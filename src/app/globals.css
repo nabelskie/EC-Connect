@@ -29,15 +29,27 @@
     --chart-3: 160 60% 45%;
     --chart-4: 30 80% 55%;
     --chart-5: 280 65% 60%;
+
+    /* Sidebar Variables */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 240 10% 3.9%;
+    --sidebar-primary: 240 24% 36%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 210 20% 96%;
+    --sidebar-accent-foreground: 240 24% 36%;
+    --sidebar-border: 210 20% 90%;
+    --sidebar-ring: 240 24% 36%;
   }
 }
 
 @layer base {
   * {
     @apply border-border outline-none;
+    -webkit-tap-highlight-color: transparent;
   }
   body {
     @apply bg-background text-foreground font-body;
+    touch-action: manipulation;
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-headline;
@@ -47,5 +59,11 @@
 @layer utilities {
   .safe-area-bottom {
     padding-bottom: env(safe-area-inset-bottom);
+  }
+  .h-screen-dvh {
+    height: 100dvh;
+  }
+  .min-h-screen-dvh {
+    min-height: 100dvh;
   }
 }

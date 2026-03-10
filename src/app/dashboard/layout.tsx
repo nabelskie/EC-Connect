@@ -53,8 +53,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen bg-background flex w-full">
-        {/* Desktop Sidebar */}
+      <div className="min-h-screen-dvh bg-background flex w-full overflow-hidden">
+        {/* Sidebar */}
         <Sidebar className="border-r bg-white shadow-sm">
           <SidebarHeader className="p-6">
             <Link href="/" className="flex items-center gap-2 px-2">
@@ -128,9 +128,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </Sidebar>
 
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 relative">
           {/* Top Navigation Bar */}
-          <header className="h-16 bg-white border-b flex items-center justify-between px-6 sticky top-0 z-30 shadow-sm">
+          <header className="h-16 bg-white border-b flex items-center justify-between px-4 md:px-6 sticky top-0 z-30 shadow-sm">
             <div className="flex items-center gap-4">
               <SidebarTrigger className="md:hidden">
                 <Menu className="h-6 w-6" />
@@ -142,20 +142,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   className="border-none bg-transparent h-6 focus-visible:ring-0 text-sm p-0"
                 />
               </div>
+              <div className="md:hidden">
+                <span className="font-headline font-bold text-primary truncate block max-w-[120px]">ElderCare</span>
+              </div>
             </div>
             
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 md:gap-4">
               <Button variant="ghost" size="icon" className="rounded-full relative text-muted-foreground">
                 <Bell className="h-5 w-5" />
-                <span className="absolute top-2 right-2 w-2 h-2 bg-destructive rounded-full border-2 border-white" />
+                <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-destructive rounded-full border-2 border-white" />
               </Button>
-              <div className="h-8 w-px bg-slate-200" />
-              <div className="flex items-center gap-3">
+              <div className="h-8 w-px bg-slate-200 hidden sm:block" />
+              <div className="flex items-center gap-2 md:gap-3">
                 <div className="text-right hidden sm:block">
                   <p className="text-sm font-bold text-primary leading-tight">Mrs. Hapsah</p>
-                  <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Elderly Resident</p>
+                  <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Elderly</p>
                 </div>
-                <Avatar className="h-9 w-9 border-2 border-slate-100 shadow-sm">
+                <Avatar className="h-8 w-8 md:h-9 md:w-9 border-2 border-slate-100 shadow-sm">
                   <AvatarImage src="https://picsum.photos/seed/user/100/100" />
                   <AvatarFallback>MH</AvatarFallback>
                 </Avatar>
@@ -163,7 +166,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           </header>
 
-          <main className="flex-1 p-6 md:p-8 lg:p-10 max-w-7xl mx-auto w-full">
+          <main className="flex-1 p-4 md:p-8 lg:p-10 max-w-7xl mx-auto w-full overflow-y-auto">
             {children}
           </main>
         </div>
