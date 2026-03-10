@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    --background: 210 20% 98%; /* Lighter background for mobile feel */
+    --background: 210 20% 98%;
     --foreground: 240 10% 3.9%;
     --card: 0 0% 100%;
     --card-foreground: 240 10% 3.9%;
@@ -23,7 +23,7 @@
     --border: 210 20% 90%;
     --input: 210 20% 90%;
     --ring: 240 24% 36%;
-    --radius: 1rem; /* More rounded for mobile */
+    --radius: 0.75rem;
     --chart-1: 199 69% 55%;
     --chart-2: 240 24% 36%;
     --chart-3: 160 60% 45%;
@@ -35,12 +35,9 @@
 @layer base {
   * {
     @apply border-border outline-none;
-    -webkit-tap-highlight-color: transparent;
   }
   body {
     @apply bg-background text-foreground font-body;
-    touch-action: manipulation;
-    overscroll-behavior-y: none; /* Prevent elastic bounce on mobile web */
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-headline;
