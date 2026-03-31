@@ -3,7 +3,7 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, ChevronRight } from 'lucide-react';
+import { Search, ChevronRight, ArrowLeft, MessageSquare } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import Link from 'next/link';
 
@@ -40,8 +40,17 @@ export default function ChatInboxPage() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-headline font-bold text-primary px-2">Messages</h1>
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-2 px-2">
+          <Link 
+            href="/dashboard/elderly" 
+            className="p-2 -ml-2 hover:bg-slate-100 rounded-full transition-colors"
+          >
+            <ArrowLeft className="h-6 w-6 text-primary" />
+          </Link>
+          <h1 className="text-2xl font-headline font-bold text-primary">Messages</h1>
+        </div>
+        
         <div className="relative px-2">
           <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input 

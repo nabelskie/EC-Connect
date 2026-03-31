@@ -56,8 +56,8 @@ export default function ChatPage() {
               <AvatarFallback>{volunteerInfo.name[0]}</AvatarFallback>
             </Avatar>
             <div>
-              <CardTitle className="text-lg md:text-xl font-headline font-bold">{volunteerInfo.name} (Volunteer)</CardTitle>
-              <div className="text-[10px] md:text-sm text-white/70 flex items-center gap-1">
+              <CardTitle className="text-lg md:text-xl font-headline font-bold">{volunteerInfo.name}</CardTitle>
+              <div className="text-[10px] md:text-xs text-white/70 flex items-center gap-1">
                 <div className="h-2 w-2 rounded-full bg-emerald-400"></div> Online
               </div>
             </div>
