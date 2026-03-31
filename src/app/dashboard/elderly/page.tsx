@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -35,14 +35,14 @@ import {
   MapPin,
   Calendar,
   User,
-  Trash2,
-  XCircle
+  Trash2
 } from 'lucide-react';
 import { generateTaskDescription } from '@/ai/flows/generate-task-description-flow';
 import { useToast } from '@/hooks/use-toast';
 
 export default function ElderlyDashboard() {
   const { toast } = useToast();
+  const [mounted, setMounted] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
@@ -53,6 +53,10 @@ export default function ElderlyDashboard() {
     location: '',
     urgency: 'Low' as 'Low' | 'Medium' | 'High'
   });
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const [requests, setRequests] = useState([
     { id: 1, type: 'Groceries', status: 'Pending', date: 'Oct 24', desc: 'Need help buying milk and bread.', location: 'Block C, Room 102', urgency: 'Medium' },
@@ -142,6 +146,14 @@ export default function ElderlyDashboard() {
       default: return <Info className="h-5 w-5" />;
     }
   };
+
+  if (!mounted) {
+    return (
+      <div className="flex h-screen-dvh items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -382,7 +394,7 @@ export default function ElderlyDashboard() {
               <div className="flex flex-col gap-3 mt-8">
                 {selectedRequest.status === 'Accepted' && (
                   <Button asChild className="w-full h-14 rounded-2xl bg-accent hover:bg-accent/90">
-                    <Link href={`/chat/RQ${selectedRequest.id}`}>
+                    <Link href={`/dashboard/chat/${selectedRequest.id}?role=elderly`}>
                       Chat with Volunteer
                     </Link>
                   </Button>

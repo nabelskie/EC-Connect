@@ -19,7 +19,6 @@ import {
   Filter,
   CheckCircle2,
   Loader2,
-  MessageSquare,
   SearchX
 } from 'lucide-react';
 import { 
@@ -43,24 +42,29 @@ export default function VolunteerDashboard() {
   const db = useFirestore();
   const { user, isUserLoading } = useUser();
   const [filter, setFilter] = useState('All');
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    if (!isUserLoading && !user) {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isUserLoading && !user && mounted) {
       router.push('/auth/login');
     }
-  }, [user, isUserLoading, router]);
+  }, [user, isUserLoading, router, mounted]);
 
   const pendingQuery = useMemoFirebase(() => {
-    if (!user) return null;
+    if (!user || !mounted) return null;
     return collection(db, 'assistance_requests_pending');
-  }, [db, user]);
+  }, [db, user, mounted]);
   
   const { data: pendingTasks, isLoading: isPendingLoading } = useCollection(pendingQuery);
 
   const activeQuery = useMemoFirebase(() => {
-    if (!user) return null;
+    if (!user || !mounted) return null;
     return query(collection(db, 'assistance_requests_active'), where('assignedVolunteerId', '==', user.uid));
-  }, [db, user]);
+  }, [db, user, mounted]);
   
   const { data: activeTasks, isLoading: isActiveLoading } = useCollection(activeQuery);
 
@@ -136,7 +140,7 @@ export default function VolunteerDashboard() {
     }
   };
 
-  if (isUserLoading) {
+  if (!mounted || isUserLoading) {
     return (
       <div className="flex h-screen-dvh items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

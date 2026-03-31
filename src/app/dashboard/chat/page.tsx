@@ -3,33 +3,47 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, ChevronRight, ArrowLeft, MessageSquare, Loader2, SearchX } from 'lucide-react';
+import { Search, ChevronRight, ArrowLeft, MessageSquare, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Suspense, useMemo } from 'react';
+import { Suspense, useMemo, useState, useEffect } from 'react';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, orderBy } from 'firebase/firestore';
 
 function ChatInboxContent() {
   const searchParams = useSearchParams();
+  const [mounted, setMounted] = useState(false);
   const role = searchParams.get('role') || 'elderly';
   const db = useFirestore();
   const { user } = useUser();
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Fetch real-time chat rooms for the current user
   const chatRoomsQuery = useMemoFirebase(() => {
-    if (!user) return null;
+    if (!user || !mounted) return null;
     return query(
       collection(db, 'chat_rooms'),
       where('participantUserIds', 'array-contains', user.uid),
       orderBy('lastMessageAt', 'desc')
     );
-  }, [db, user]);
+  }, [db, user, mounted]);
 
   const { data: chatRooms, isLoading } = useCollection(chatRoomsQuery);
 
   const backHref = role === 'admin' ? '/dashboard/admin' : role === 'volunteer' ? '/dashboard/volunteer' : '/dashboard/elderly';
+
+  if (!mounted) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-2 text-muted-foreground">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <p className="text-xs font-bold uppercase">Preparing messages...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -116,7 +130,7 @@ function ChatInboxContent() {
 
 export default function ChatInboxPage() {
   return (
-    <Suspense fallback={<div>Loading inbox...</div>}>
+    <Suspense fallback={<div className="flex items-center justify-center py-20"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>}>
       <ChatInboxContent />
     </Suspense>
   );
