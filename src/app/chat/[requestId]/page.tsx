@@ -29,12 +29,16 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="h-[calc(100dvh-theme(spacing.24))] md:h-[calc(100vh-140px)] flex flex-col -m-4 md:m-0">
-      <Card className="flex-1 flex flex-col border-none md:shadow-2xl overflow-hidden bg-white md:rounded-3xl rounded-none">
-        <CardHeader className="bg-primary text-white border-b px-4 py-3 md:px-6 md:py-4 flex flex-row items-center justify-between">
+    <div className="h-screen-dvh flex flex-col bg-background">
+      <Card className="flex-1 flex flex-col border-none shadow-none md:shadow-2xl overflow-hidden bg-white rounded-none md:rounded-3xl md:m-4">
+        <CardHeader className="bg-primary text-white border-b px-4 py-3 md:px-6 md:py-4 flex flex-row items-center justify-between shrink-0">
           <div className="flex items-center gap-3 md:gap-4">
-            <Link href="/dashboard/elderly" className="md:hidden">
-              <ArrowLeft className="h-6 w-6" />
+            <Link 
+              href="/dashboard/elderly" 
+              className="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors flex items-center gap-1 group"
+            >
+              <ArrowLeft className="h-6 w-6 transition-transform group-hover:-translate-x-1" />
+              <span className="text-sm font-bold hidden sm:inline">Back</span>
             </Link>
             <Avatar className="h-10 w-10 md:h-12 md:w-12 border-2 border-white/20">
               <AvatarImage src="https://picsum.photos/seed/volunteer/100/100" />
@@ -82,7 +86,7 @@ export default function ChatPage() {
           </ScrollArea>
         </CardContent>
 
-        <CardFooter className="p-3 md:p-4 bg-white border-t safe-area-bottom">
+        <CardFooter className="p-3 md:p-4 bg-white border-t safe-area-bottom shrink-0">
           <form 
             onSubmit={(e) => { e.preventDefault(); handleSend(); }}
             className="flex items-center gap-2 md:gap-3 w-full"
@@ -103,7 +107,7 @@ export default function ChatPage() {
           </form>
         </CardFooter>
       </Card>
-      <div className="hidden md:flex mt-4 items-center justify-center gap-6 text-sm text-muted-foreground font-medium">
+      <div className="hidden md:flex mb-4 items-center justify-center gap-6 text-sm text-muted-foreground font-medium">
         <div className="flex items-center gap-2">
           <ShieldCheck className="h-4 w-4 text-emerald-500" />
           End-to-end encrypted
