@@ -8,11 +8,10 @@ import Link from 'next/link';
 
 export default function RequestsHistoryPage() {
   const allRequests = [
-    { id: 1, type: 'Grocery', status: 'Pending', date: 'Oct 24, 2024', desc: 'Need help buying milk and bread from the local market.' },
-    { id: 2, type: 'Transport', status: 'Accepted', date: 'Oct 23, 2024', desc: 'Ride to the clinic for monthly health checkup.' },
+    { id: 1, type: 'Groceries', status: 'Pending', date: 'Oct 24, 2024', desc: 'Need help buying milk and bread from the local market.' },
+    { id: 2, type: 'Transportation', status: 'Accepted', date: 'Oct 23, 2024', desc: 'Ride to the clinic for monthly health checkup.' },
     { id: 3, type: 'Tech Support', status: 'Completed', date: 'Oct 21, 2024', desc: 'Setting up my new phone and installing WhatsApp.' },
-    { id: 4, type: 'Other', status: 'Completed', date: 'Oct 15, 2024', desc: 'Need help moving some light boxes to storage.' },
-    { id: 5, type: 'Grocery', status: 'Completed', date: 'Oct 10, 2024', desc: 'Weekly grocery run for vegetables and fruits.' },
+    { id: 4, type: 'Groceries', status: 'Completed', date: 'Oct 10, 2024', desc: 'Weekly grocery run for vegetables and fruits.' },
   ];
 
   const getStatusBadge = (status: string) => {
@@ -26,8 +25,8 @@ export default function RequestsHistoryPage() {
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'Grocery': return <ShoppingCart className="h-5 w-5" />;
-      case 'Transport': return <Truck className="h-5 w-5" />;
+      case 'Groceries': return <ShoppingCart className="h-5 w-5" />;
+      case 'Transportation': return <Truck className="h-5 w-5" />;
       case 'Tech Support': return <Wrench className="h-5 w-5" />;
       default: return <Info className="h-5 w-5" />;
     }
@@ -69,14 +68,6 @@ export default function RequestsHistoryPage() {
           </Card>
         ))}
       </div>
-
-      {allRequests.length === 0 && (
-        <div className="text-center py-20 opacity-50">
-          <Clock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-          <p className="text-lg font-bold">No requests found</p>
-          <p className="text-sm">Start by creating your first request!</p>
-        </div>
-      )}
     </div>
   );
 }

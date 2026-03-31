@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Clock, ShoppingCart, Truck, Wrench, Info, Sparkles, Loader2, ChevronRight, HeartPulse } from 'lucide-react';
+import { PlusCircle, Clock, ShoppingCart, Truck, Wrench, Info, Sparkles, Loader2, ChevronRight } from 'lucide-react';
 import { generateTaskDescription } from '@/ai/flows/generate-task-description-flow';
 
 export default function ElderlyDashboard() {
@@ -23,8 +23,8 @@ export default function ElderlyDashboard() {
   });
 
   const recentRequests = [
-    { id: 1, type: 'Grocery', status: 'Pending', date: 'Oct 24', desc: 'Need help buying milk and bread.' },
-    { id: 2, type: 'Transport', status: 'Accepted', date: 'Oct 23', desc: 'Ride to the clinic for checkup.' },
+    { id: 1, type: 'Groceries', status: 'Pending', date: 'Oct 24', desc: 'Need help buying milk and bread.' },
+    { id: 2, type: 'Transportation', status: 'Accepted', date: 'Oct 23', desc: 'Ride to the clinic for checkup.' },
     { id: 3, type: 'Tech Support', status: 'Completed', date: 'Oct 21', desc: 'Setting up my new phone.' },
   ];
 
@@ -57,10 +57,9 @@ export default function ElderlyDashboard() {
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'Grocery': return <ShoppingCart className="h-5 w-5" />;
-      case 'Transport': return <Truck className="h-5 w-5" />;
+      case 'Groceries': return <ShoppingCart className="h-5 w-5" />;
+      case 'Transportation': return <Truck className="h-5 w-5" />;
       case 'Tech Support': return <Wrench className="h-5 w-5" />;
-      case 'Medical': return <HeartPulse className="h-5 w-5" />;
       default: return <Info className="h-5 w-5" />;
     }
   };
@@ -104,11 +103,9 @@ export default function ElderlyDashboard() {
                   <SelectValue placeholder="What do you need?" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Grocery">Grocery Shopping</SelectItem>
-                  <SelectItem value="Transport">Transportation</SelectItem>
+                  <SelectItem value="Groceries">Groceries</SelectItem>
+                  <SelectItem value="Transportation">Transportation</SelectItem>
                   <SelectItem value="Tech Support">Tech Support</SelectItem>
-                  <SelectItem value="Medical">Medical / Health</SelectItem>
-                  <SelectItem value="Other">Other Assistance</SelectItem>
                 </SelectContent>
               </Select>
             </div>
