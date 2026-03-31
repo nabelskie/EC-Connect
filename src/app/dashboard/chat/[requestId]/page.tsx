@@ -2,16 +2,18 @@
 "use client";
 
 import { useState, useMemo, Suspense, useEffect } from 'react';
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, Phone, Info, ArrowLeft, ShieldCheck, Loader2 } from 'lucide-react';
+import { Send, Phone, ArrowLeft, ShieldCheck, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useFirestore, useUser, useDoc, useCollection, useMemoFirebase } from '@/firebase';
+import { doc, collection, query, orderBy, addDoc, serverTimestamp } from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 function ChatContent() {
   const params = useParams();
@@ -21,6 +23,8 @@ function ChatContent() {
   const db = useFirestore();
   const { user } = useUser();
   const [mounted, setMounted] = useState(false);
+  const [input, setInput] = useState('');
+  const [isSending, setIsSending] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -31,9 +35,19 @@ function ChatContent() {
     return doc(db, 'chat_rooms', requestId);
   }, [db, requestId]);
 
-  const { data: chatRoom, isLoading, error } = useDoc(chatRoomRef);
+  const { data: chatRoom, isLoading: isRoomLoading, error: roomError } = useDoc(chatRoomRef);
 
-  // Determine partner info from real data
+  // Fetch real messages from subcollection
+  const messagesQuery = useMemoFirebase(() => {
+    if (!requestId) return null;
+    return query(
+      collection(db, 'chat_rooms', requestId, 'messages'),
+      orderBy('timestamp', 'asc')
+    );
+  }, [db, requestId]);
+
+  const { data: messages, isLoading: isMessagesLoading } = useCollection(messagesQuery);
+
   const chatPartner = useMemo(() => {
     if (!chatRoom) return { name: 'Chat', image: '', roleName: '...' };
     
@@ -52,21 +66,45 @@ function ChatContent() {
     }
   }, [chatRoom, role]);
 
-  const [messages, setMessages] = useState([
-    { id: 1, sender: 'partner', text: "Hello! I'm here to help.", time: '10:05 AM' },
-    { id: 2, sender: 'me', text: 'Thank you so much!', time: '10:07 AM' },
-  ]);
-  const [input, setInput] = useState('');
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || !user || !requestId || isSending) return;
 
-  const handleSend = () => {
-    if (!input.trim()) return;
-    setMessages([...messages, { 
-      id: messages.length + 1, 
-      sender: 'me', 
-      text: input, 
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
-    }]);
+    setIsSending(true);
+    const messageText = input.trim();
     setInput('');
+
+    const messageData = {
+      chatRoomId: requestId,
+      senderUserId: user.uid,
+      messageText: messageText,
+      timestamp: serverTimestamp(),
+      // Denormalize participants for security rules as per backend.json guidelines
+      participantUserIds: chatRoom?.participantUserIds || []
+    };
+
+    const messagesRef = collection(db, 'chat_rooms', requestId, 'messages');
+    
+    addDoc(messagesRef, messageData)
+      .then(() => {
+        setIsSending(false);
+        // Also update the parent chat room with a snippet
+        const roomRef = doc(db, 'chat_rooms', requestId);
+        // Use non-blocking update
+        const { updateDoc } = require('firebase/firestore');
+        updateDoc(roomRef, {
+          lastMessageSnippet: messageText,
+          lastMessageAt: serverTimestamp()
+        }).catch(() => {});
+      })
+      .catch(async (err) => {
+        setIsSending(false);
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: `${messagesRef.path}/new`,
+          operation: 'create',
+          requestResourceData: messageData
+        }));
+      });
   };
 
   if (!mounted) {
@@ -78,7 +116,7 @@ function ChatContent() {
     );
   }
 
-  if (isLoading) {
+  if (isRoomLoading) {
     return (
       <div className="h-full flex flex-col items-center justify-center py-20 gap-3">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -87,7 +125,7 @@ function ChatContent() {
     );
   }
 
-  if (error) {
+  if (roomError) {
     return (
       <div className="h-full flex flex-col items-center justify-center py-20 gap-3 text-center px-6">
         <div className="p-4 bg-destructive/10 rounded-full">
@@ -95,7 +133,7 @@ function ChatContent() {
         </div>
         <h2 className="text-lg font-bold text-primary">Access Denied</h2>
         <p className="text-sm text-muted-foreground leading-relaxed">
-          You don't have permission to view this chat. This can happen if the chat room was just created or if you're logged into a different account.
+          You don't have permission to view this chat.
         </p>
         <Button asChild variant="outline" className="mt-4 rounded-xl">
           <Link href={`/dashboard/chat?role=${role}`}>Back to Messages</Link>
@@ -140,27 +178,42 @@ function ChatContent() {
                 <span className="bg-white/50 backdrop-blur-sm text-muted-foreground text-[10px] px-3 py-1 rounded-full font-bold uppercase tracking-wider">Today</span>
               </div>
               
-              {messages.map((msg) => (
-                <div key={msg.id} className={`flex ${msg.sender === 'me' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[85%] flex flex-col ${msg.sender === 'me' ? 'items-end' : 'items-start'}`}>
-                    <div className={`p-3 rounded-2xl shadow-sm text-sm ${
-                      msg.sender === 'me' 
-                        ? 'bg-accent text-white rounded-tr-none' 
-                        : 'bg-white text-primary rounded-tl-none'
-                    }`}>
-                      {msg.text}
-                    </div>
-                    <span className="text-[10px] text-muted-foreground mt-1 font-semibold">{msg.time}</span>
-                  </div>
+              {isMessagesLoading ? (
+                <div className="flex justify-center py-10">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
-              ))}
+              ) : messages && messages.length > 0 ? (
+                messages.map((msg) => {
+                  const isMe = msg.senderUserId === user?.uid;
+                  const timeStr = msg.timestamp?.toDate ? msg.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '...';
+                  
+                  return (
+                    <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`max-w-[85%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
+                        <div className={`p-3 rounded-2xl shadow-sm text-sm ${
+                          isMe 
+                            ? 'bg-accent text-white rounded-tr-none' 
+                            : 'bg-white text-primary rounded-tl-none'
+                        }`}>
+                          {msg.messageText}
+                        </div>
+                        <span className="text-[10px] text-muted-foreground mt-1 font-semibold">{timeStr}</span>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="text-center py-10">
+                  <p className="text-[10px] font-bold uppercase text-muted-foreground">Start the conversation</p>
+                </div>
+              )}
             </div>
           </ScrollArea>
         </CardContent>
 
         <CardFooter className="p-3 bg-white border-t shrink-0">
           <form 
-            onSubmit={(e) => { e.preventDefault(); handleSend(); }}
+            onSubmit={handleSend}
             className="flex items-center gap-2 w-full"
           >
             <Input 
@@ -173,7 +226,8 @@ function ChatContent() {
             <Button 
               type="submit" 
               size="icon" 
-              className="h-12 w-12 rounded-2xl bg-primary hover:bg-primary/90 text-white shadow-lg"
+              disabled={!input.trim() || isSending}
+              className="h-12 w-12 rounded-2xl bg-primary hover:bg-primary/90 text-white shadow-lg disabled:opacity-50"
             >
               <Send className="h-5 w-5" />
             </Button>

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -32,7 +33,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, setDoc, deleteDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, doc, setDoc, deleteDoc, getDoc, serverTimestamp, addDoc } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
@@ -130,15 +131,27 @@ export default function VolunteerDashboard() {
     // 3. Create chat room
     const chatRoomId = task.id; 
     const chatRoomRef = doc(db, 'chat_rooms', chatRoomId);
+    const participantUserIds = [residentId, volunteerId];
+    
     setDoc(chatRoomRef, {
       id: chatRoomId,
       requestId: task.id,
-      participantUserIds: [residentId, volunteerId],
+      participantUserIds: participantUserIds,
       residentName: residentName,
       volunteerName: volunteerName,
       createdAt: serverTimestamp(),
       lastMessageSnippet: `Volunteer ${volunteerName} has accepted your request.`,
       lastMessageAt: serverTimestamp(),
+    }).then(() => {
+      // 4. Send the initial "I'm here to help" message automatically
+      const messagesRef = collection(db, 'chat_rooms', chatRoomId, 'messages');
+      addDoc(messagesRef, {
+        chatRoomId: chatRoomId,
+        senderUserId: volunteerId,
+        messageText: "Hello! I'm here to help.",
+        timestamp: serverTimestamp(),
+        participantUserIds: participantUserIds // Denormalize for security rules
+      });
     }).catch(async (err) => {
       errorEmitter.emit('permission-error', new FirestorePermissionError({
         path: chatRoomRef.path,
@@ -151,6 +164,8 @@ export default function VolunteerDashboard() {
       title: "Task Accepted!",
       description: `You are now helping ${residentName}.`,
     });
+    
+    router.push(`/dashboard/chat/${task.id}?role=volunteer`);
   };
 
   const getUrgencyColor = (urgency: string) => {
