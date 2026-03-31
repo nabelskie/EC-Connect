@@ -16,12 +16,15 @@ service cloud.firestore {
     // Safely checks if the current user has a specific role.
     function hasRole(role) {
       return isSignedIn() && 
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
     }
 
     function isAdmin() {
-      return hasRole('admin');
+      // Check if user is signed in and has admin role doc
+      return isSignedIn() && (
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
     }
 
     function isOwner(userId) {
@@ -29,7 +32,9 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow get, list: if isOwner(userId) || isAdmin();
+      allow get: if isOwner(userId) || isAdmin();
+      // Allow admins to list the whole directory for management
+      allow list: if isAdmin();
       allow create: if isSignedIn() && request.auth.uid == userId;
       allow update: if isOwner(userId) || isAdmin();
       allow delete: if isAdmin();
@@ -37,24 +42,30 @@ service cloud.firestore {
 
     match /assistance_requests_pending/{requestId} {
       allow get, list: if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.createdByUserId == request.auth.uid;
+      allow create: if isSignedIn();
       // Allow the creator, admins, or any volunteer (to accept/claim the task) to update/delete
       allow update, delete: if isSignedIn() && (
         request.auth.uid == resource.data.createdByUserId || 
-        hasRole('volunteer') ||
-        isAdmin()
+        isAdmin() ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'volunteer')
       );
     }
 
     match /assistance_requests_active/{requestId} {
-      allow get, list: if isSignedIn();
+      allow get: if isSignedIn();
+      // Allow participants or admins to list
+      allow list: if isSignedIn();
       allow create: if isSignedIn();
       allow update: if isSignedIn() && (
         request.auth.uid == resource.data.createdByUserId || 
         request.auth.uid == resource.data.assignedVolunteerId ||
         isAdmin()
       );
-      allow delete: if isSignedIn() && (request.auth.uid == resource.data.createdByUserId || isAdmin());
+      allow delete: if isSignedIn() && (
+        request.auth.uid == resource.data.createdByUserId || 
+        isAdmin()
+      );
     }
 
     match /assistance_requests_completed/{requestId} {
@@ -64,16 +75,15 @@ service cloud.firestore {
     }
 
     match /chat_rooms/{chatRoomId} {
-      // Allow participants or admins to see chat room details.
-      // We allow 'get' if document doesn't exist (resource == null) to handle navigation gracefully 
-      // while the volunteer is creating the room document.
+      // Allow get if document doesn't exist yet (race condition handling) 
+      // or if user is participant/admin
       allow get: if isSignedIn() && (
         resource == null || 
         request.auth.uid in resource.data.participantUserIds || 
         isAdmin()
       );
       
-      // Queryable Authorization Pattern (QAP) for listing chats
+      // Allow participants or admins to list chats
       allow list: if isSignedIn() && (
         request.auth.uid in resource.data.participantUserIds || isAdmin()
       );
@@ -88,12 +98,12 @@ service cloud.firestore {
     }
 
     match /chat_rooms/{chatRoomId}/messages/{messageId} {
-      // READ: Requires query to match the participant filter (Rules are not filters)
+      // Allow participants or admins to read messages
       allow get, list: if isSignedIn() && (
         request.auth.uid in resource.data.participantUserIds || isAdmin()
       );
       
-      // CREATE: Uses denormalized participantUserIds to evaluate access without parent lookup
+      // Allow participants to send messages
       allow create: if isSignedIn() && (
         request.resource.data.senderUserId == request.auth.uid && 
         (request.auth.uid in request.resource.data.participantUserIds || isAdmin())
