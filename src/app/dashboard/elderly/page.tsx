@@ -57,6 +57,7 @@ export default function ElderlyDashboard() {
     { id: 1, type: 'Groceries', status: 'Pending', date: 'Oct 24', desc: 'Need help buying milk and bread.', location: 'Block C, Room 102', urgency: 'Medium' },
     { id: 2, type: 'Transportation', status: 'Accepted', date: 'Oct 23', desc: 'Ride to the clinic for checkup.', location: 'Lobby Block A', urgency: 'High', volunteer: 'Sarah (Student)' },
     { id: 3, type: 'Tech Support', status: 'Completed', date: 'Oct 21', desc: 'Setting up my new phone.', location: 'Block C, Room 102', urgency: 'Low', volunteer: 'Jason (Student)' },
+    { id: 4, type: 'Groceries', status: 'Completed', date: 'Oct 15', desc: 'Buying fruits from market.', location: 'Block C, Room 102', urgency: 'Low', volunteer: 'Sarah (Student)' },
   ]);
 
   const handleAiHelp = async () => {
@@ -245,7 +246,7 @@ export default function ElderlyDashboard() {
         <h2 className="text-xl font-bold text-primary">Active Status</h2>
         
         <div className="space-y-3">
-          {requests.map((req) => (
+          {requests.slice(0, 3).map((req) => (
             <Card 
               key={req.id} 
               className="border-none shadow-sm rounded-3xl overflow-hidden active:bg-slate-50 transition-colors cursor-pointer"
@@ -267,6 +268,12 @@ export default function ElderlyDashboard() {
               </CardContent>
             </Card>
           ))}
+          
+          {requests.length > 3 && (
+            <p className="text-center text-xs text-muted-foreground font-medium pt-2">
+              Tap the History button to view all {requests.length} requests.
+            </p>
+          )}
         </div>
       </div>
 
