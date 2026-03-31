@@ -14,6 +14,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 export default function LoginPage() {
+  const [mounted, setMounted] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -23,9 +24,13 @@ export default function LoginPage() {
   const { user, isUserLoading } = useUser();
   const { toast } = useToast();
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Redirect if user is already logged in
   useEffect(() => {
-    if (user && !isUserLoading) {
+    if (user && !isUserLoading && mounted) {
       const checkRoleAndRedirect = async () => {
         const userDoc = await getDoc(doc(db, 'users', user.uid));
         if (userDoc.exists()) {
@@ -38,7 +43,7 @@ export default function LoginPage() {
       };
       checkRoleAndRedirect();
     }
-  }, [user, isUserLoading, db, router]);
+  }, [user, isUserLoading, db, router, mounted]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,6 +59,14 @@ export default function LoginPage() {
         });
       });
   };
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
