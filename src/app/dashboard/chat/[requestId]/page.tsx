@@ -1,33 +1,55 @@
+
 "use client";
 
-import { useState, useMemo, Suspense } from 'react';
+import { useState, useMemo, Suspense, useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, Phone, Info, ArrowLeft, ShieldCheck } from 'lucide-react';
+import { Send, Phone, Info, ArrowLeft, ShieldCheck, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
 
 function ChatContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const requestId = params.requestId as string;
   const role = searchParams.get('role') || 'elderly';
+  const db = useFirestore();
+  const { user } = useUser();
 
-  // Mock participant info based on role
+  const chatRoomRef = useMemoFirebase(() => {
+    if (!requestId) return null;
+    return doc(db, 'chat_rooms', requestId);
+  }, [db, requestId]);
+
+  const { data: chatRoom, isLoading } = useDoc(chatRoomRef);
+
+  // Determine partner info from real data
   const chatPartner = useMemo(() => {
+    if (!chatRoom) return { name: 'User', image: '', roleName: '...' };
+    
     if (role === 'volunteer') {
-      return { name: 'Mrs. Hapsah', image: 'https://picsum.photos/seed/user/100/100', roleName: 'Elderly' };
+      return { 
+        name: chatRoom.residentName || 'Resident', 
+        image: `https://picsum.photos/seed/${chatRoom.participantUserIds[0]}/100/100`, 
+        roleName: 'Resident' 
+      };
+    } else {
+      return { 
+        name: chatRoom.volunteerName || 'Volunteer', 
+        image: `https://picsum.photos/seed/${chatRoom.participantUserIds[1]}/100/100`, 
+        roleName: 'Volunteer' 
+      };
     }
-    if (requestId === 'RQ1023') return { name: 'Sarah', image: 'https://picsum.photos/seed/volunteer2/100/100', roleName: 'Volunteer' };
-    return { name: 'Ahmad', image: 'https://picsum.photos/seed/volunteer1/100/100', roleName: 'Volunteer' };
-  }, [requestId, role]);
+  }, [chatRoom, role]);
 
   const [messages, setMessages] = useState([
-    { id: 1, sender: role === 'volunteer' ? 'partner' : 'me', text: `Hello! Regarding the request (${requestId})...`, time: '10:05 AM' },
-    { id: 2, sender: role === 'volunteer' ? 'me' : 'partner', text: 'I am here to help. What do you need?', time: '10:07 AM' },
+    { id: 1, sender: 'partner', text: "Hello! I'm here to help.", time: '10:05 AM' },
+    { id: 2, sender: 'me', text: 'Thank you so much!', time: '10:07 AM' },
   ]);
   const [input, setInput] = useState('');
 
@@ -42,6 +64,15 @@ function ChatContent() {
     setInput('');
   };
 
+  if (isLoading) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center py-20 gap-3">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-xs font-bold uppercase text-muted-foreground">Loading chat room...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="h-[calc(100vh-140px)] flex flex-col bg-background -mx-4 -mt-6">
       <Card className="flex-1 flex flex-col border-none shadow-none overflow-hidden bg-white">
@@ -55,7 +86,7 @@ function ChatContent() {
             </Link>
             <Avatar className="h-10 w-10 border-2 border-white/20">
               <AvatarImage src={chatPartner.image} />
-              <AvatarFallback>{chatPartner.name[0]}</AvatarFallback>
+              <AvatarFallback>{chatPartner.name?.[0] || 'U'}</AvatarFallback>
             </Avatar>
             <div>
               <CardTitle className="text-lg font-headline font-bold">{chatPartner.name}</CardTitle>
@@ -123,7 +154,7 @@ function ChatContent() {
 
 export default function ChatPage() {
   return (
-    <Suspense fallback={<div>Loading chat...</div>}>
+    <Suspense fallback={<div className="flex items-center justify-center py-20"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>}>
       <ChatContent />
     </Suspense>
   );

@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search, ChevronRight, ArrowLeft, MessageSquare, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useMemo, useState, useEffect } from 'react';
@@ -24,7 +25,6 @@ function ChatInboxContent() {
   }, []);
 
   // Fetch real-time chat rooms for the current user
-  // Simplified query: removed orderBy to avoid requiring a composite index
   const chatRoomsQuery = useMemoFirebase(() => {
     if (!user || !mounted) return null;
     return query(
@@ -85,37 +85,48 @@ function ChatInboxContent() {
               <Loader2 className="h-8 w-8 animate-spin" />
               <p className="text-xs font-bold uppercase">Loading conversations...</p>
             </div>
-          ) : sortedChatRooms.map((chat) => (
-            <Link key={chat.id} href={`/dashboard/chat/${chat.requestId}?role=${role}`}>
-              <Card className="border-none shadow-sm rounded-3xl overflow-hidden active:bg-slate-50 transition-colors mb-3">
-                <CardContent className="p-4 flex items-center gap-4">
-                  <div className="relative">
-                    <Avatar className="h-14 w-14 border-2 border-slate-100">
-                      <AvatarImage src={`https://picsum.photos/seed/${chat.id}/100/100`} />
-                      <AvatarFallback>C</AvatarFallback>
-                    </Avatar>
-                    <div className="absolute bottom-0 right-0 h-4 w-4 bg-emerald-500 border-2 border-white rounded-full" />
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-0.5">
-                      <span className="font-bold text-primary truncate">Task Request</span>
-                      <span className="text-[10px] text-muted-foreground font-semibold">
-                        {chat.lastMessageAt?.toDate?.() ? chat.lastMessageAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Now'}
-                      </span>
+          ) : sortedChatRooms.map((chat) => {
+            // Determine partner name and role based on current user's role
+            const partnerName = role === 'volunteer' ? chat.residentName : chat.volunteerName;
+            const partnerRole = role === 'volunteer' ? 'Resident' : 'Volunteer';
+            
+            return (
+              <Link key={chat.id} href={`/dashboard/chat/${chat.requestId}?role=${role}`}>
+                <Card className="border-none shadow-sm rounded-3xl overflow-hidden active:bg-slate-50 transition-colors mb-3">
+                  <CardContent className="p-4 flex items-center gap-4">
+                    <div className="relative">
+                      <Avatar className="h-14 w-14 border-2 border-slate-100">
+                        <AvatarImage src={`https://picsum.photos/seed/${chat.id}/100/100`} />
+                        <AvatarFallback>{partnerName?.[0] || 'C'}</AvatarFallback>
+                      </Avatar>
+                      <div className="absolute bottom-0 right-0 h-4 w-4 bg-emerald-500 border-2 border-white rounded-full" />
                     </div>
-                    <p className="text-sm truncate text-muted-foreground font-medium">
-                      {chat.lastMessageSnippet || "No messages yet"}
-                    </p>
-                  </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-0.5">
+                        <div className="flex items-center gap-2 overflow-hidden">
+                          <span className="font-bold text-primary truncate">{partnerName || "User"}</span>
+                          <Badge variant="outline" className="text-[8px] h-4 px-1 leading-none uppercase shrink-0">
+                            {partnerRole}
+                          </Badge>
+                        </div>
+                        <span className="text-[10px] text-muted-foreground font-semibold shrink-0">
+                          {chat.lastMessageAt?.toDate?.() ? chat.lastMessageAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Now'}
+                        </span>
+                      </div>
+                      <p className="text-sm truncate text-muted-foreground font-medium">
+                        {chat.lastMessageSnippet || "No messages yet"}
+                      </p>
+                    </div>
 
-                  <div className="flex flex-col items-end gap-2 shrink-0">
-                    <ChevronRight className="h-5 w-5 text-muted-foreground/30" />
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+                    <div className="flex flex-col items-end gap-2 shrink-0">
+                      <ChevronRight className="h-5 w-5 text-muted-foreground/30" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })}
 
           {!isLoading && (!chatRooms || chatRooms.length === 0) && !error && (
             <div className="text-center py-20 bg-white rounded-[2.5rem] border-2 border-dashed border-slate-100 flex flex-col items-center justify-center gap-4 mx-2">

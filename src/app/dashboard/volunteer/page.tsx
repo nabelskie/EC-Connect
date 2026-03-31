@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -32,7 +33,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, setDoc, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, doc, setDoc, deleteDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
@@ -80,6 +81,17 @@ export default function VolunteerDashboard() {
     const volunteerId = user.uid;
     const volunteerName = user.displayName || 'Volunteer';
 
+    // Fetch resident name for the chat room
+    let residentName = 'Resident';
+    try {
+      const residentDoc = await getDoc(doc(db, 'users', task.createdByUserId));
+      if (residentDoc.exists()) {
+        residentName = residentDoc.data().name || 'Resident';
+      }
+    } catch (e) {
+      console.error("Could not fetch resident profile", e);
+    }
+
     const activeRef = doc(db, 'assistance_requests_active', task.id);
     const pendingRef = doc(db, 'assistance_requests_pending', task.id);
 
@@ -106,12 +118,14 @@ export default function VolunteerDashboard() {
     });
 
     // 3. Create chat room
-    const chatRoomId = `chat_${task.id}`;
+    const chatRoomId = task.id; // Use the request ID as chat room ID for consistency
     const chatRoomRef = doc(db, 'chat_rooms', chatRoomId);
     setDoc(chatRoomRef, {
       id: chatRoomId,
       requestId: task.id,
       participantUserIds: [task.createdByUserId, volunteerId],
+      residentName: residentName,
+      volunteerName: volunteerName,
       createdAt: serverTimestamp(),
       lastMessageSnippet: `Volunteer ${volunteerName} has accepted your request.`,
       lastMessageAt: serverTimestamp(),
@@ -124,7 +138,7 @@ export default function VolunteerDashboard() {
 
     toast({
       title: "Task Accepted!",
-      description: "You can now chat with the resident in the Active tab.",
+      description: `You are now helping ${residentName}.`,
     });
   };
 
@@ -292,7 +306,7 @@ export default function VolunteerDashboard() {
                       <MapPin className="h-3 w-3" /> {task.location}
                     </div>
                     <Button asChild size="sm" className="bg-primary text-white rounded-xl h-9 px-4 text-xs font-bold gap-2">
-                      <Link href={`/dashboard/chat?role=volunteer`}>
+                      <Link href={`/dashboard/chat/${task.id}?role=volunteer`}>
                         Go to Chat
                         <ArrowRight className="h-3 w-3" />
                       </Link>
