@@ -38,7 +38,12 @@ service cloud.firestore {
     match /assistance_requests_pending/{requestId} {
       allow get, list: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.createdByUserId == request.auth.uid;
-      allow update, delete: if isSignedIn() && (request.auth.uid == resource.data.createdByUserId || isAdmin());
+      // Allow the creator, admins, or any volunteer (to accept/claim the task) to update/delete
+      allow update, delete: if isSignedIn() && (
+        request.auth.uid == resource.data.createdByUserId || 
+        hasRole('volunteer') ||
+        isAdmin()
+      );
     }
 
     match /assistance_requests_active/{requestId} {
