@@ -39,9 +39,13 @@ import {
 } from 'lucide-react';
 import { generateTaskDescription } from '@/ai/flows/generate-task-description-flow';
 import { useToast } from '@/hooks/use-toast';
+import { useFirestore, useUser } from '@/firebase';
+import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 export default function ElderlyDashboard() {
   const { toast } = useToast();
+  const db = useFirestore();
+  const { user } = useUser();
   const [mounted, setMounted] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
@@ -58,11 +62,12 @@ export default function ElderlyDashboard() {
     setMounted(true);
   }, []);
 
+  // For demonstration, we'll keep the local state for immediate feedback
+  // but in a real app, this would be a useCollection hook.
   const [requests, setRequests] = useState([
-    { id: 1, type: 'Groceries', status: 'Pending', date: 'Oct 24', desc: 'Need help buying milk and bread.', location: 'Block C, Room 102', urgency: 'Medium' },
-    { id: 2, type: 'Transportation', status: 'Accepted', date: 'Oct 23', desc: 'Ride to the clinic for checkup.', location: 'Lobby Block A', urgency: 'High', volunteer: 'Sarah (Student)' },
-    { id: 3, type: 'Tech Support', status: 'Completed', date: 'Oct 21', desc: 'Setting up my new phone.', location: 'Block C, Room 102', urgency: 'Low', volunteer: 'Jason (Student)' },
-    { id: 4, type: 'Groceries', status: 'Completed', date: 'Oct 15', desc: 'Buying fruits from market.', location: 'Block C, Room 102', urgency: 'Low', volunteer: 'Sarah (Student)' },
+    { id: '1', type: 'Groceries', status: 'Pending', date: 'Oct 24', desc: 'Need help buying milk and bread.', location: 'Block C, Room 102', urgency: 'Medium' },
+    { id: '2', type: 'Transportation', status: 'Accepted', date: 'Oct 23', desc: 'Ride to the clinic for checkup.', location: 'Lobby Block A', urgency: 'High', volunteer: 'Sarah (Student)' },
+    { id: '3', type: 'Tech Support', status: 'Completed', date: 'Oct 21', desc: 'Setting up my new phone.', location: 'Block C, Room 102', urgency: 'Low', volunteer: 'Jason (Student)' },
   ]);
 
   const handleAiHelp = async () => {
@@ -84,42 +89,49 @@ export default function ElderlyDashboard() {
   };
 
   const handleSubmit = async () => {
-    if (!formData.type || !formData.initialDesc) return;
+    if (!formData.type || !formData.initialDesc || !user) return;
     
     setIsSubmitting(true);
     
-    // Simulate server processing
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    const newRequest = {
-      id: Date.now(),
-      type: formData.type,
-      status: 'Pending',
-      date: 'Just Now',
-      desc: formData.initialDesc,
-      location: formData.location || 'Not specified',
-      urgency: formData.urgency
-    };
+    try {
+      const requestId = Math.random().toString(36).substring(7);
+      const requestData = {
+        id: requestId,
+        createdByUserId: user.uid,
+        taskType: formData.type,
+        description: formData.initialDesc,
+        location: formData.location || 'Not specified',
+        urgencyLevel: formData.urgency,
+        status: 'Pending',
+        createdAt: new Date().toISOString()
+      };
 
-    setRequests([newRequest, ...requests]);
-    setIsSubmitting(false);
-    setShowForm(false);
-    
-    toast({
-      title: "Request Submitted Successfully",
-      description: "Volunteers have been notified of your request.",
-    });
+      // Write to Firestore
+      await setDoc(doc(db, 'assistance_requests_pending', requestId), requestData);
 
-    // Reset form
-    setFormData({
-      type: '',
-      initialDesc: '',
-      location: '',
-      urgency: 'Low'
-    });
+      setRequests([requestData as any, ...requests]);
+      setIsSubmitting(false);
+      setShowForm(false);
+      
+      toast({
+        title: "Request Submitted Successfully",
+        description: "Volunteers have been notified of your request.",
+      });
+
+      // Reset form
+      setFormData({
+        type: '',
+        initialDesc: '',
+        location: '',
+        urgency: 'Low'
+      });
+    } catch (error) {
+      console.error("Submission failed", error);
+      setIsSubmitting(false);
+    }
   };
 
-  const handleCancelRequest = (id: number) => {
+  const handleCancelRequest = (id: string) => {
     setRequests(requests.filter(req => req.id !== id));
     setSelectedRequest(null);
     toast({
@@ -283,10 +295,10 @@ export default function ElderlyDashboard() {
             </Card>
           ))}
           
-          {requests.length > 3 && (
-            <p className="text-center text-xs text-muted-foreground font-medium pt-2">
-              Tap the History button to view all {requests.length} requests.
-            </p>
+          {requests.length === 0 && (
+            <div className="text-center py-10 opacity-40">
+              <p className="text-sm font-bold">No active requests</p>
+            </div>
           )}
         </div>
       </div>
@@ -342,59 +354,10 @@ export default function ElderlyDashboard() {
                 )}
               </div>
 
-              <div className="space-y-4 pt-6">
-                <h3 className="text-sm font-bold text-primary uppercase tracking-wider">Progress Timeline</h3>
-                <div className="space-y-6 relative before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-100">
-                  <div className="flex items-start gap-4 relative z-10">
-                    <div className="h-5 w-5 rounded-full bg-emerald-500 border-4 border-white shadow-sm mt-0.5" />
-                    <div>
-                      <p className="text-sm font-bold text-primary">Request Submitted</p>
-                      <p className="text-xs text-muted-foreground">{selectedRequest.date}</p>
-                    </div>
-                  </div>
-                  
-                  {selectedRequest.status === 'Rejected' ? (
-                    <div className="flex items-start gap-4 relative z-10">
-                      <div className="h-5 w-5 rounded-full bg-destructive border-4 border-white shadow-sm mt-0.5" />
-                      <div>
-                        <p className="text-sm font-bold text-destructive">Request Rejected</p>
-                        <p className="text-xs text-muted-foreground">No volunteer available or request declined.</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="flex items-start gap-4 relative z-10">
-                        <div className={`h-5 w-5 rounded-full border-4 border-white shadow-sm mt-0.5 ${
-                          selectedRequest.status === 'Accepted' || selectedRequest.status === 'Completed' ? 'bg-emerald-500' : 'bg-slate-200'
-                        }`} />
-                        <div>
-                          <p className={`text-sm font-bold ${
-                            selectedRequest.status === 'Accepted' || selectedRequest.status === 'Completed' ? 'text-primary' : 'text-muted-foreground'
-                          }`}>Volunteer Accepted</p>
-                          {selectedRequest.volunteer && <p className="text-xs text-muted-foreground">Assigned to {selectedRequest.volunteer}</p>}
-                        </div>
-                      </div>
-
-                      <div className="flex items-start gap-4 relative z-10">
-                        <div className={`h-5 w-5 rounded-full border-4 border-white shadow-sm mt-0.5 ${
-                          selectedRequest.status === 'Completed' ? 'bg-emerald-500' : 'bg-slate-200'
-                        }`} />
-                        <div>
-                          <p className={`text-sm font-bold ${
-                            selectedRequest.status === 'Completed' ? 'text-primary' : 'text-muted-foreground'
-                          }`}>Task Completed</p>
-                          {selectedRequest.status === 'Completed' && <p className="text-xs text-muted-foreground">Successfully closed</p>}
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-
               <div className="flex flex-col gap-3 mt-8">
                 {selectedRequest.status === 'Accepted' && (
                   <Button asChild className="w-full h-14 rounded-2xl bg-accent hover:bg-accent/90">
-                    <Link href={`/dashboard/chat/${selectedRequest.id}?role=elderly`}>
+                    <Link href={`/dashboard/chat?role=elderly`}>
                       Chat with Volunteer
                     </Link>
                   </Button>
@@ -412,7 +375,7 @@ export default function ElderlyDashboard() {
                       <AlertDialogHeader>
                         <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          This will permanently remove your help request. You will need to create a new one if you still need assistance.
+                          This will permanently remove your help request.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter className="flex flex-col gap-2">

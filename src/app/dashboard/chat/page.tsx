@@ -32,7 +32,7 @@ function ChatInboxContent() {
     );
   }, [db, user, mounted]);
 
-  const { data: chatRooms, isLoading } = useCollection(chatRoomsQuery);
+  const { data: chatRooms, isLoading, error } = useCollection(chatRoomsQuery);
 
   const backHref = role === 'admin' ? '/dashboard/admin' : role === 'volunteer' ? '/dashboard/volunteer' : '/dashboard/elderly';
 
@@ -88,7 +88,7 @@ function ChatInboxContent() {
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-0.5">
-                      <span className="font-bold text-primary truncate">Request {chat.requestId.slice(0, 5)}</span>
+                      <span className="font-bold text-primary truncate">Task Request</span>
                       <span className="text-[10px] text-muted-foreground font-semibold">
                         {chat.lastMessageAt?.toDate?.() ? chat.lastMessageAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Now'}
                       </span>
@@ -106,7 +106,7 @@ function ChatInboxContent() {
             </Link>
           ))}
 
-          {!isLoading && (!chatRooms || chatRooms.length === 0) && (
+          {!isLoading && (!chatRooms || chatRooms.length === 0) && !error && (
             <div className="text-center py-20 bg-white rounded-[2.5rem] border-2 border-dashed border-slate-100 flex flex-col items-center justify-center gap-4 mx-2">
               <div className="p-4 bg-slate-50 rounded-full">
                 <MessageSquare className="h-10 w-10 text-slate-300" />
@@ -115,11 +115,17 @@ function ChatInboxContent() {
                 <p className="text-lg font-bold text-primary">No Chats Available</p>
                 <p className="text-xs text-muted-foreground max-w-[220px] mx-auto leading-relaxed">
                   {role === 'volunteer' 
-                    ? "Accept an assistance request to start a conversation with a resident." 
-                    : "Once a volunteer accepts your request, you'll be able to chat with them here."
+                    ? "Accept a request to start a conversation with a resident." 
+                    : "Once a volunteer accepts your request, you'll be able to chat here."
                   }
                 </p>
               </div>
+            </div>
+          )}
+
+          {error && (
+            <div className="text-center py-10 text-destructive text-sm font-bold">
+              Failed to load chats. Please try again.
             </div>
           )}
         </div>
