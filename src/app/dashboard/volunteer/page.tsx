@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -16,7 +17,8 @@ import {
   AlertCircle, 
   Heart,
   Filter,
-  CheckCircle2
+  CheckCircle2,
+  Loader2
 } from 'lucide-react';
 import { 
   DropdownMenu, 
@@ -28,65 +30,85 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
+import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, where, doc, setDoc, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function VolunteerDashboard() {
   const { toast } = useToast();
+  const db = useFirestore();
+  const { user } = useUser();
   const [filter, setFilter] = useState('All');
-  
-  // Mock tasks state
-  const [tasks, setTasks] = useState([
-    { 
-      id: '1024', 
-      user: 'Mrs. Hapsah', 
-      type: 'Grocery', 
-      urgency: 'High', 
-      location: 'Block C, G Floor', 
-      dist: '200m away',
-      desc: 'Need urgent help getting medications and some rice.',
-      status: 'Available'
-    },
-    { 
-      id: '1025', 
-      user: 'Mr. Lim', 
-      type: 'Tech Support', 
-      urgency: 'Medium', 
-      location: 'Block A, Level 2', 
-      dist: '500m away',
-      desc: 'My laptop screen is flickering. Need help checking cable.',
-      status: 'Available'
-    },
-    { 
-      id: '1026', 
-      user: 'Uncle Sam', 
-      type: 'Transport', 
-      urgency: 'Low', 
-      location: 'Block B, Room 301', 
-      dist: '800m away',
-      desc: 'Need a lift to the library tomorrow morning.',
-      status: 'Available'
-    },
-  ]);
+
+  // Fetch Pending Tasks
+  const pendingQuery = useMemoFirebase(() => {
+    return collection(db, 'assistance_requests_pending');
+  }, [db]);
+  const { data: pendingTasks, isLoading: isPendingLoading } = useCollection(pendingQuery);
+
+  // Fetch Active Tasks assigned to this volunteer
+  const activeQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(collection(db, 'assistance_requests_active'), where('assignedVolunteerId', '==', user.uid));
+  }, [db, user]);
+  const { data: activeTasks, isLoading: isActiveLoading } = useCollection(activeQuery);
 
   const availableTasks = useMemo(() => {
-    let filtered = tasks.filter(t => t.status === 'Available');
-    if (filter !== 'All') {
-      filtered = filtered.filter(t => t.type === filter);
-    }
-    return filtered;
-  }, [tasks, filter]);
+    if (!pendingTasks) return [];
+    if (filter === 'All') return pendingTasks;
+    return pendingTasks.filter(t => t.taskType === filter);
+  }, [pendingTasks, filter]);
 
-  const activeTasks = useMemo(() => {
-    return tasks.filter(t => t.status === 'Active');
-  }, [tasks]);
+  const handleAcceptTask = async (task: any) => {
+    if (!user || !db) return;
 
-  const handleAcceptTask = (taskId: string) => {
-    setTasks(prev => prev.map(t => 
-      t.id === taskId ? { ...t, status: 'Active' } : t
-    ));
-    
+    const volunteerId = user.uid;
+    const volunteerName = user.displayName || 'Volunteer';
+
+    const activeRef = doc(db, 'assistance_requests_active', task.id);
+    const pendingRef = doc(db, 'assistance_requests_pending', task.id);
+
+    // 1. Move to Active
+    setDoc(activeRef, {
+      ...task,
+      status: 'Accepted',
+      assignedVolunteerId: volunteerId,
+      acceptedAt: serverTimestamp(),
+    }).catch(async (err) => {
+      errorEmitter.emit('permission-error', new FirestorePermissionError({
+        path: activeRef.path,
+        operation: 'create',
+        requestResourceData: task,
+      }));
+    });
+
+    // 2. Remove from Pending
+    deleteDoc(pendingRef).catch(async (err) => {
+      errorEmitter.emit('permission-error', new FirestorePermissionError({
+        path: pendingRef.path,
+        operation: 'delete',
+      }));
+    });
+
+    // 3. Create Chat Room
+    const chatRoomRef = collection(db, 'chat_rooms');
+    addDoc(chatRoomRef, {
+      requestId: task.id,
+      participantUserIds: [task.createdByUserId, volunteerId],
+      createdAt: serverTimestamp(),
+      lastMessageSnippet: `Volunteer ${volunteerName} has accepted your request.`,
+      lastMessageAt: serverTimestamp(),
+    }).catch(async (err) => {
+      errorEmitter.emit('permission-error', new FirestorePermissionError({
+        path: chatRoomRef.path,
+        operation: 'create',
+      }));
+    });
+
     toast({
       title: "Task Accepted!",
-      description: "The request has been moved to your Active tab.",
+      description: "You can now chat with the resident in the Active tab.",
     });
   };
 
@@ -100,8 +122,8 @@ export default function VolunteerDashboard() {
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'Grocery': return <ShoppingCart className="h-5 w-5" />;
-      case 'Transport': return <Truck className="h-5 w-5" />;
+      case 'Groceries': return <ShoppingCart className="h-5 w-5" />;
+      case 'Transportation': return <Truck className="h-5 w-5" />;
       case 'Tech Support': return <Wrench className="h-5 w-5" />;
       default: return <AlertCircle className="h-5 w-5" />;
     }
@@ -116,7 +138,7 @@ export default function VolunteerDashboard() {
         </div>
         <div className="bg-primary/5 px-3 py-1.5 rounded-full border border-primary/10 flex items-center gap-2">
           <Heart className="h-4 w-4 text-accent fill-accent" />
-          <span className="text-sm font-bold text-primary">{12 + activeTasks.length} Done</span>
+          <span className="text-sm font-bold text-primary">{activeTasks?.length || 0} Active</span>
         </div>
       </div>
 
@@ -126,7 +148,7 @@ export default function VolunteerDashboard() {
             Available ({availableTasks.length})
           </TabsTrigger>
           <TabsTrigger value="active" className="rounded-xl font-bold text-sm">
-            Active ({activeTasks.length})
+            Active ({activeTasks?.length || 0})
           </TabsTrigger>
         </TabsList>
         
@@ -146,8 +168,8 @@ export default function VolunteerDashboard() {
                 <DropdownMenuSeparator />
                 <DropdownMenuRadioGroup value={filter} onValueChange={setFilter}>
                   <DropdownMenuRadioItem value="All">All Categories</DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="Grocery">Groceries</DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="Transport">Transportation</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="Groceries">Groceries</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="Transportation">Transportation</DropdownMenuRadioItem>
                   <DropdownMenuRadioItem value="Tech Support">Tech Support</DropdownMenuRadioItem>
                 </DropdownMenuRadioGroup>
               </DropdownMenuContent>
@@ -155,33 +177,37 @@ export default function VolunteerDashboard() {
           </div>
 
           <div className="space-y-4">
-            {availableTasks.map((task) => (
+            {isPendingLoading ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-2 text-muted-foreground">
+                <Loader2 className="h-8 w-8 animate-spin" />
+                <p className="text-xs font-bold uppercase">Loading requests...</p>
+              </div>
+            ) : availableTasks.map((task) => (
               <Card key={task.id} className="overflow-hidden border-none shadow-sm rounded-3xl active:scale-[0.98] transition-all">
                 <CardContent className="p-0">
                   <div className="p-4 flex items-center justify-between bg-slate-50/50 border-b">
                     <div className="flex items-center gap-3">
                       <div className="p-2 rounded-xl bg-white shadow-sm text-accent">
-                        {getTypeIcon(task.type)}
+                        {getTypeIcon(task.taskType)}
                       </div>
                       <div>
-                        <div className="font-bold text-sm text-primary">{task.type}</div>
-                        <div className="text-[10px] text-muted-foreground font-semibold uppercase">{task.user}</div>
+                        <div className="font-bold text-sm text-primary">{task.taskType}</div>
+                        <div className="text-[10px] text-muted-foreground font-semibold uppercase">Resident ID: {task.createdByUserId.slice(0, 5)}</div>
                       </div>
                     </div>
-                    <Badge variant="outline" className={`text-[10px] rounded-lg ${getUrgencyColor(task.urgency)}`}>
-                      {task.urgency}
+                    <Badge variant="outline" className={`text-[10px] rounded-lg ${getUrgencyColor(task.urgencyLevel)}`}>
+                      {task.urgencyLevel}
                     </Badge>
                   </div>
                   <div className="p-4 space-y-3">
                     <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed italic">
-                      "{task.desc}"
+                      "{task.description}"
                     </p>
                     <div className="flex items-center gap-4 text-[10px] text-muted-foreground font-bold uppercase">
                       <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {task.location}</span>
-                      <span className="flex items-center gap-1 text-accent"><Clock className="h-3 w-3" /> {task.dist}</span>
                     </div>
                     <Button 
-                      onClick={() => handleAcceptTask(task.id)}
+                      onClick={() => handleAcceptTask(task)}
                       className="w-full h-12 bg-accent hover:bg-accent/90 text-white font-bold rounded-2xl gap-2 mt-2 shadow-lg shadow-accent/20"
                     >
                       Accept & Chat
@@ -192,7 +218,7 @@ export default function VolunteerDashboard() {
               </Card>
             ))}
 
-            {availableTasks.length === 0 && (
+            {!isPendingLoading && availableTasks.length === 0 && (
               <div className="text-center py-12 opacity-50">
                 <AlertCircle className="h-10 w-10 mx-auto mb-2 text-muted-foreground" />
                 <p className="text-sm font-bold">No requests found</p>
@@ -208,20 +234,25 @@ export default function VolunteerDashboard() {
           </div>
 
           <div className="space-y-4">
-            {activeTasks.map((task) => (
+            {isActiveLoading ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-2 text-muted-foreground">
+                <Loader2 className="h-8 w-8 animate-spin" />
+                <p className="text-xs font-bold uppercase">Loading your tasks...</p>
+              </div>
+            ) : activeTasks?.map((task) => (
               <Card key={task.id} className="overflow-hidden border-none shadow-sm rounded-3xl border-l-4 border-l-emerald-500">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
                       <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600">
-                        {getTypeIcon(task.type)}
+                        {getTypeIcon(task.taskType)}
                       </div>
                       <div>
-                        <div className="font-bold text-sm text-primary">{task.type}</div>
-                        <div className="text-[10px] text-muted-foreground font-semibold uppercase">{task.user}</div>
+                        <div className="font-bold text-sm text-primary">{task.taskType}</div>
+                        <div className="text-[10px] text-muted-foreground font-semibold uppercase">Resident ID: {task.createdByUserId.slice(0, 5)}</div>
                       </div>
                     </div>
-                    <Badge className="bg-emerald-500 text-white text-[8px] h-5">IN PROGRESS</Badge>
+                    <Badge className="bg-emerald-500 text-white text-[8px] h-5 uppercase">{task.status}</Badge>
                   </div>
                   
                   <div className="flex items-center justify-between gap-3">
@@ -229,7 +260,7 @@ export default function VolunteerDashboard() {
                       <MapPin className="h-3 w-3" /> {task.location}
                     </div>
                     <Button asChild size="sm" className="bg-primary text-white rounded-xl h-9 px-4 text-xs font-bold gap-2">
-                      <Link href={`/dashboard/chat/RQ${task.id}?role=volunteer`}>
+                      <Link href={`/dashboard/chat?role=volunteer`}>
                         Go to Chat
                         <ArrowRight className="h-3 w-3" />
                       </Link>
@@ -239,7 +270,7 @@ export default function VolunteerDashboard() {
               </Card>
             ))}
 
-            {activeTasks.length === 0 && (
+            {!isActiveLoading && (!activeTasks || activeTasks.length === 0) && (
               <div className="text-center py-12 bg-white rounded-3xl border-2 border-dashed border-muted">
                 <div className="max-w-[180px] mx-auto space-y-3">
                   <div className="p-3 bg-muted/20 rounded-full w-14 h-14 flex items-center justify-center mx-auto">
@@ -251,7 +282,7 @@ export default function VolunteerDashboard() {
               </div>
             )}
             
-            {activeTasks.length > 0 && (
+            {!isActiveLoading && activeTasks && activeTasks.length > 0 && (
               <div className="flex items-center justify-center gap-2 p-4 bg-emerald-50 rounded-2xl text-emerald-700 text-[10px] font-bold uppercase">
                 <CheckCircle2 className="h-4 w-4" />
                 You are currently helping {activeTasks.length} residents
