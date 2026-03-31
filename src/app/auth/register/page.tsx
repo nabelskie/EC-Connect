@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -11,7 +12,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Heart, User, GraduationCap, ShieldCheck, Loader2 } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 export default function RegisterPage() {
@@ -28,47 +29,45 @@ export default function RegisterPage() {
   const db = useFirestore();
   const { toast } = useToast();
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    try {
-      // 1. Create Firebase Auth user
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+    createUserWithEmailAndPassword(auth, email, password)
+      .then((userCredential) => {
+        const user = userCredential.user;
+        
+        // 1. Update display name
+        updateProfile(user, { displayName: name });
 
-      // 2. Update display name
-      await updateProfile(user, { displayName: name });
+        // 2. Create UserProfile in Firestore
+        const userProfile = {
+          id: user.uid,
+          name,
+          email,
+          role,
+          phone,
+          address,
+          createdAt: new Date().toISOString()
+        };
 
-      // 3. Create UserProfile in Firestore
-      const userProfile = {
-        id: user.uid,
-        name,
-        email,
-        role,
-        phone,
-        address,
-        createdAt: new Date().toISOString()
-      };
-
-      await setDoc(doc(db, 'users', user.uid), userProfile);
-
-      toast({
-        title: "Registration Successful",
-        description: `Welcome to ElderCare Connect, ${name}!`,
+        setDoc(doc(db, 'users', user.uid), userProfile)
+          .then(() => {
+            toast({
+              title: "Registration Successful",
+              description: `Welcome to ElderCare Connect, ${name}!`,
+            });
+            router.push(`/dashboard/${role}?role=${role}`);
+          });
+      })
+      .catch((err: any) => {
+        setIsLoading(false);
+        toast({
+          variant: "destructive",
+          title: "Registration Failed",
+          description: err.message || "An error occurred during registration.",
+        });
       });
-
-      router.push(`/dashboard/${role}?role=${role}`);
-    } catch (err: any) {
-      console.error(err);
-      toast({
-        variant: "destructive",
-        title: "Registration Failed",
-        description: err.message || "An error occurred during registration.",
-      });
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   return (
@@ -82,7 +81,7 @@ export default function RegisterPage() {
         <CardHeader className="text-center space-y-1">
           <CardTitle className="text-3xl font-headline font-bold text-primary">Join the Community</CardTitle>
           <CardDescription className="text-muted-foreground text-lg">
-            Tell us who you are and how we can connect you
+            Choose your role and get started
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -104,8 +103,7 @@ export default function RegisterPage() {
                     }`}
                   >
                     <User className={`h-12 w-12 mb-4 ${role === 'elderly' ? 'text-accent' : 'text-muted-foreground'}`} />
-                    <span className="font-bold text-lg">Elderly / Caregiver</span>
-                    <span className="text-xs text-center text-muted-foreground mt-2">I need assistance with daily tasks</span>
+                    <span className="font-bold text-lg">Resident</span>
                   </Label>
                 </div>
 
@@ -118,8 +116,7 @@ export default function RegisterPage() {
                     }`}
                   >
                     <GraduationCap className={`h-12 w-12 mb-4 ${role === 'volunteer' ? 'text-accent' : 'text-muted-foreground'}`} />
-                    <span className="font-bold text-lg">Student Volunteer</span>
-                    <span className="text-xs text-center text-muted-foreground mt-2">I want to help elderly residents</span>
+                    <span className="font-bold text-lg">Volunteer</span>
                   </Label>
                 </div>
 
@@ -132,8 +129,7 @@ export default function RegisterPage() {
                     }`}
                   >
                     <ShieldCheck className={`h-12 w-12 mb-4 ${role === 'admin' ? 'text-accent' : 'text-muted-foreground'}`} />
-                    <span className="font-bold text-lg">Staff Admin</span>
-                    <span className="text-xs text-center text-muted-foreground mt-2">I manage the platform operations</span>
+                    <span className="font-bold text-lg">Admin</span>
                   </Label>
                 </div>
               </RadioGroup>
@@ -157,18 +153,13 @@ export default function RegisterPage() {
                 <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="h-12" />
               </div>
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="address">Address / Room No (Politeknik Dorm)</Label>
-                <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Block A, Room 102 / No 12, Taman..." required className="h-12" />
+                <Label htmlFor="address">Address / Room No</Label>
+                <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Block A, Room 102" required className="h-12" />
               </div>
             </div>
 
             <Button type="submit" className="w-full h-14 text-xl bg-primary hover:bg-primary/90 mt-4" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-6 w-6 animate-spin" />
-                  Creating Account...
-                </>
-              ) : 'Complete Registration'}
+              {isLoading ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : 'Complete Registration'}
             </Button>
           </form>
         </CardContent>
