@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -8,9 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { Heart, Loader2, UserSecret } from 'lucide-react';
+import { Heart, Loader2 } from 'lucide-react';
 import { useAuth, useFirestore, useUser } from '@/firebase';
-import { signInWithEmailAndPassword, signInAnonymously } from 'firebase/auth';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
@@ -33,8 +32,8 @@ export default function LoginPage() {
           const role = userDoc.data().role;
           router.push(`/dashboard/${role}?role=${role}`);
         } else {
-          // Default for anonymous or missing profile
-          router.push('/dashboard/elderly?role=elderly');
+          // If no profile exists yet (rare case), send to registration
+          router.push('/auth/register');
         }
       };
       checkRoleAndRedirect();
@@ -52,19 +51,6 @@ export default function LoginPage() {
           variant: "destructive",
           title: "Login Failed",
           description: "Invalid email or password. Please try again.",
-        });
-      });
-  };
-
-  const handleAnonymousLogin = () => {
-    setIsSubmitting(true);
-    signInAnonymously(auth)
-      .catch((err: any) => {
-        setIsSubmitting(false);
-        toast({
-          variant: "destructive",
-          title: "Login Failed",
-          description: "Could not sign in anonymously. Please try again.",
         });
       });
   };
@@ -121,24 +107,6 @@ export default function LoginPage() {
               {isSubmitting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : 'Sign In'}
             </Button>
           </form>
-
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">Or continue as guest</span>
-            </div>
-          </div>
-
-          <Button 
-            variant="outline" 
-            className="w-full h-12 text-lg border-2 hover:bg-slate-50" 
-            onClick={handleAnonymousLogin}
-            disabled={isSubmitting}
-          >
-            Sign In Anonymously
-          </Button>
         </CardContent>
         <CardFooter className="flex flex-col space-y-4 pt-0">
           <div className="text-center text-sm text-muted-foreground">
