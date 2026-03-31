@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, Suspense, useEffect } from 'react';
@@ -19,6 +20,11 @@ function ChatContent() {
   const role = searchParams.get('role') || 'elderly';
   const db = useFirestore();
   const { user } = useUser();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const chatRoomRef = useMemoFirebase(() => {
     if (!requestId) return null;
@@ -62,6 +68,15 @@ function ChatContent() {
     }]);
     setInput('');
   };
+
+  if (!mounted) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center py-20 gap-3">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-xs font-bold uppercase text-muted-foreground">Preparing chat...</p>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
