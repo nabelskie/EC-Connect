@@ -59,9 +59,13 @@ service cloud.firestore {
     }
 
     match /chat_rooms/{chatRoomId} {
-      // Allow participants or admins to see chat room details
+      // Allow participants or admins to see chat room details.
+      // We allow 'get' if document doesn't exist (resource == null) to handle navigation gracefully 
+      // while the volunteer is creating the room document.
       allow get: if isSignedIn() && (
-        request.auth.uid in resource.data.participantUserIds || isAdmin()
+        resource == null || 
+        request.auth.uid in resource.data.participantUserIds || 
+        isAdmin()
       );
       
       // Queryable Authorization Pattern (QAP) for listing chats

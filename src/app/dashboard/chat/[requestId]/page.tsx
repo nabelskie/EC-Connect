@@ -40,7 +40,6 @@ function ChatContent() {
   const messagesQuery = useMemoFirebase(() => {
     if (!requestId || !db || !user) return null;
     // We add the 'participantUserIds' filter to satisfy "Rules are not filters"
-    // except for admins who can see everything.
     return query(
       collection(db, 'chat_rooms', requestId, 'messages'),
       where('participantUserIds', 'array-contains', user.uid),
@@ -106,6 +105,7 @@ function ChatContent() {
     );
   }
 
+  // If there's a permission error or the room genuinely doesn't exist after loading
   if (roomError || (mounted && !isRoomLoading && !chatRoom)) {
     return (
       <div className="h-full flex flex-col items-center justify-center py-20 gap-3 text-center px-6">
