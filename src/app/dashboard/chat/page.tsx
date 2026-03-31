@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,7 +10,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useMemo, useState, useEffect } from 'react';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 
 function ChatInboxContent() {
   const searchParams = useSearchParams();
@@ -23,16 +24,26 @@ function ChatInboxContent() {
   }, []);
 
   // Fetch real-time chat rooms for the current user
+  // Simplified query: removed orderBy to avoid requiring a composite index
   const chatRoomsQuery = useMemoFirebase(() => {
     if (!user || !mounted) return null;
     return query(
       collection(db, 'chat_rooms'),
-      where('participantUserIds', 'array-contains', user.uid),
-      orderBy('lastMessageAt', 'desc')
+      where('participantUserIds', 'array-contains', user.uid)
     );
   }, [db, user, mounted]);
 
   const { data: chatRooms, isLoading, error } = useCollection(chatRoomsQuery);
+
+  // Sort chat rooms in memory by lastMessageAt descending
+  const sortedChatRooms = useMemo(() => {
+    if (!chatRooms) return [];
+    return [...chatRooms].sort((a, b) => {
+      const timeA = a.lastMessageAt?.toMillis?.() || 0;
+      const timeB = b.lastMessageAt?.toMillis?.() || 0;
+      return timeB - timeA;
+    });
+  }, [chatRooms]);
 
   const backHref = role === 'admin' ? '/dashboard/admin' : role === 'volunteer' ? '/dashboard/volunteer' : '/dashboard/elderly';
 
@@ -74,7 +85,7 @@ function ChatInboxContent() {
               <Loader2 className="h-8 w-8 animate-spin" />
               <p className="text-xs font-bold uppercase">Loading conversations...</p>
             </div>
-          ) : chatRooms?.map((chat) => (
+          ) : sortedChatRooms.map((chat) => (
             <Link key={chat.id} href={`/dashboard/chat/${chat.requestId}?role=${role}`}>
               <Card className="border-none shadow-sm rounded-3xl overflow-hidden active:bg-slate-50 transition-colors mb-3">
                 <CardContent className="p-4 flex items-center gap-4">
