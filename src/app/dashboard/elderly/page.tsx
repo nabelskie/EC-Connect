@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Clock, ShoppingCart, Truck, Wrench, Info, Sparkles, Loader2, ChevronRight } from 'lucide-react';
+import { PlusCircle, Clock, ShoppingCart, Truck, Wrench, Info, Sparkles, Loader2, ChevronRight, HeartPulse } from 'lucide-react';
 import { generateTaskDescription } from '@/ai/flows/generate-task-description-flow';
 
 export default function ElderlyDashboard() {
@@ -60,6 +60,7 @@ export default function ElderlyDashboard() {
       case 'Grocery': return <ShoppingCart className="h-5 w-5" />;
       case 'Transport': return <Truck className="h-5 w-5" />;
       case 'Tech Support': return <Wrench className="h-5 w-5" />;
+      case 'Medical': return <HeartPulse className="h-5 w-5" />;
       default: return <Info className="h-5 w-5" />;
     }
   };
@@ -106,7 +107,8 @@ export default function ElderlyDashboard() {
                   <SelectItem value="Grocery">Grocery Shopping</SelectItem>
                   <SelectItem value="Transport">Transportation</SelectItem>
                   <SelectItem value="Tech Support">Tech Support</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
+                  <SelectItem value="Medical">Medical / Health</SelectItem>
+                  <SelectItem value="Other">Other Assistance</SelectItem>
                 </SelectContent>
               </Select>
             </div>
