@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -5,12 +6,16 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Label } from '@/components/ui/label';
-import { LogOut, User, Phone, Mail, MapPin, ShieldCheck, GraduationCap } from 'lucide-react';
-import { Suspense, useMemo } from 'react';
+import { LogOut, User, Phone, Mail, MapPin, ShieldCheck, GraduationCap, Loader2 } from 'lucide-react';
+import { Suspense, useMemo, useState } from 'react';
+import { useAuth } from '@/firebase';
+import { signOut } from 'firebase/auth';
 
 function ProfileContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const auth = useAuth();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const role = searchParams.get('role') || 'elderly';
 
   const userData = useMemo(() => {
@@ -50,8 +55,15 @@ function ProfileContent() {
     }
   }, [role]);
 
-  const handleLogout = () => {
-    router.push('/auth/login');
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await signOut(auth);
+      router.push('/auth/login');
+    } catch (err) {
+      console.error("Logout failed", err);
+      setIsLoggingOut(false);
+    }
   };
 
   const RoleIcon = userData.icon;
@@ -59,10 +71,12 @@ function ProfileContent() {
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col items-center gap-4 py-6">
-        <Avatar className="h-24 w-24 border-4 border-white shadow-xl">
-          <AvatarImage src={userData.avatar} />
-          <AvatarFallback>{userData.name[0]}</AvatarFallback>
-        </Avatar>
+        <div className="relative">
+          <Avatar className="h-24 w-24 border-4 border-white shadow-xl">
+            <AvatarImage src={userData.avatar} />
+            <AvatarFallback>{userData.name[0]}</AvatarFallback>
+          </Avatar>
+        </div>
         <div className="text-center">
           <h1 className="text-2xl font-headline font-bold text-primary">{userData.name}</h1>
           <div className="flex items-center justify-center gap-1 mt-1 text-accent font-bold uppercase text-[10px] tracking-widest">
@@ -123,9 +137,14 @@ function ProfileContent() {
           variant="destructive" 
           className="w-full h-14 rounded-2xl font-bold gap-2 text-lg shadow-lg shadow-destructive/10"
           onClick={handleLogout}
+          disabled={isLoggingOut}
         >
-          <LogOut className="h-5 w-5" />
-          Logout
+          {isLoggingOut ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : (
+            <LogOut className="h-5 w-5" />
+          )}
+          {isLoggingOut ? 'Logging out...' : 'Logout'}
         </Button>
       </div>
     </div>
