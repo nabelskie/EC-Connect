@@ -83,6 +83,7 @@ export default function VolunteerDashboard() {
     const activeRef = doc(db, 'assistance_requests_active', task.id);
     const pendingRef = doc(db, 'assistance_requests_pending', task.id);
 
+    // 1. Move to active
     setDoc(activeRef, {
       ...task,
       status: 'Accepted',
@@ -96,6 +97,7 @@ export default function VolunteerDashboard() {
       }));
     });
 
+    // 2. Remove from pending
     deleteDoc(pendingRef).catch(async (err) => {
       errorEmitter.emit('permission-error', new FirestorePermissionError({
         path: pendingRef.path,
@@ -103,8 +105,11 @@ export default function VolunteerDashboard() {
       }));
     });
 
-    const chatRoomRef = collection(db, 'chat_rooms');
-    addDoc(chatRoomRef, {
+    // 3. Create chat room
+    const chatRoomId = `chat_${task.id}`;
+    const chatRoomRef = doc(db, 'chat_rooms', chatRoomId);
+    setDoc(chatRoomRef, {
+      id: chatRoomId,
       requestId: task.id,
       participantUserIds: [task.createdByUserId, volunteerId],
       createdAt: serverTimestamp(),
@@ -213,7 +218,7 @@ export default function VolunteerDashboard() {
                       </div>
                       <div>
                         <div className="font-bold text-sm text-primary">{task.taskType}</div>
-                        <div className="text-[10px] text-muted-foreground font-semibold uppercase">Resident ID: {task.createdByUserId.slice(0, 5)}</div>
+                        <div className="text-[10px] text-muted-foreground font-semibold uppercase">Resident ID: {task.createdByUserId?.slice(0, 5)}</div>
                       </div>
                     </div>
                     <Badge variant="outline" className={`text-[10px] rounded-lg ${getUrgencyColor(task.urgencyLevel)}`}>
@@ -276,7 +281,7 @@ export default function VolunteerDashboard() {
                       </div>
                       <div>
                         <div className="font-bold text-sm text-primary">{task.taskType}</div>
-                        <div className="text-[10px] text-muted-foreground font-semibold uppercase">Resident ID: {task.createdByUserId.slice(0, 5)}</div>
+                        <div className="text-[10px] text-muted-foreground font-semibold uppercase">Resident ID: {task.createdByUserId?.slice(0, 5)}</div>
                       </div>
                     </div>
                     <Badge className="bg-emerald-500 text-white text-[8px] h-5 uppercase">{task.status}</Badge>
