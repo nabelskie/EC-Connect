@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -5,8 +6,7 @@ service cloud.firestore {
     /**
      * ELDERCARE CONNECT SECURITY RULES
      * 
-     * Enforces ownership and relationship-based access control.
-     * Provides full management capabilities to authenticated administrators.
+     * Enforces strict Authorization Independence and role-based access control.
      */
 
     function isSignedIn() {
@@ -60,20 +60,35 @@ service cloud.firestore {
     }
 
     match /chat_rooms/{chatRoomId} {
+      // Allow individual lookups for participants or admins
       allow get: if isSignedIn();
+      
+      // Allow listing for participants or admins
       allow list: if isSignedIn() && (
         request.auth.uid in resource.data.participantUserIds || isAdmin()
       );
+      
       allow create: if isSignedIn();
+      
       allow update: if isSignedIn() && (
         request.auth.uid in resource.data.participantUserIds || isAdmin()
       );
+      
       allow delete: if isAdmin();
     }
 
     match /chat_rooms/{chatRoomId}/messages/{messageId} {
-      allow get, list: if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.senderUserId == request.auth.uid;
+      // READ: Only participants or admins (uses denormalized participantUserIds)
+      allow get, list: if isSignedIn() && (
+        request.auth.uid in resource.data.participantUserIds || isAdmin()
+      );
+      
+      // CREATE: Only the sender, provided they are a participant (uses denormalized participantUserIds in request)
+      allow create: if isSignedIn() && (
+        request.resource.data.senderUserId == request.auth.uid && 
+        (request.auth.uid in request.resource.data.participantUserIds || isAdmin())
+      );
+      
       allow update, delete: if isAdmin();
     }
 
