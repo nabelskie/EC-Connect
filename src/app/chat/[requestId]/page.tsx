@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -10,10 +11,20 @@ import { Send, Phone, Info, ArrowLeft, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 
 export default function ChatPage() {
+  const params = useParams();
+  const requestId = params.requestId as string;
+
+  // Mock conversation data based on ID
+  const volunteerInfo = useMemo(() => {
+    if (requestId === 'RQ1023') return { name: 'Sarah', image: 'https://picsum.photos/seed/volunteer2/100/100' };
+    if (requestId === 'RQ1022') return { name: 'Jason', image: 'https://picsum.photos/seed/volunteer3/100/100' };
+    return { name: 'Ahmad', image: 'https://picsum.photos/seed/volunteer1/100/100' };
+  }, [requestId]);
+
   const [messages, setMessages] = useState([
-    { id: 1, sender: 'volunteer', text: 'Hello Mrs. Hapsah! I have accepted your grocery request.', time: '10:05 AM' },
-    { id: 2, sender: 'elderly', text: 'Thank you Ahmad. Can you please buy 1kg of brown rice?', time: '10:07 AM' },
-    { id: 3, sender: 'volunteer', text: 'Sure thing! Any specific brand you prefer?', time: '10:08 AM' },
+    { id: 1, sender: 'volunteer', text: `Hello Mrs. Hapsah! I have accepted your request (${requestId}).`, time: '10:05 AM' },
+    { id: 2, sender: 'elderly', text: 'Thank you. Can you please help me with the details?', time: '10:07 AM' },
+    { id: 3, sender: 'volunteer', text: 'Sure thing! I am ready to help.', time: '10:08 AM' },
   ]);
   const [input, setInput] = useState('');
 
@@ -34,18 +45,18 @@ export default function ChatPage() {
         <CardHeader className="bg-primary text-white border-b px-4 py-3 md:px-6 md:py-4 flex flex-row items-center justify-between shrink-0">
           <div className="flex items-center gap-3 md:gap-4">
             <Link 
-              href="/dashboard/elderly" 
+              href="/chat" 
               className="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors flex items-center gap-1 group"
             >
               <ArrowLeft className="h-6 w-6 transition-transform group-hover:-translate-x-1" />
               <span className="text-sm font-bold hidden sm:inline">Back</span>
             </Link>
             <Avatar className="h-10 w-10 md:h-12 md:w-12 border-2 border-white/20">
-              <AvatarImage src="https://picsum.photos/seed/volunteer/100/100" />
-              <AvatarFallback>AV</AvatarFallback>
+              <AvatarImage src={volunteerInfo.image} />
+              <AvatarFallback>{volunteerInfo.name[0]}</AvatarFallback>
             </Avatar>
             <div>
-              <CardTitle className="text-lg md:text-xl font-headline font-bold">Ahmad (Volunteer)</CardTitle>
+              <CardTitle className="text-lg md:text-xl font-headline font-bold">{volunteerInfo.name} (Volunteer)</CardTitle>
               <div className="text-[10px] md:text-sm text-white/70 flex items-center gap-1">
                 <div className="h-2 w-2 rounded-full bg-emerald-400"></div> Online
               </div>

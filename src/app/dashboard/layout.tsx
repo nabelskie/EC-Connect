@@ -23,17 +23,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const navItems = {
     elderly: [
       { label: 'Home', icon: Home, href: '/dashboard/elderly' },
-      { label: 'Chat', icon: MessageSquare, href: '/chat/demo' },
+      { label: 'Chat', icon: MessageSquare, href: '/chat' },
       { label: 'Profile', icon: User, href: '/dashboard/profile' },
     ],
     volunteer: [
       { label: 'Browse', icon: LayoutDashboard, href: '/dashboard/volunteer' },
-      { label: 'Chat', icon: MessageSquare, href: '/chat/demo' },
+      { label: 'Chat', icon: MessageSquare, href: '/chat' },
       { label: 'Profile', icon: User, href: '/dashboard/profile' },
     ],
     admin: [
       { label: 'Overview', icon: ShieldCheck, href: '/dashboard/admin' },
-      { label: 'Messages', icon: MessageSquare, href: '/chat/demo' },
+      { label: 'Messages', icon: MessageSquare, href: '/chat' },
       { label: 'Profile', icon: User, href: '/dashboard/profile' },
     ]
   };
@@ -70,7 +70,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <nav className="h-20 bg-white border-t flex items-center justify-around px-2 fixed bottom-0 left-0 right-0 z-50 safe-area-bottom shadow-[0_-4_-10px_rgba(0,0,0,0.05)]">
         {roleNavItems.map((item) => {
           const Icon = item.icon;
-          const isActive = pathname === item.href;
+          const isActive = pathname === item.href || (item.href === '/chat' && pathname.startsWith('/chat'));
           return (
             <Link 
               key={item.href} 
