@@ -1,41 +1,73 @@
 "use client";
 
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Label } from '@/components/ui/label';
-import { LogOut, User, Phone, Mail, MapPin, ShieldCheck } from 'lucide-react';
+import { LogOut, User, Phone, Mail, MapPin, ShieldCheck, GraduationCap } from 'lucide-react';
+import { Suspense, useMemo } from 'react';
 
-export default function ProfilePage() {
+function ProfileContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const role = searchParams.get('role') || 'elderly';
 
-  // Mock user data - in a real app, this would come from an auth hook/Firestore
-  const userData = {
-    name: "Hapsah Binti Ahmad",
-    role: "Elderly Resident",
-    email: "hapsah@example.com",
-    phone: "012-3456789",
-    address: "Block C, Room 102, Politeknik Kuching",
-    joinDate: "October 2024"
-  };
+  // Mock user data based on role
+  const userData = useMemo(() => {
+    if (role === 'volunteer') {
+      return {
+        name: "Ahmad Bin Zulkifli",
+        role: "Student Volunteer",
+        email: "ahmad.z@student.pks.edu.my",
+        phone: "019-8765432",
+        address: "Kolej Kediaman Siswa, PKS",
+        joinDate: "September 2024",
+        avatar: "https://picsum.photos/seed/volunteer1/200/200",
+        icon: GraduationCap
+      };
+    } else if (role === 'admin') {
+      return {
+        name: "Siti Nurhaliza",
+        role: "Staff Admin",
+        email: "siti.n@pks.edu.my",
+        phone: "013-1122334",
+        address: "Admin Building, PKS",
+        joinDate: "January 2022",
+        avatar: "https://picsum.photos/seed/admin/200/200",
+        icon: ShieldCheck
+      };
+    } else {
+      return {
+        name: "Hapsah Binti Ahmad",
+        role: "Elderly Resident",
+        email: "hapsah@example.com",
+        phone: "012-3456789",
+        address: "Block C, Room 102, PKS Residential",
+        joinDate: "October 2024",
+        avatar: "https://picsum.photos/seed/user/200/200",
+        icon: User
+      };
+    }
+  }, [role]);
 
   const handleLogout = () => {
-    // Simulating logout
     router.push('/auth/login');
   };
+
+  const RoleIcon = userData.icon;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col items-center gap-4 py-6">
         <Avatar className="h-24 w-24 border-4 border-white shadow-xl">
-          <AvatarImage src="https://picsum.photos/seed/user/200/200" />
-          <AvatarFallback>MH</AvatarFallback>
+          <AvatarImage src={userData.avatar} />
+          <AvatarFallback>{userData.name[0]}</AvatarFallback>
         </Avatar>
         <div className="text-center">
           <h1 className="text-2xl font-headline font-bold text-primary">{userData.name}</h1>
           <div className="flex items-center justify-center gap-1 mt-1 text-accent font-bold uppercase text-[10px] tracking-widest">
-            <ShieldCheck className="h-3 w-3" />
+            <RoleIcon className="h-3 w-3" />
             {userData.role}
           </div>
         </div>
@@ -98,5 +130,13 @@ export default function ProfilePage() {
         </Button>
       </div>
     </div>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center py-20">Loading profile...</div>}>
+      <ProfileContent />
+    </Suspense>
   );
 }
