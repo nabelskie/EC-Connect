@@ -1,8 +1,8 @@
-
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -37,21 +37,32 @@ import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function VolunteerDashboard() {
   const { toast } = useToast();
+  const router = useRouter();
   const db = useFirestore();
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const [filter, setFilter] = useState('All');
 
-  // Fetch Pending Tasks
+  // Handle unauthenticated state
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.push('/auth/login');
+    }
+  }, [user, isUserLoading, router]);
+
+  // Fetch Pending Tasks - ONLY if user is signed in
   const pendingQuery = useMemoFirebase(() => {
+    if (!user) return null;
     return collection(db, 'assistance_requests_pending');
-  }, [db]);
+  }, [db, user]);
+  
   const { data: pendingTasks, isLoading: isPendingLoading } = useCollection(pendingQuery);
 
-  // Fetch Active Tasks assigned to this volunteer
+  // Fetch Active Tasks assigned to this volunteer - ONLY if user is signed in
   const activeQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(collection(db, 'assistance_requests_active'), where('assignedVolunteerId', '==', user.uid));
   }, [db, user]);
+  
   const { data: activeTasks, isLoading: isActiveLoading } = useCollection(activeQuery);
 
   const availableTasks = useMemo(() => {
@@ -128,6 +139,16 @@ export default function VolunteerDashboard() {
       default: return <AlertCircle className="h-5 w-5" />;
     }
   };
+
+  if (isUserLoading) {
+    return (
+      <div className="flex h-screen-dvh items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) return null;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">

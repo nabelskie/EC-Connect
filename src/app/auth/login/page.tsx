@@ -7,30 +7,49 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { Heart } from 'lucide-react';
+import { Heart, Loader2 } from 'lucide-react';
+import { useAuth, useFirestore } from '@/firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const auth = useAuth();
+  const db = useFirestore();
+  const { toast } = useToast();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // In a real app, use Firebase Auth and check user role in Firestore
-    // For now, simulate redirection based on a simple logic or default to a dashboard
-    setTimeout(() => {
-      // Mock redirection for demonstration
-      if (email.includes('admin')) {
-        router.push('/dashboard/admin');
-      } else if (email.includes('volunteer')) {
-        router.push('/dashboard/volunteer');
+
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // Fetch user profile to determine role
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      
+      if (userDoc.exists()) {
+        const role = userDoc.data().role;
+        router.push(`/dashboard/${role}?role=${role}`);
       } else {
-        router.push('/dashboard/elderly');
+        // Fallback if profile doesn't exist (shouldn't happen with correct registration)
+        router.push('/dashboard/elderly?role=elderly');
       }
+    } catch (err: any) {
+      console.error(err);
+      toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: err.message || "Please check your credentials.",
+      });
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -82,7 +101,12 @@ export default function LoginPage() {
               className="w-full h-12 text-lg bg-primary hover:bg-primary/90 mt-2" 
               disabled={isLoading}
             >
-              {isLoading ? 'Signing in...' : 'Sign In'}
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Signing in...
+                </>
+              ) : 'Sign In'}
             </Button>
           </form>
         </CardContent>

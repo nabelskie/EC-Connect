@@ -8,21 +8,67 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { Heart, User, GraduationCap, ShieldCheck } from 'lucide-react';
+import { Heart, User, GraduationCap, ShieldCheck, Loader2 } from 'lucide-react';
+import { useAuth, useFirestore } from '@/firebase';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 export default function RegisterPage() {
   const [role, setRole] = useState('elderly');
   const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
+  
   const router = useRouter();
+  const auth = useAuth();
+  const db = useFirestore();
+  const { toast } = useToast();
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // Real Firebase registration logic would go here
-    setTimeout(() => {
-      router.push(`/dashboard/${role}`);
+
+    try {
+      // 1. Create Firebase Auth user
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // 2. Update display name
+      await updateProfile(user, { displayName: name });
+
+      // 3. Create UserProfile in Firestore
+      const userProfile = {
+        id: user.uid,
+        name,
+        email,
+        role,
+        phone,
+        address,
+        createdAt: new Date().toISOString()
+      };
+
+      await setDoc(doc(db, 'users', user.uid), userProfile);
+
+      toast({
+        title: "Registration Successful",
+        description: `Welcome to ElderCare Connect, ${name}!`,
+      });
+
+      router.push(`/dashboard/${role}?role=${role}`);
+    } catch (err: any) {
+      console.error(err);
+      toast({
+        variant: "destructive",
+        title: "Registration Failed",
+        description: err.message || "An error occurred during registration.",
+      });
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -96,28 +142,33 @@ export default function RegisterPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="full-name">Full Name</Label>
-                <Input id="full-name" placeholder="John Doe" required className="h-12" />
+                <Input id="full-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="John Doe" required className="h-12" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone Number</Label>
-                <Input id="phone" placeholder="012-3456789" required className="h-12" />
+                <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="012-3456789" required className="h-12" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email Address</Label>
-                <Input id="email" type="email" placeholder="john@example.com" required className="h-12" />
+                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="john@example.com" required className="h-12" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Create Password</Label>
-                <Input id="password" type="password" required className="h-12" />
+                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="h-12" />
               </div>
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="address">Address / Room No (Politeknik Dorm)</Label>
-                <Input id="address" placeholder="Block A, Room 102 / No 12, Taman..." required className="h-12" />
+                <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Block A, Room 102 / No 12, Taman..." required className="h-12" />
               </div>
             </div>
 
             <Button type="submit" className="w-full h-14 text-xl bg-primary hover:bg-primary/90 mt-4" disabled={isLoading}>
-              {isLoading ? 'Creating Account...' : 'Complete Registration'}
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+                  Creating Account...
+                </>
+              ) : 'Complete Registration'}
             </Button>
           </form>
         </CardContent>
