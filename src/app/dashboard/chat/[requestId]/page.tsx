@@ -11,7 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send, Phone, ArrowLeft, ShieldCheck, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useFirestore, useUser, useDoc, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, collection, query, orderBy, serverTimestamp } from 'firebase/firestore';
+import { doc, collection, query, orderBy, serverTimestamp, where } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 function ChatContent() {
@@ -30,20 +30,23 @@ function ChatContent() {
   }, []);
 
   const chatRoomRef = useMemoFirebase(() => {
-    if (!requestId) return null;
+    if (!requestId || !db) return null;
     return doc(db, 'chat_rooms', requestId);
   }, [db, requestId]);
 
   const { data: chatRoom, isLoading: isRoomLoading, error: roomError } = useDoc(chatRoomRef);
 
-  // Fetch real messages from subcollection
+  // Fetch real messages from subcollection with a security filter
   const messagesQuery = useMemoFirebase(() => {
-    if (!requestId) return null;
+    if (!requestId || !db || !user) return null;
+    // We add the 'participantUserIds' filter to satisfy "Rules are not filters"
+    // except for admins who can see everything.
     return query(
       collection(db, 'chat_rooms', requestId, 'messages'),
+      where('participantUserIds', 'array-contains', user.uid),
       orderBy('timestamp', 'asc')
     );
-  }, [db, requestId]);
+  }, [db, requestId, user]);
 
   const { data: messages, isLoading: isMessagesLoading } = useCollection(messagesQuery);
 
@@ -65,7 +68,6 @@ function ChatContent() {
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Ensure room is loaded and user is authenticated
     if (!input.trim() || !user || !requestId || isSending || !chatRoom) return;
 
     setIsSending(true);
@@ -82,20 +84,15 @@ function ChatContent() {
       participantUserIds: chatRoom.participantUserIds || []
     };
 
-    // Use non-blocking utility for message creation
-    addDocumentNonBlocking(messagesRef, messageData)
-      .then(() => {
-        setIsSending(false);
-        // Update parent chat room snippet
-        const roomRef = doc(db, 'chat_rooms', requestId);
-        updateDocumentNonBlocking(roomRef, {
-          lastMessageSnippet: messageText,
-          lastMessageAt: serverTimestamp()
-        });
-      })
-      .catch(() => {
-        setIsSending(false);
-      });
+    addDocumentNonBlocking(messagesRef, messageData);
+    
+    // Update parent snippet
+    updateDocumentNonBlocking(doc(db, 'chat_rooms', requestId), {
+      lastMessageSnippet: messageText,
+      lastMessageAt: serverTimestamp()
+    });
+    
+    setIsSending(false);
   };
 
   if (!mounted) return null;
@@ -117,7 +114,7 @@ function ChatContent() {
         </div>
         <h2 className="text-lg font-bold text-primary">Access Denied</h2>
         <p className="text-sm text-muted-foreground leading-relaxed">
-          You don't have permission to view this chat.
+          You don't have permission to view this chat or the request has been closed.
         </p>
         <Button asChild variant="outline" className="mt-4 rounded-xl">
           <Link href={`/dashboard/chat?role=${role}`}>Back to Messages</Link>
@@ -159,7 +156,7 @@ function ChatContent() {
           <ScrollArea className="h-full p-4">
             <div className="space-y-4">
               <div className="text-center">
-                <span className="bg-white/50 backdrop-blur-sm text-muted-foreground text-[10px] px-3 py-1 rounded-full font-bold uppercase tracking-wider">Today</span>
+                <span className="bg-white/50 backdrop-blur-sm text-muted-foreground text-[10px] px-3 py-1 rounded-full font-bold uppercase tracking-wider">Conversation Started</span>
               </div>
               
               {isMessagesLoading ? (
@@ -188,7 +185,7 @@ function ChatContent() {
                 })
               ) : (
                 <div className="text-center py-10">
-                  <p className="text-[10px] font-bold uppercase text-muted-foreground">Start the conversation</p>
+                  <p className="text-[10px] font-bold uppercase text-muted-foreground">No messages yet</p>
                 </div>
               )}
             </div>
