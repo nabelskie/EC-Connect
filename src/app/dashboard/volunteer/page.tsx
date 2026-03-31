@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -80,11 +79,21 @@ export default function VolunteerDashboard() {
 
     const volunteerId = user.uid;
     const volunteerName = user.displayName || 'Volunteer';
+    const residentId = task.createdByUserId;
+
+    if (!residentId) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not identify the resident for this request.",
+      });
+      return;
+    }
 
     // Fetch resident name for the chat room
     let residentName = 'Resident';
     try {
-      const residentDoc = await getDoc(doc(db, 'users', task.createdByUserId));
+      const residentDoc = await getDoc(doc(db, 'users', residentId));
       if (residentDoc.exists()) {
         residentName = residentDoc.data().name || 'Resident';
       }
@@ -100,6 +109,7 @@ export default function VolunteerDashboard() {
       ...task,
       status: 'Accepted',
       assignedVolunteerId: volunteerId,
+      volunteerName: volunteerName,
       acceptedAt: serverTimestamp(),
     }).catch(async (err) => {
       errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -118,12 +128,12 @@ export default function VolunteerDashboard() {
     });
 
     // 3. Create chat room
-    const chatRoomId = task.id; // Use the request ID as chat room ID for consistency
+    const chatRoomId = task.id; 
     const chatRoomRef = doc(db, 'chat_rooms', chatRoomId);
     setDoc(chatRoomRef, {
       id: chatRoomId,
       requestId: task.id,
-      participantUserIds: [task.createdByUserId, volunteerId],
+      participantUserIds: [residentId, volunteerId],
       residentName: residentName,
       volunteerName: volunteerName,
       createdAt: serverTimestamp(),
@@ -133,6 +143,7 @@ export default function VolunteerDashboard() {
       errorEmitter.emit('permission-error', new FirestorePermissionError({
         path: chatRoomRef.path,
         operation: 'create',
+        requestResourceData: { id: chatRoomId, requestId: task.id },
       }));
     });
 

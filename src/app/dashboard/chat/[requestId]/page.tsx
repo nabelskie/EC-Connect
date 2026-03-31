@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, Suspense, useEffect } from 'react';
@@ -26,22 +25,22 @@ function ChatContent() {
     return doc(db, 'chat_rooms', requestId);
   }, [db, requestId]);
 
-  const { data: chatRoom, isLoading } = useDoc(chatRoomRef);
+  const { data: chatRoom, isLoading, error } = useDoc(chatRoomRef);
 
   // Determine partner info from real data
   const chatPartner = useMemo(() => {
-    if (!chatRoom) return { name: 'User', image: '', roleName: '...' };
+    if (!chatRoom) return { name: 'Chat', image: '', roleName: '...' };
     
     if (role === 'volunteer') {
       return { 
         name: chatRoom.residentName || 'Resident', 
-        image: `https://picsum.photos/seed/${chatRoom.participantUserIds[0]}/100/100`, 
+        image: `https://picsum.photos/seed/${chatRoom.participantUserIds?.[0] || '1'}/100/100`, 
         roleName: 'Resident' 
       };
     } else {
       return { 
         name: chatRoom.volunteerName || 'Volunteer', 
-        image: `https://picsum.photos/seed/${chatRoom.participantUserIds[1]}/100/100`, 
+        image: `https://picsum.photos/seed/${chatRoom.participantUserIds?.[1] || '2'}/100/100`, 
         roleName: 'Volunteer' 
       };
     }
@@ -68,7 +67,24 @@ function ChatContent() {
     return (
       <div className="h-full flex flex-col items-center justify-center py-20 gap-3">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-xs font-bold uppercase text-muted-foreground">Loading chat room...</p>
+        <p className="text-xs font-bold uppercase text-muted-foreground">Connecting to chat...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center py-20 gap-3 text-center px-6">
+        <div className="p-4 bg-destructive/10 rounded-full">
+           <ShieldCheck className="h-10 w-10 text-destructive" />
+        </div>
+        <h2 className="text-lg font-bold text-primary">Access Denied</h2>
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          You don't have permission to view this chat. This can happen if the chat room was just created or if you're logged into a different account.
+        </p>
+        <Button asChild variant="outline" className="mt-4 rounded-xl">
+          <Link href={`/dashboard/chat?role=${role}`}>Back to Messages</Link>
+        </Button>
       </div>
     );
   }
@@ -137,6 +153,7 @@ function ChatContent() {
               className="flex-1 h-12 text-sm bg-slate-50 border-none focus-visible:ring-accent rounded-2xl px-4"
               value={input}
               onChange={(e) => setInput(e.target.value)}
+              suppressHydrationWarning
             />
             <Button 
               type="submit" 
