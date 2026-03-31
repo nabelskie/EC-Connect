@@ -69,6 +69,13 @@ export default function VolunteerDashboard() {
   
   const { data: activeTasks, isLoading: isActiveLoading } = useCollection(activeQuery);
 
+  const completedQuery = useMemoFirebase(() => {
+    if (!user || !mounted) return null;
+    return query(collection(db, 'assistance_requests_completed'), where('assignedVolunteerId', '==', user.uid));
+  }, [db, user, mounted]);
+  
+  const { data: completedTasks, isLoading: isCompletedLoading } = useCollection(completedQuery);
+
   const availableTasks = useMemo(() => {
     if (!pendingTasks) return [];
     if (filter === 'All') return pendingTasks;
@@ -91,7 +98,6 @@ export default function VolunteerDashboard() {
       return;
     }
 
-    // Fetch resident name for the chat room
     let residentName = 'Resident';
     try {
       const residentDoc = await getDoc(doc(db, 'users', residentId));
@@ -105,12 +111,12 @@ export default function VolunteerDashboard() {
     const activeRef = doc(db, 'assistance_requests_active', task.id);
     const pendingRef = doc(db, 'assistance_requests_pending', task.id);
 
-    // 1. Move to active
     setDoc(activeRef, {
       ...task,
       status: 'Accepted',
       assignedVolunteerId: volunteerId,
       volunteerName: volunteerName,
+      residentName: residentName,
       acceptedAt: serverTimestamp(),
     }).catch(async (err) => {
       errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -120,7 +126,6 @@ export default function VolunteerDashboard() {
       }));
     });
 
-    // 2. Remove from pending
     deleteDoc(pendingRef).catch(async (err) => {
       errorEmitter.emit('permission-error', new FirestorePermissionError({
         path: pendingRef.path,
@@ -128,7 +133,6 @@ export default function VolunteerDashboard() {
       }));
     });
 
-    // 3. Create chat room
     const chatRoomId = task.id; 
     const chatRoomRef = doc(db, 'chat_rooms', chatRoomId);
     const participantUserIds = [residentId, volunteerId];
@@ -143,14 +147,13 @@ export default function VolunteerDashboard() {
       lastMessageSnippet: `Volunteer ${volunteerName} has accepted your request.`,
       lastMessageAt: serverTimestamp(),
     }).then(() => {
-      // 4. Send the initial "I'm here to help" message automatically
       const messagesRef = collection(db, 'chat_rooms', chatRoomId, 'messages');
       addDoc(messagesRef, {
         chatRoomId: chatRoomId,
         senderUserId: volunteerId,
         messageText: "Hello! I'm here to help.",
         timestamp: serverTimestamp(),
-        participantUserIds: participantUserIds // Denormalize for security rules
+        participantUserIds: participantUserIds
       });
     }).catch(async (err) => {
       errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -209,19 +212,21 @@ export default function VolunteerDashboard() {
       </div>
 
       <Tabs defaultValue="available" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-6 h-12 rounded-2xl p-1 bg-slate-100">
+        <TabsList className="grid w-full grid-cols-3 mb-6 h-12 rounded-2xl p-1 bg-slate-100">
           <TabsTrigger value="available" className="rounded-xl font-bold text-sm">
             Available ({availableTasks.length})
           </TabsTrigger>
           <TabsTrigger value="active" className="rounded-xl font-bold text-sm">
             Active ({activeTasks?.length || 0})
           </TabsTrigger>
+          <TabsTrigger value="completed" className="rounded-xl font-bold text-sm">
+            History ({completedTasks?.length || 0})
+          </TabsTrigger>
         </TabsList>
         
         <TabsContent value="available" className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-primary">Open Requests</h2>
-            
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="h-8 px-2 text-accent text-xs font-bold gap-1">
@@ -249,7 +254,7 @@ export default function VolunteerDashboard() {
                 <p className="text-xs font-bold uppercase">Loading requests...</p>
               </div>
             ) : availableTasks.map((task) => (
-              <Card key={task.id} className="overflow-hidden border-none shadow-sm rounded-3xl active:scale-[0.98] transition-all">
+              <Card key={task.id} className="overflow-hidden border-none shadow-sm rounded-3xl transition-all">
                 <CardContent className="p-0">
                   <div className="p-4 flex items-center justify-between bg-slate-50/50 border-b">
                     <div className="flex items-center gap-3">
@@ -289,12 +294,7 @@ export default function VolunteerDashboard() {
                 <div className="p-4 bg-slate-50 rounded-full">
                   <SearchX className="h-10 w-10 text-slate-300" />
                 </div>
-                <div className="space-y-1">
-                  <p className="text-lg font-bold text-primary">No Requests Available</p>
-                  <p className="text-xs text-muted-foreground max-w-[200px] mx-auto leading-relaxed">
-                    There are no open assistance requests {filter !== 'All' ? `for ${filter}` : ''} right now. Check back soon!
-                  </p>
-                </div>
+                <p className="text-lg font-bold text-primary">No Requests Available</p>
               </div>
             )}
           </div>
@@ -304,12 +304,11 @@ export default function VolunteerDashboard() {
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-primary">Ongoing Tasks</h2>
           </div>
-
           <div className="space-y-4">
             {isActiveLoading ? (
               <div className="flex flex-col items-center justify-center py-12 gap-2 text-muted-foreground">
                 <Loader2 className="h-8 w-8 animate-spin" />
-                <p className="text-xs font-bold uppercase">Loading your tasks...</p>
+                <p className="text-xs font-bold uppercase">Loading tasks...</p>
               </div>
             ) : activeTasks?.map((task) => (
               <Card key={task.id} className="overflow-hidden border-none shadow-sm rounded-3xl border-l-4 border-l-emerald-500">
@@ -326,7 +325,6 @@ export default function VolunteerDashboard() {
                     </div>
                     <Badge className="bg-emerald-500 text-white text-[8px] h-5 uppercase">{task.status}</Badge>
                   </div>
-                  
                   <div className="flex items-center justify-between gap-3">
                     <div className="text-[10px] text-muted-foreground flex items-center gap-1">
                       <MapPin className="h-3 w-3" /> {task.location}
@@ -341,26 +339,39 @@ export default function VolunteerDashboard() {
                 </CardContent>
               </Card>
             ))}
+          </div>
+        </TabsContent>
 
-            {!isActiveLoading && (!activeTasks || activeTasks.length === 0) && (
-              <div className="text-center py-20 bg-white rounded-[2.5rem] border-2 border-dashed border-slate-100 flex flex-col items-center justify-center gap-4">
-                <div className="p-4 bg-slate-50 rounded-full">
-                  <Clock className="h-10 w-10 text-slate-300" />
-                </div>
-                <div className="space-y-1">
-                  <p className="text-lg font-bold text-primary">No Active Tasks</p>
-                  <p className="text-xs text-muted-foreground max-w-[200px] mx-auto leading-relaxed">
-                    You haven't accepted any tasks yet. Head over to the "Available" tab to start helping!
-                  </p>
-                </div>
+        <TabsContent value="completed" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold text-primary">Completed Tasks</h2>
+          </div>
+          <div className="space-y-4">
+            {isCompletedLoading ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-2 text-muted-foreground">
+                <Loader2 className="h-8 w-8 animate-spin" />
               </div>
-            )}
-            
-            {!isActiveLoading && activeTasks && activeTasks.length > 0 && (
-              <div className="flex items-center justify-center gap-2 p-4 bg-emerald-50 rounded-2xl text-emerald-700 text-[10px] font-bold uppercase">
-                <CheckCircle2 className="h-4 w-4" />
-                You are currently helping {activeTasks.length} residents
-              </div>
+            ) : completedTasks?.map((task) => (
+              <Card key={task.id} className="overflow-hidden border-none shadow-sm rounded-3xl opacity-80">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-xl bg-slate-50 text-slate-400">
+                        {getTypeIcon(task.taskType)}
+                      </div>
+                      <div>
+                        <div className="font-bold text-sm text-primary">{task.taskType}</div>
+                        <div className="text-[10px] text-muted-foreground">{task.completedAt ? new Date(task.completedAt).toLocaleDateString() : 'Finished'}</div>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50">Completed</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground italic truncate">"{task.description}"</p>
+                </CardContent>
+              </Card>
+            ))}
+            {!isCompletedLoading && completedTasks?.length === 0 && (
+              <div className="text-center py-20 opacity-30 italic text-sm">No completed tasks yet.</div>
             )}
           </div>
         </TabsContent>

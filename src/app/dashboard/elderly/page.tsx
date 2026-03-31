@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -35,12 +36,13 @@ import {
   MapPin,
   Calendar,
   User,
-  Trash2
+  Trash2,
+  CheckCircle2
 } from 'lucide-react';
 import { generateTaskDescription } from '@/ai/flows/generate-task-description-flow';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 
 export default function ElderlyDashboard() {
   const { toast } = useToast();
@@ -79,8 +81,8 @@ export default function ElderlyDashboard() {
   const allActiveRequests = useMemo(() => {
     const combined = [...(pendingData || []), ...(activeData || [])];
     return combined.sort((a, b) => {
-      const dateA = new Date(a.createdAt).getTime();
-      const dateB = new Date(b.createdAt).getTime();
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
       return dateB - dateA;
     });
   }, [pendingData, activeData]);
@@ -157,6 +159,37 @@ export default function ElderlyDashboard() {
     }
   };
 
+  const handleCompleteRequest = async (request: any) => {
+    if (!user) return;
+    try {
+      const requestId = request.id;
+      const completedData = {
+        ...request,
+        status: 'Completed',
+        completedAt: new Date().toISOString()
+      };
+
+      // Move the document to the completed collection
+      await setDoc(doc(db, 'assistance_requests_completed', requestId), completedData);
+      
+      // Delete from active
+      await deleteDoc(doc(db, 'assistance_requests_active', requestId));
+      
+      setSelectedRequest(null);
+      toast({
+        title: "Task Completed",
+        description: "Thank you for letting us know! The volunteer and admin have been updated.",
+      });
+    } catch (e) {
+      console.error("Completion failed", e);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not mark the task as completed. Please try again.",
+      });
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'Pending': return <Badge className="bg-yellow-500 text-white rounded-full px-3">Pending</Badge>;
@@ -176,6 +209,7 @@ export default function ElderlyDashboard() {
   };
 
   const formatDate = (dateStr: string) => {
+    if (!dateStr) return 'Recent';
     try {
       const date = new Date(dateStr);
       return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
@@ -195,7 +229,7 @@ export default function ElderlyDashboard() {
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-headline font-bold text-primary">Hi {user?.displayName || 'there'}!</h1>
+        <h1 className="text-3xl font-headline font-bold text-primary">Hi {user?.displayName?.split(' ')[0] || 'there'}!</h1>
         <p className="text-muted-foreground">What can we help you with today?</p>
       </div>
 
@@ -368,7 +402,7 @@ export default function ElderlyDashboard() {
                   </div>
                   <div>
                     <Label className="text-[10px] text-muted-foreground uppercase font-bold">Requested On</Label>
-                    <p className="text-primary font-medium">{new Date(selectedRequest.createdAt).toLocaleDateString()}</p>
+                    <p className="text-primary font-medium">{selectedRequest.createdAt ? new Date(selectedRequest.createdAt).toLocaleDateString() : 'Recent'}</p>
                   </div>
                 </div>
 
@@ -387,11 +421,41 @@ export default function ElderlyDashboard() {
 
               <div className="flex flex-col gap-3 mt-8">
                 {selectedRequest.status === 'Accepted' && (
-                  <Button asChild className="w-full h-14 rounded-2xl bg-accent hover:bg-accent/90">
-                    <Link href={`/dashboard/chat/${selectedRequest.id}?role=elderly`}>
-                      Chat with Volunteer
-                    </Link>
-                  </Button>
+                  <div className="flex flex-col gap-3">
+                    <Button asChild className="w-full h-14 rounded-2xl bg-accent hover:bg-accent/90 font-bold">
+                      <Link href={`/dashboard/chat/${selectedRequest.id}?role=elderly`}>
+                        Chat with Volunteer
+                      </Link>
+                    </Button>
+                    
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button className="w-full h-14 rounded-2xl bg-emerald-500 hover:bg-emerald-600 font-bold gap-2">
+                          <CheckCircle2 className="h-5 w-5" />
+                          Mark as Completed
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="rounded-3xl max-w-[90vw] mx-auto">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Is this task finished?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Confirming this will let the volunteer and admin know the task is successfully completed.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter className="flex flex-col gap-2">
+                          <AlertDialogAction 
+                            onClick={() => handleCompleteRequest(selectedRequest)}
+                            className="bg-emerald-500 hover:bg-emerald-600 h-12 rounded-xl font-bold"
+                          >
+                            Yes, Mark Completed
+                          </AlertDialogAction>
+                          <AlertDialogCancel className="h-12 rounded-xl font-bold border-none bg-slate-100">
+                            Not Yet
+                          </AlertDialogCancel>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 )}
                 
                 {selectedRequest.status === 'Pending' && (
@@ -404,9 +468,9 @@ export default function ElderlyDashboard() {
                     </AlertDialogTrigger>
                     <AlertDialogContent className="rounded-3xl max-w-[90vw] mx-auto">
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          This will permanently remove your help request.
+                          This will remove your request from the system permanently.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter className="flex flex-col gap-2">
