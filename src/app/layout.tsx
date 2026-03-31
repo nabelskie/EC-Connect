@@ -1,5 +1,6 @@
 import type {Metadata, Viewport} from 'next';
 import './globals.css';
+import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
   title: 'ElderCare Connect',
@@ -38,6 +39,7 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased bg-background text-foreground selection:bg-accent/30 overflow-x-hidden min-h-[100dvh]">
         {children}
+        <Toaster />
       </body>
     </html>
   );
