@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from 'react';
@@ -12,6 +11,17 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { 
   PlusCircle, 
   Clock, 
   ShoppingCart, 
@@ -22,10 +32,10 @@ import {
   Loader2, 
   ChevronRight, 
   X, 
-  CheckCircle2, 
   MapPin,
   Calendar,
-  User
+  User,
+  Trash2
 } from 'lucide-react';
 import { generateTaskDescription } from '@/ai/flows/generate-task-description-flow';
 import { useToast } from '@/hooks/use-toast';
@@ -100,6 +110,15 @@ export default function ElderlyDashboard() {
       initialDesc: '',
       location: '',
       urgency: 'Low'
+    });
+  };
+
+  const handleCancelRequest = (id: number) => {
+    setRequests(requests.filter(req => req.id !== id));
+    setSelectedRequest(null);
+    toast({
+      title: "Request Cancelled",
+      description: "Your assistance request has been removed.",
     });
   };
 
@@ -252,9 +271,9 @@ export default function ElderlyDashboard() {
       </div>
 
       <Sheet open={!!selectedRequest} onOpenChange={() => setSelectedRequest(null)}>
-        <SheetContent side="bottom" className="rounded-t-[3rem] h-[80vh] px-6 py-8">
+        <SheetContent side="bottom" className="rounded-t-[3rem] h-[85vh] px-6 py-8">
           {selectedRequest && (
-            <div className="space-y-6 h-full overflow-y-auto">
+            <div className="space-y-6 h-full overflow-y-auto pb-10">
               <SheetHeader className="text-left space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="p-4 rounded-2xl bg-accent/10 text-accent w-fit">
@@ -339,13 +358,45 @@ export default function ElderlyDashboard() {
                 </div>
               </div>
 
-              {selectedRequest.status === 'Accepted' && (
-                <Button asChild className="w-full h-14 rounded-2xl bg-accent hover:bg-accent/90 mt-4">
-                  <Link href={`/chat/RQ${selectedRequest.id}`}>
-                    Chat with Volunteer
-                  </Link>
-                </Button>
-              )}
+              <div className="flex flex-col gap-3 mt-8">
+                {selectedRequest.status === 'Accepted' && (
+                  <Button asChild className="w-full h-14 rounded-2xl bg-accent hover:bg-accent/90">
+                    <Link href={`/chat/RQ${selectedRequest.id}`}>
+                      Chat with Volunteer
+                    </Link>
+                  </Button>
+                )}
+                
+                {selectedRequest.status !== 'Completed' && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="outline" className="w-full h-14 rounded-2xl text-destructive hover:bg-destructive/10 border-destructive/20 font-bold gap-2">
+                        <Trash2 className="h-5 w-5" />
+                        Cancel Request
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="rounded-3xl max-w-[90vw] mx-auto">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will permanently remove your help request. You will need to create a new one if you still need assistance.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter className="flex flex-col gap-2">
+                        <AlertDialogAction 
+                          onClick={() => handleCancelRequest(selectedRequest.id)}
+                          className="bg-destructive hover:bg-destructive/90 h-12 rounded-xl font-bold"
+                        >
+                          Yes, Cancel Request
+                        </AlertDialogAction>
+                        <AlertDialogCancel className="h-12 rounded-xl font-bold border-none bg-slate-100">
+                          Keep Request
+                        </AlertDialogCancel>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+              </div>
             </div>
           )}
         </SheetContent>
