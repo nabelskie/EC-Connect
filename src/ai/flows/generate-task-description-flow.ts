@@ -75,7 +75,25 @@ const generateTaskDescriptionFlow = ai.defineFlow(
     outputSchema: GenerateTaskDescriptionOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
-    return output!;
+    let attempts = 0;
+    const maxAttempts = 3;
+    
+    while (attempts < maxAttempts) {
+      try {
+        const {output} = await prompt(input);
+        if (output) return output;
+        throw new Error('Empty output from AI');
+      } catch (error: any) {
+        attempts++;
+        if (attempts >= maxAttempts) {
+           return { 
+             generatedDescription: input.initialDescription 
+           };
+        }
+        // Wait before retrying (exponentially): 1s, 2s...
+        await new Promise(resolve => setTimeout(resolve, attempts * 1000));
+      }
+    }
+    return { generatedDescription: input.initialDescription };
   }
 );

@@ -62,7 +62,27 @@ const generateAdminDashboardSummaryFlow = ai.defineFlow(
     outputSchema: GenerateAdminDashboardSummaryOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
-    return output!;
+    let attempts = 0;
+    const maxAttempts = 3;
+    
+    while (attempts < maxAttempts) {
+      try {
+        const {output} = await prompt(input);
+        if (output) return output;
+        throw new Error('Empty output from AI');
+      } catch (error: any) {
+        attempts++;
+        if (attempts >= maxAttempts) {
+           return { 
+             summary: "The AI summary is currently unavailable due to high demand. Current status: " + 
+                      `${input.totalUsers} users registered, ${input.totalRequests} total requests, ` +
+                      `${input.completedTasks} tasks completed. Please try refreshing again in a moment.`
+           };
+        }
+        // Wait before retrying (exponentially): 1s, 2s...
+        await new Promise(resolve => setTimeout(resolve, attempts * 1000));
+      }
+    }
+    return { summary: "Service temporarily unavailable." };
   }
 );
