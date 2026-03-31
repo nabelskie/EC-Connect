@@ -152,10 +152,7 @@ export default function ElderlyDashboard() {
 
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold text-primary">Your Requests</h2>
-          <Button asChild variant="link" className="text-accent p-0 font-bold">
-            <Link href="/dashboard/elderly/requests">View All</Link>
-          </Button>
+          <h2 className="text-xl font-bold text-primary">Recent Requests</h2>
         </div>
         
         <div className="space-y-3">
