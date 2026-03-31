@@ -12,7 +12,7 @@ import {z} from 'genkit';
 
 const GenerateTaskDescriptionInputSchema = z.object({
   taskType: z
-    .enum(['Groceries', 'Transportation', 'Tech Support', 'Other'])
+    .enum(['Groceries', 'Transportation', 'Tech Support'])
     .describe('The type of assistance task.'),
   initialDescription: z
     .string()
@@ -53,11 +53,11 @@ const prompt = ai.definePrompt({
 Your goal is to expand on the provided initial description, ensuring all necessary details are captured so that a volunteer can fully understand what is needed.
 
 Consider the task type and common requirements for such tasks. 
-- For 'Groceries', include specific items if mentioned.
-- For 'Transportation', include pick-up/drop-off points.
-- For 'Tech Support', detail the specific device or software issue.
+- For 'Groceries', include specific items if mentioned, or common essentials like milk, bread, or eggs if the description is vague.
+- For 'Transportation', include pick-up/drop-off points or common destinations like the clinic or market.
+- For 'Tech Support', detail the specific device or software issue like WhatsApp setup or phone settings.
 
-Format the output clearly, using sections if necessary. Do not ask questions back to the user.
+Format the output clearly and politely. Do not ask questions back to the user.
 
 --- Input Details ---
 Task Type: {{{taskType}}}

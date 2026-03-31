@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Clock, ShoppingCart, Truck, Wrench, Info, Sparkles, Loader2, ChevronRight } from 'lucide-react';
+import { PlusCircle, Clock, ShoppingCart, Truck, Wrench, Info, Sparkles, Loader2, ChevronRight, X } from 'lucide-react';
 import { generateTaskDescription } from '@/ai/flows/generate-task-description-flow';
 
 export default function ElderlyDashboard() {
@@ -19,7 +19,7 @@ export default function ElderlyDashboard() {
     type: '',
     initialDesc: '',
     location: '',
-    urgency: 'Low'
+    urgency: 'Low' as 'Low' | 'Medium' | 'High'
   });
 
   const recentRequests = [
@@ -33,10 +33,10 @@ export default function ElderlyDashboard() {
     setIsAiLoading(true);
     try {
       const result = await generateTaskDescription({
-        taskType: formData.type as any,
+        taskType: formData.type as 'Groceries' | 'Transportation' | 'Tech Support',
         initialDescription: formData.initialDesc,
         location: formData.location,
-        urgencyLevel: formData.urgency as any
+        urgencyLevel: formData.urgency
       });
       setFormData({ ...formData, initialDesc: result.generatedDescription });
     } catch (error) {
@@ -92,7 +92,9 @@ export default function ElderlyDashboard() {
         <div className="fixed inset-0 z-[100] bg-white overflow-y-auto p-6 safe-area-bottom animate-in slide-in-from-bottom duration-300">
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-2xl font-bold text-primary">Request Help</h2>
-            <Button variant="ghost" size="sm" onClick={() => setShowForm(false)} className="rounded-full">Close</Button>
+            <Button variant="ghost" size="icon" onClick={() => setShowForm(false)} className="rounded-full h-10 w-10 bg-slate-100">
+              <X className="h-5 w-5" />
+            </Button>
           </div>
 
           <div className="space-y-6">
@@ -100,9 +102,9 @@ export default function ElderlyDashboard() {
               <Label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Help Category</Label>
               <Select onValueChange={(val) => setFormData({...formData, type: val})}>
                 <SelectTrigger className="h-14 rounded-2xl text-lg">
-                  <SelectValue placeholder="What do you need?" />
+                  <SelectValue placeholder="Choose Category" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[110]">
                   <SelectItem value="Groceries">Groceries</SelectItem>
                   <SelectItem value="Transportation">Transportation</SelectItem>
                   <SelectItem value="Tech Support">Tech Support</SelectItem>
@@ -113,13 +115,19 @@ export default function ElderlyDashboard() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Details</Label>
-                <Button variant="link" size="sm" onClick={handleAiHelp} disabled={isAiLoading || !formData.type} className="text-accent font-bold gap-1 p-0">
+                <Button 
+                  variant="link" 
+                  size="sm" 
+                  onClick={handleAiHelp} 
+                  disabled={isAiLoading || !formData.type || !formData.initialDesc} 
+                  className="text-accent font-bold gap-1 p-0"
+                >
                   {isAiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                   AI Refine
                 </Button>
               </div>
               <Textarea 
-                placeholder="Briefly describe what you need..." 
+                placeholder="What specifically do you need help with?" 
                 className="min-h-[120px] rounded-2xl text-lg p-4"
                 value={formData.initialDesc}
                 onChange={(e) => setFormData({...formData, initialDesc: e.target.value})}
@@ -127,9 +135,9 @@ export default function ElderlyDashboard() {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Location</Label>
+              <Label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Location / Meeting Point</Label>
               <Input 
-                placeholder="Where should we meet?" 
+                placeholder="e.g. Block C, Lobby" 
                 className="h-14 rounded-2xl text-lg"
                 value={formData.location}
                 onChange={(e) => setFormData({...formData, location: e.target.value})}
@@ -141,6 +149,7 @@ export default function ElderlyDashboard() {
                 size="lg" 
                 className="w-full h-16 text-xl rounded-2xl bg-primary font-bold shadow-xl"
                 onClick={() => setShowForm(false)}
+                disabled={!formData.type || !formData.initialDesc}
               >
                 Submit Request
               </Button>
@@ -150,9 +159,7 @@ export default function ElderlyDashboard() {
       )}
 
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold text-primary">Recent Requests</h2>
-        </div>
+        <h2 className="text-xl font-bold text-primary">Active Status</h2>
         
         <div className="space-y-3">
           {recentRequests.map((req) => (
