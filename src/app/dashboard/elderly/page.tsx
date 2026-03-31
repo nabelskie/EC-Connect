@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -78,10 +79,13 @@ export default function ElderlyDashboard() {
           <PlusCircle className="h-10 w-10 mb-2 group-hover:scale-110 transition-transform" />
           <span className="font-bold">New Request</span>
         </button>
-        <div className="flex flex-col items-center justify-center p-6 bg-primary/5 rounded-3xl border-2 border-primary/10 text-primary">
+        <Link 
+          href="/dashboard/elderly/requests"
+          className="flex flex-col items-center justify-center p-6 bg-primary/5 rounded-3xl border-2 border-primary/10 text-primary active:scale-95 transition-all"
+        >
           <Clock className="h-10 w-10 mb-2" />
           <span className="font-bold">History</span>
-        </div>
+        </Link>
       </div>
 
       {showForm && (
@@ -134,7 +138,11 @@ export default function ElderlyDashboard() {
             </div>
 
             <div className="pt-4">
-              <Button size="lg" className="w-full h-16 text-xl rounded-2xl bg-primary font-bold shadow-xl">
+              <Button 
+                size="lg" 
+                className="w-full h-16 text-xl rounded-2xl bg-primary font-bold shadow-xl"
+                onClick={() => setShowForm(false)}
+              >
                 Submit Request
               </Button>
             </div>
@@ -145,7 +153,9 @@ export default function ElderlyDashboard() {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold text-primary">Your Requests</h2>
-          <Button variant="link" className="text-accent p-0 font-bold">View All</Button>
+          <Button asChild variant="link" className="text-accent p-0 font-bold">
+            <Link href="/dashboard/elderly/requests">View All</Link>
+          </Button>
         </div>
         
         <div className="space-y-3">
