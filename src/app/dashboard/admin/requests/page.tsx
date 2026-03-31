@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { 
   ArrowLeft, 
   Search, 
@@ -15,7 +16,10 @@ import {
   Loader2,
   MapPin,
   User,
-  Trash2
+  Trash2,
+  Calendar,
+  AlertCircle,
+  CheckCircle2
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -26,6 +30,7 @@ import { useToast } from '@/hooks/use-toast';
 function AdminRequestsContent() {
   const [mounted, setMounted] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const searchParams = useSearchParams();
   const initialFilter = searchParams.get('filter') || 'All';
   const [statusFilter, setStatusFilter] = useState(initialFilter);
@@ -71,7 +76,8 @@ function AdminRequestsContent() {
     });
   }, [allRequests, searchTerm, statusFilter]);
 
-  const handleDelete = async (request: any) => {
+  const handleDelete = async (e: React.MouseEvent, request: any) => {
+    e.stopPropagation(); // Prevent opening the detail sheet
     try {
       let collName = 'assistance_requests_pending';
       if (request.status === 'Active' || request.status === 'Accepted') collName = 'assistance_requests_active';
@@ -84,6 +90,16 @@ function AdminRequestsContent() {
       });
     } catch (e) {
       console.error("Delete failed", e);
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'Pending': return <Badge className="bg-yellow-500 text-white rounded-full px-3">Pending</Badge>;
+      case 'Active':
+      case 'Accepted': return <Badge className="bg-sky-500 text-white rounded-full px-3">Active</Badge>;
+      case 'Completed': return <Badge className="bg-emerald-500 text-white rounded-full px-3">Completed</Badge>;
+      default: return <Badge variant="outline" className="rounded-full px-3">{status}</Badge>;
     }
   };
 
@@ -109,6 +125,7 @@ function AdminRequestsContent() {
             className="pl-10 h-12 rounded-2xl bg-white border-none shadow-sm"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            suppressHydrationWarning
           />
         </div>
         
@@ -119,8 +136,8 @@ function AdminRequestsContent() {
               variant={statusFilter === s ? "default" : "outline"}
               size="sm"
               onClick={() => setStatusFilter(s)}
-              className={`rounded-full px-4 h-8 text-[10px] font-bold uppercase shrink-0 ${
-                statusFilter === s ? 'bg-primary text-white border-primary' : 'bg-white text-muted-foreground border-slate-200'
+              className={`rounded-full px-4 h-8 text-[10px] font-bold uppercase shrink-0 transition-all ${
+                statusFilter === s ? 'bg-primary text-white border-primary shadow-md' : 'bg-white text-muted-foreground border-slate-200'
               }`}
             >
               {s}
@@ -132,14 +149,19 @@ function AdminRequestsContent() {
       <ScrollArea className="h-[calc(100vh-280px)]">
         <div className="space-y-3 px-1">
           {(isPendingLoading || isActiveLoading || isCompletedLoading) && allRequests.length === 0 ? (
-            <div className="flex justify-center py-20">
+            <div className="flex flex-col items-center justify-center py-20 gap-2 opacity-40">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-[10px] font-bold uppercase">Fetching requests...</p>
             </div>
           ) : filteredRequests.map((req) => (
-            <Card key={req.id} className="border-none shadow-sm rounded-2xl p-4 overflow-hidden relative active:bg-slate-50 transition-colors">
+            <Card 
+              key={req.id} 
+              className="border-none shadow-sm rounded-2xl p-4 overflow-hidden relative hover:bg-slate-50 transition-colors cursor-pointer group"
+              onClick={() => setSelectedRequest(req)}
+            >
               <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-slate-100 text-primary">
+                  <div className="p-2 rounded-xl bg-slate-100 text-primary group-hover:bg-white transition-colors">
                     <Clock className="h-5 w-5" />
                   </div>
                   <div>
@@ -147,12 +169,7 @@ function AdminRequestsContent() {
                     <div className="text-[10px] text-muted-foreground font-mono">ID: {req.id.slice(0, 8)}</div>
                   </div>
                 </div>
-                <Badge className={`text-[8px] h-5 px-2 ${
-                  req.status === 'Completed' ? 'bg-emerald-500' : 
-                  req.status === 'Active' || req.status === 'Accepted' ? 'bg-sky-500' : 'bg-yellow-500'
-                }`}>
-                  {req.status}
-                </Badge>
+                {getStatusBadge(req.status)}
               </div>
               
               <p className="text-xs text-muted-foreground line-clamp-2 mb-3 leading-relaxed italic">
@@ -161,28 +178,125 @@ function AdminRequestsContent() {
 
               <div className="flex items-center justify-between text-[10px] text-muted-foreground font-bold uppercase tracking-tight">
                 <div className="flex items-center gap-3">
-                  <span className="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-lg"><MapPin className="h-3 w-3" /> {req.location?.slice(0, 15)}</span>
-                  <span className="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-lg"><User className="h-3 w-3" /> {req.createdByUserId?.slice(0, 5)}</span>
+                  <span className="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-lg group-hover:bg-white"><MapPin className="h-3 w-3" /> {req.location?.slice(0, 15)}</span>
+                  <span className="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-lg group-hover:bg-white"><User className="h-3 w-3" /> {req.createdByUserId?.slice(0, 5)}</span>
                 </div>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-8 w-8 text-destructive hover:bg-destructive/10 rounded-full"
-                  onClick={() => handleDelete(req)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-1">
+                   <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 text-destructive hover:bg-destructive/10 rounded-full"
+                    onClick={(e) => handleDelete(e, req)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground/20 group-hover:text-primary transition-colors" />
+                </div>
               </div>
             </Card>
           ))}
           
-          {filteredRequests.length === 0 && !isPendingLoading && (
+          {filteredRequests.length === 0 && !isPendingLoading && !isActiveLoading && !isCompletedLoading && (
             <div className="text-center py-20 opacity-30 italic text-sm">
-              No requests matching your filters.
+              No requests found matching your filters.
             </div>
           )}
         </div>
       </ScrollArea>
+
+      <Sheet open={!!selectedRequest} onOpenChange={() => setSelectedRequest(null)}>
+        <SheetContent side="bottom" className="rounded-t-[3rem] h-[85vh] px-6 py-8">
+          {selectedRequest && (
+            <div className="space-y-6 h-full overflow-y-auto pb-10">
+              <SheetHeader className="text-left space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="p-4 rounded-2xl bg-primary/5 text-primary w-fit">
+                    <Clock className="h-8 w-8" />
+                  </div>
+                  {getStatusBadge(selectedRequest.status)}
+                </div>
+                <SheetTitle className="text-2xl font-bold text-primary">{selectedRequest.taskType} Request</SheetTitle>
+                <SheetDescription className="text-base leading-relaxed text-slate-600 italic">
+                  "{selectedRequest.description}"
+                </SheetDescription>
+              </SheetHeader>
+
+              <div className="space-y-4 pt-4 border-t">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-lg bg-slate-50 text-slate-400">
+                      <MapPin className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold">Location</p>
+                      <p className="text-sm text-primary font-medium">{selectedRequest.location}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-lg bg-slate-50 text-slate-400">
+                      <AlertCircle className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold">Urgency</p>
+                      <p className="text-sm text-primary font-medium">{selectedRequest.urgencyLevel}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 pt-2">
+                  <div className="p-2 rounded-lg bg-slate-50 text-slate-400">
+                    <Calendar className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold">Created On</p>
+                    <p className="text-sm text-primary font-medium">
+                      {selectedRequest.createdAt ? new Date(selectedRequest.createdAt).toLocaleString() : 'N/A'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 pt-2">
+                  <div className="p-2 rounded-lg bg-slate-50 text-slate-400">
+                    <User className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold">Requester ID</p>
+                    <p className="text-sm font-mono text-primary font-medium">{selectedRequest.createdByUserId}</p>
+                  </div>
+                </div>
+
+                {selectedRequest.volunteerName && (
+                  <div className="flex items-start gap-3 pt-2">
+                    <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600">
+                      <CheckCircle2 className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold">Assigned Volunteer</p>
+                      <p className="text-sm text-primary font-medium">{selectedRequest.volunteerName}</p>
+                      <p className="text-[10px] text-muted-foreground font-mono">{selectedRequest.assignedVolunteerId}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-6">
+                <Button 
+                  variant="destructive" 
+                  className="w-full h-14 rounded-2xl font-bold gap-2"
+                  onClick={(e) => {
+                    handleDelete(e as any, selectedRequest);
+                    setSelectedRequest(null);
+                  }}
+                >
+                  <Trash2 className="h-5 w-5" />
+                  Remove Request From System
+                </Button>
+              </div>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
