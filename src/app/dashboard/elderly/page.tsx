@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -39,8 +39,8 @@ import {
 } from 'lucide-react';
 import { generateTaskDescription } from '@/ai/flows/generate-task-description-flow';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, useUser } from '@/firebase';
-import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, where, doc, setDoc, deleteDoc } from 'firebase/firestore';
 
 export default function ElderlyDashboard() {
   const { toast } = useToast();
@@ -62,13 +62,28 @@ export default function ElderlyDashboard() {
     setMounted(true);
   }, []);
 
-  // For demonstration, we'll keep the local state for immediate feedback
-  // but in a real app, this would be a useCollection hook.
-  const [requests, setRequests] = useState([
-    { id: '1', type: 'Groceries', status: 'Pending', date: 'Oct 24', desc: 'Need help buying milk and bread.', location: 'Block C, Room 102', urgency: 'Medium' },
-    { id: '2', type: 'Transportation', status: 'Accepted', date: 'Oct 23', desc: 'Ride to the clinic for checkup.', location: 'Lobby Block A', urgency: 'High', volunteer: 'Sarah (Student)' },
-    { id: '3', type: 'Tech Support', status: 'Completed', date: 'Oct 21', desc: 'Setting up my new phone.', location: 'Block C, Room 102', urgency: 'Low', volunteer: 'Jason (Student)' },
-  ]);
+  // Real-time data fetching for user's requests
+  const pendingQuery = useMemoFirebase(() => {
+    if (!user || !mounted) return null;
+    return query(collection(db, 'assistance_requests_pending'), where('createdByUserId', '==', user.uid));
+  }, [db, user, mounted]);
+
+  const activeQuery = useMemoFirebase(() => {
+    if (!user || !mounted) return null;
+    return query(collection(db, 'assistance_requests_active'), where('createdByUserId', '==', user.uid));
+  }, [db, user, mounted]);
+
+  const { data: pendingData, isLoading: isPendingLoading } = useCollection(pendingQuery);
+  const { data: activeData, isLoading: isActiveLoading } = useCollection(activeQuery);
+
+  const allActiveRequests = useMemo(() => {
+    const combined = [...(pendingData || []), ...(activeData || [])];
+    return combined.sort((a, b) => {
+      const dateA = new Date(a.createdAt).getTime();
+      const dateB = new Date(b.createdAt).getTime();
+      return dateB - dateA;
+    });
+  }, [pendingData, activeData]);
 
   const handleAiHelp = async () => {
     if (!formData.type || !formData.initialDesc) return;
@@ -106,10 +121,8 @@ export default function ElderlyDashboard() {
         createdAt: new Date().toISOString()
       };
 
-      // Write to Firestore
       await setDoc(doc(db, 'assistance_requests_pending', requestId), requestData);
 
-      setRequests([requestData as any, ...requests]);
       setIsSubmitting(false);
       setShowForm(false);
       
@@ -118,7 +131,6 @@ export default function ElderlyDashboard() {
         description: "Volunteers have been notified of your request.",
       });
 
-      // Reset form
       setFormData({
         type: '',
         initialDesc: '',
@@ -131,13 +143,18 @@ export default function ElderlyDashboard() {
     }
   };
 
-  const handleCancelRequest = (id: string) => {
-    setRequests(requests.filter(req => req.id !== id));
-    setSelectedRequest(null);
-    toast({
-      title: "Request Cancelled",
-      description: "Your assistance request has been removed.",
-    });
+  const handleCancelRequest = async (request: any) => {
+    try {
+      const collectionName = request.status === 'Pending' ? 'assistance_requests_pending' : 'assistance_requests_active';
+      await deleteDoc(doc(db, collectionName, request.id));
+      setSelectedRequest(null);
+      toast({
+        title: "Request Cancelled",
+        description: "Your assistance request has been removed.",
+      });
+    } catch (e) {
+      console.error("Cancellation failed", e);
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -145,7 +162,6 @@ export default function ElderlyDashboard() {
       case 'Pending': return <Badge className="bg-yellow-500 text-white rounded-full px-3">Pending</Badge>;
       case 'Accepted': return <Badge className="bg-sky-500 text-white rounded-full px-3">Accepted</Badge>;
       case 'Completed': return <Badge className="bg-emerald-500 text-white rounded-full px-3">Completed</Badge>;
-      case 'Rejected': return <Badge className="bg-destructive text-white rounded-full px-3">Rejected</Badge>;
       default: return <Badge variant="outline" className="rounded-full">{status}</Badge>;
     }
   };
@@ -156,6 +172,15 @@ export default function ElderlyDashboard() {
       case 'Transportation': return <Truck className="h-5 w-5" />;
       case 'Tech Support': return <Wrench className="h-5 w-5" />;
       default: return <Info className="h-5 w-5" />;
+    }
+  };
+
+  const formatDate = (dateStr: string) => {
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    } catch (e) {
+      return dateStr;
     }
   };
 
@@ -170,7 +195,7 @@ export default function ElderlyDashboard() {
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-headline font-bold text-primary">Hi Hapsah!</h1>
+        <h1 className="text-3xl font-headline font-bold text-primary">Hi {user?.displayName || 'there'}!</h1>
         <p className="text-muted-foreground">What can we help you with today?</p>
       </div>
 
@@ -272,7 +297,12 @@ export default function ElderlyDashboard() {
         <h2 className="text-xl font-bold text-primary">Active Status</h2>
         
         <div className="space-y-3">
-          {requests.slice(0, 3).map((req) => (
+          {(isPendingLoading || isActiveLoading) ? (
+            <div className="flex flex-col items-center justify-center py-10 gap-2 opacity-40">
+              <Loader2 className="h-6 w-6 animate-spin" />
+              <p className="text-xs font-bold uppercase">Loading requests...</p>
+            </div>
+          ) : allActiveRequests.map((req) => (
             <Card 
               key={req.id} 
               className="border-none shadow-sm rounded-3xl overflow-hidden active:bg-slate-50 transition-colors cursor-pointer"
@@ -280,14 +310,14 @@ export default function ElderlyDashboard() {
             >
               <CardContent className="p-5 flex items-center gap-4">
                 <div className="p-3 rounded-2xl bg-accent/10 text-accent">
-                  {getTypeIcon(req.type)}
+                  {getTypeIcon(req.taskType)}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="font-bold text-primary truncate">{req.type}</span>
-                    <span className="text-[10px] text-muted-foreground font-semibold">{req.date}</span>
+                    <span className="font-bold text-primary truncate">{req.taskType}</span>
+                    <span className="text-[10px] text-muted-foreground font-semibold">{formatDate(req.createdAt)}</span>
                   </div>
-                  <p className="text-xs text-muted-foreground truncate mb-2">{req.desc}</p>
+                  <p className="text-xs text-muted-foreground truncate mb-2">{req.description}</p>
                   {getStatusBadge(req.status)}
                 </div>
                 <ChevronRight className="h-5 w-5 text-muted-foreground/30" />
@@ -295,9 +325,10 @@ export default function ElderlyDashboard() {
             </Card>
           ))}
           
-          {requests.length === 0 && (
-            <div className="text-center py-10 opacity-40">
+          {(!isPendingLoading && !isActiveLoading) && allActiveRequests.length === 0 && (
+            <div className="text-center py-10 opacity-40 bg-white rounded-3xl border-2 border-dashed">
               <p className="text-sm font-bold">No active requests</p>
+              <p className="text-[10px] uppercase tracking-wider">Tap "New Request" to get help</p>
             </div>
           )}
         </div>
@@ -310,13 +341,13 @@ export default function ElderlyDashboard() {
               <SheetHeader className="text-left space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="p-4 rounded-2xl bg-accent/10 text-accent w-fit">
-                    {getTypeIcon(selectedRequest.type)}
+                    {getTypeIcon(selectedRequest.taskType)}
                   </div>
                   {getStatusBadge(selectedRequest.status)}
                 </div>
-                <SheetTitle className="text-2xl font-bold text-primary">{selectedRequest.type} Help</SheetTitle>
+                <SheetTitle className="text-2xl font-bold text-primary">{selectedRequest.taskType} Help</SheetTitle>
                 <SheetDescription className="text-base leading-relaxed text-slate-600 italic">
-                  "{selectedRequest.desc}"
+                  "{selectedRequest.description}"
                 </SheetDescription>
               </SheetHeader>
 
@@ -337,18 +368,18 @@ export default function ElderlyDashboard() {
                   </div>
                   <div>
                     <Label className="text-[10px] text-muted-foreground uppercase font-bold">Requested On</Label>
-                    <p className="text-primary font-medium">{selectedRequest.date}</p>
+                    <p className="text-primary font-medium">{new Date(selectedRequest.createdAt).toLocaleDateString()}</p>
                   </div>
                 </div>
 
-                {selectedRequest.volunteer && (
+                {selectedRequest.volunteerName && (
                   <div className="flex items-start gap-4">
                     <div className="p-2 rounded-lg bg-emerald-50 text-emerald-500">
                       <User className="h-5 w-5" />
                     </div>
                     <div>
                       <Label className="text-[10px] text-muted-foreground uppercase font-bold">Volunteer Assigned</Label>
-                      <p className="text-primary font-medium">{selectedRequest.volunteer}</p>
+                      <p className="text-primary font-medium">{selectedRequest.volunteerName}</p>
                     </div>
                   </div>
                 )}
@@ -357,13 +388,13 @@ export default function ElderlyDashboard() {
               <div className="flex flex-col gap-3 mt-8">
                 {selectedRequest.status === 'Accepted' && (
                   <Button asChild className="w-full h-14 rounded-2xl bg-accent hover:bg-accent/90">
-                    <Link href={`/dashboard/chat?role=elderly`}>
+                    <Link href={`/dashboard/chat/${selectedRequest.id}?role=elderly`}>
                       Chat with Volunteer
                     </Link>
                   </Button>
                 )}
                 
-                {selectedRequest.status !== 'Completed' && selectedRequest.status !== 'Rejected' && (
+                {selectedRequest.status === 'Pending' && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="outline" className="w-full h-14 rounded-2xl text-destructive hover:bg-destructive/10 border-destructive/20 font-bold gap-2">
@@ -380,7 +411,7 @@ export default function ElderlyDashboard() {
                       </AlertDialogHeader>
                       <AlertDialogFooter className="flex flex-col gap-2">
                         <AlertDialogAction 
-                          onClick={() => handleCancelRequest(selectedRequest.id)}
+                          onClick={() => handleCancelRequest(selectedRequest)}
                           className="bg-destructive hover:bg-destructive/90 h-12 rounded-xl font-bold"
                         >
                           Yes, Cancel Request
