@@ -1,17 +1,32 @@
+
 "use client";
 
+import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, Truck, Wrench, Info, ChevronRight, ArrowLeft } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { 
+  ShoppingCart, 
+  Truck, 
+  Wrench, 
+  Info, 
+  ChevronRight, 
+  ArrowLeft,
+  MapPin,
+  Calendar,
+  User
+} from 'lucide-react';
 import Link from 'next/link';
 
 export default function RequestsHistoryPage() {
+  const [selectedRequest, setSelectedRequest] = useState<any>(null);
+
   const allRequests = [
-    { id: 1, type: 'Groceries', status: 'Pending', date: 'Oct 24, 2024', desc: 'Need help buying milk and bread from the local market.' },
-    { id: 2, type: 'Transportation', status: 'Accepted', date: 'Oct 23, 2024', desc: 'Ride to the clinic for monthly health checkup.' },
-    { id: 3, type: 'Tech Support', status: 'Completed', date: 'Oct 21, 2024', desc: 'Setting up my new phone and installing WhatsApp.' },
-    { id: 4, type: 'Groceries', status: 'Completed', date: 'Oct 10, 2024', desc: 'Weekly grocery run for vegetables and fruits.' },
+    { id: 1, type: 'Groceries', status: 'Pending', date: 'Oct 24, 2024', desc: 'Need help buying milk and bread from the local market.', location: 'Block C, Room 102', urgency: 'Medium' },
+    { id: 2, type: 'Transportation', status: 'Accepted', date: 'Oct 23, 2024', desc: 'Ride to the clinic for monthly health checkup.', location: 'Lobby Block A', urgency: 'High', volunteer: 'Sarah (Student)' },
+    { id: 3, type: 'Tech Support', status: 'Completed', date: 'Oct 21, 2024', desc: 'Setting up my new phone and installing WhatsApp.', location: 'Block C, Room 102', urgency: 'Low', volunteer: 'Jason (Student)' },
+    { id: 4, type: 'Groceries', status: 'Completed', date: 'Oct 10, 2024', desc: 'Weekly grocery run for vegetables and fruits.', location: 'Local Market', urgency: 'Low', volunteer: 'Ahmad (Student)' },
   ];
 
   const getStatusBadge = (status: string) => {
@@ -46,7 +61,11 @@ export default function RequestsHistoryPage() {
 
       <div className="space-y-4">
         {allRequests.map((req) => (
-          <Card key={req.id} className="border-none shadow-sm rounded-3xl overflow-hidden active:bg-slate-50 transition-colors">
+          <Card 
+            key={req.id} 
+            className="border-none shadow-sm rounded-3xl overflow-hidden active:bg-slate-50 transition-colors cursor-pointer"
+            onClick={() => setSelectedRequest(req)}
+          >
             <CardContent className="p-5 flex items-start gap-4">
               <div className="p-3 rounded-2xl bg-accent/10 text-accent shrink-0">
                 {getTypeIcon(req.type)}
@@ -54,20 +73,110 @@ export default function RequestsHistoryPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-1">
                   <span className="font-bold text-primary truncate text-lg">{req.type}</span>
-                  <span className="text-[10px] text-muted-foreground font-semibold uppercase">{req.date}</span>
+                  <span className="text-[10px] text-muted-foreground font-semibold uppercase">{req.date.split(',')[0]}</span>
                 </div>
-                <p className="text-sm text-muted-foreground leading-relaxed mb-3">{req.desc}</p>
+                <p className="text-sm text-muted-foreground leading-relaxed mb-3 line-clamp-2">{req.desc}</p>
                 <div className="flex items-center justify-between">
                   {getStatusBadge(req.status)}
-                  <Button variant="ghost" size="sm" className="text-accent font-bold text-xs p-0 h-auto">
-                    View Details
-                  </Button>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground/30" />
                 </div>
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
+
+      <Sheet open={!!selectedRequest} onOpenChange={() => setSelectedRequest(null)}>
+        <SheetContent side="bottom" className="rounded-t-[3rem] h-[80vh] px-6 py-8">
+          {selectedRequest && (
+            <div className="space-y-6 h-full overflow-y-auto">
+              <SheetHeader className="text-left space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="p-4 rounded-2xl bg-accent/10 text-accent w-fit">
+                    {getTypeIcon(selectedRequest.type)}
+                  </div>
+                  {getStatusBadge(selectedRequest.status)}
+                </div>
+                <SheetTitle className="text-2xl font-bold text-primary">{selectedRequest.type} Help</SheetTitle>
+                <SheetDescription className="text-base leading-relaxed text-slate-600 italic">
+                  "{selectedRequest.desc}"
+                </SheetDescription>
+              </SheetHeader>
+
+              <div className="space-y-4 pt-4 border-t">
+                <div className="flex items-start gap-4">
+                  <div className="p-2 rounded-lg bg-slate-50 text-slate-400">
+                    <MapPin className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground uppercase font-bold">Location</Label>
+                    <p className="text-primary font-medium">{selectedRequest.location}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <div className="p-2 rounded-lg bg-slate-50 text-slate-400">
+                    <Calendar className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground uppercase font-bold">Requested On</Label>
+                    <p className="text-primary font-medium">{selectedRequest.date}</p>
+                  </div>
+                </div>
+
+                {selectedRequest.volunteer && (
+                  <div className="flex items-start gap-4">
+                    <div className="p-2 rounded-lg bg-emerald-50 text-emerald-500">
+                      <User className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <Label className="text-[10px] text-muted-foreground uppercase font-bold">Volunteer Assigned</Label>
+                      <p className="text-primary font-medium">{selectedRequest.volunteer}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-4 pt-6">
+                <h3 className="text-sm font-bold text-primary uppercase tracking-wider">Progress Timeline</h3>
+                <div className="space-y-6 relative before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-100">
+                  <div className="flex items-start gap-4 relative z-10">
+                    <div className="h-5 w-5 rounded-full bg-emerald-500 border-4 border-white shadow-sm mt-0.5" />
+                    <div>
+                      <p className="text-sm font-bold text-primary">Request Submitted</p>
+                      <p className="text-xs text-muted-foreground">{selectedRequest.date}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-4 relative z-10">
+                    <div className={`h-5 w-5 rounded-full border-4 border-white shadow-sm mt-0.5 ${
+                      selectedRequest.status === 'Accepted' || selectedRequest.status === 'Completed' ? 'bg-emerald-500' : 'bg-slate-200'
+                    }`} />
+                    <div>
+                      <p className={`text-sm font-bold ${
+                        selectedRequest.status === 'Accepted' || selectedRequest.status === 'Completed' ? 'text-primary' : 'text-muted-foreground'
+                      }`}>Volunteer Accepted</p>
+                      {selectedRequest.volunteer && <p className="text-xs text-muted-foreground">Assigned to {selectedRequest.volunteer}</p>}
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4 relative z-10">
+                    <div className={`h-5 w-5 rounded-full border-4 border-white shadow-sm mt-0.5 ${
+                      selectedRequest.status === 'Completed' ? 'bg-emerald-500' : 'bg-slate-200'
+                    }`} />
+                    <div>
+                      <p className={`text-sm font-bold ${
+                        selectedRequest.status === 'Completed' ? 'text-primary' : 'text-muted-foreground'
+                      }`}>Task Completed</p>
+                      {selectedRequest.status === 'Completed' && <p className="text-xs text-muted-foreground">Successfully closed</p>}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
