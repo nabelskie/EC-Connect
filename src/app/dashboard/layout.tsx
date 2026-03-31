@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -26,11 +27,17 @@ import {
   SheetTrigger 
 } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Suspense, useMemo } from 'react';
+import { Suspense, useMemo, useState, useEffect } from 'react';
 
 function DashboardNav() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const roleQuery = searchParams.get('role');
 
   const currentRole = useMemo(() => {
@@ -60,6 +67,14 @@ function DashboardNav() {
   };
 
   const roleNavItems = navItems[currentRole as keyof typeof navItems] || navItems.elderly;
+
+  if (!mounted) {
+    return (
+      <nav className="h-20 bg-white border-t flex items-center justify-around px-2 fixed bottom-0 left-0 right-0 z-50 safe-area-bottom shadow-[0_-4_-10px_rgba(0,0,0,0.05)]">
+        <div className="flex-1 h-full bg-slate-50/50 animate-pulse" />
+      </nav>
+    );
+  }
 
   return (
     <nav className="h-20 bg-white border-t flex items-center justify-around px-2 fixed bottom-0 left-0 right-0 z-50 safe-area-bottom shadow-[0_-4_-10px_rgba(0,0,0,0.05)]">
@@ -92,6 +107,12 @@ function DashboardNav() {
 function NotificationContent() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const roleQuery = searchParams.get('role');
 
   const currentRole = useMemo(() => {
@@ -166,6 +187,10 @@ function NotificationContent() {
   };
 
   const notifications = notificationsByRole[currentRole as keyof typeof notificationsByRole] || notificationsByRole.elderly;
+
+  if (!mounted) {
+    return <div className="p-10 text-center text-sm text-muted-foreground">Loading alerts...</div>;
+  }
 
   return (
     <div className="divide-y divide-slate-100">
