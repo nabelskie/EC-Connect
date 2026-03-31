@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { 
   Heart, 
   Home, 
-  ClipboardList, 
   MessageSquare, 
   User, 
   LayoutDashboard, 
@@ -24,19 +23,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const navItems = {
     elderly: [
       { label: 'Home', icon: Home, href: '/dashboard/elderly' },
-      { label: 'Requests', icon: ClipboardList, href: '/dashboard/elderly/requests' },
       { label: 'Chat', icon: MessageSquare, href: '/chat/demo' },
       { label: 'Profile', icon: User, href: '/dashboard/profile' },
     ],
     volunteer: [
       { label: 'Browse', icon: LayoutDashboard, href: '/dashboard/volunteer' },
-      { label: 'My Tasks', icon: ClipboardList, href: '/dashboard/volunteer/history' },
       { label: 'Chat', icon: MessageSquare, href: '/chat/demo' },
       { label: 'Profile', icon: User, href: '/dashboard/profile' },
     ],
     admin: [
       { label: 'Overview', icon: ShieldCheck, href: '/dashboard/admin' },
-      { label: 'Requests', icon: ClipboardList, href: '/dashboard/admin/requests' },
       { label: 'Messages', icon: MessageSquare, href: '/chat/demo' },
       { label: 'Profile', icon: User, href: '/dashboard/profile' },
     ]
