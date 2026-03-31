@@ -32,6 +32,12 @@ import { Suspense, useMemo, useState, useEffect } from 'react';
 function DashboardNav() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const roleQuery = searchParams.get('role');
 
   const currentRole = useMemo(() => {
@@ -55,10 +61,11 @@ function DashboardNav() {
     ],
     admin: [
       { label: 'Overview', icon: ShieldCheck, href: `/dashboard/admin?role=admin` },
-      { label: 'Messages', icon: MessageSquare, href: `/dashboard/chat?role=admin` },
       { label: 'Profile', icon: User, href: `/dashboard/profile?role=admin` },
     ]
   };
+
+  if (!mounted) return null;
 
   const roleNavItems = navItems[currentRole as keyof typeof navItems] || navItems.elderly;
 
@@ -108,8 +115,8 @@ function NotificationContent() {
       { 
         id: 1, 
         title: 'Request Accepted', 
-        message: 'Sarah has accepted your Grocery request.', 
-        time: '2 mins ago', 
+        message: 'A volunteer has accepted your assistance request.', 
+        time: 'Just now', 
         unread: true,
         icon: CheckCircle2,
         color: 'text-emerald-500'
@@ -117,7 +124,7 @@ function NotificationContent() {
       { 
         id: 2, 
         title: 'New Message', 
-        message: 'Jason sent you a message regarding your Tech Support.', 
+        message: 'You have a new message from your assigned volunteer.', 
         time: '1 hour ago', 
         unread: true,
         icon: MessageCircle,
@@ -128,7 +135,7 @@ function NotificationContent() {
       { 
         id: 1, 
         title: 'New Request Available', 
-        message: 'Mrs. Hapsah needs help with Groceries at Block C.', 
+        message: 'A resident needs help with a task near your location.', 
         time: '5 mins ago', 
         unread: true,
         icon: AlertCircle,
@@ -136,8 +143,8 @@ function NotificationContent() {
       },
       { 
         id: 2, 
-        title: 'Hours Verified', 
-        message: 'Admin has verified your 2 hours of service.', 
+        title: 'Task Verified', 
+        message: 'Your completed task has been verified by the administrator.', 
         time: 'Yesterday', 
         unread: false,
         icon: CheckCircle2,
@@ -148,7 +155,7 @@ function NotificationContent() {
       { 
         id: 1, 
         title: 'New User Registration', 
-        message: 'A new student volunteer has registered.', 
+        message: 'A new volunteer has successfully registered and is pending review.', 
         time: '10 mins ago', 
         unread: true,
         icon: UserPlus,
@@ -157,7 +164,7 @@ function NotificationContent() {
       { 
         id: 2, 
         title: 'Weekly Report', 
-        message: 'Your automated system summary is ready.', 
+        message: 'The automated system summary for the current week is now ready.', 
         time: 'Yesterday', 
         unread: false,
         icon: BarChart3,
