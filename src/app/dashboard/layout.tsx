@@ -32,12 +32,6 @@ import { Suspense, useMemo, useState, useEffect } from 'react';
 function DashboardNav() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   const roleQuery = searchParams.get('role');
 
   const currentRole = useMemo(() => {
@@ -67,14 +61,6 @@ function DashboardNav() {
   };
 
   const roleNavItems = navItems[currentRole as keyof typeof navItems] || navItems.elderly;
-
-  if (!mounted) {
-    return (
-      <nav className="h-20 bg-white border-t flex items-center justify-around px-2 fixed bottom-0 left-0 right-0 z-50 safe-area-bottom shadow-[0_-4_-10px_rgba(0,0,0,0.05)]">
-        <div className="flex-1 h-full bg-slate-50/50 animate-pulse" />
-      </nav>
-    );
-  }
 
   return (
     <nav className="h-20 bg-white border-t flex items-center justify-around px-2 fixed bottom-0 left-0 right-0 z-50 safe-area-bottom shadow-[0_-4_-10px_rgba(0,0,0,0.05)]">
@@ -107,12 +93,6 @@ function DashboardNav() {
 function NotificationContent() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   const roleQuery = searchParams.get('role');
 
   const currentRole = useMemo(() => {
@@ -188,10 +168,6 @@ function NotificationContent() {
 
   const notifications = notificationsByRole[currentRole as keyof typeof notificationsByRole] || notificationsByRole.elderly;
 
-  if (!mounted) {
-    return <div className="p-10 text-center text-sm text-muted-foreground">Loading alerts...</div>;
-  }
-
   return (
     <div className="divide-y divide-slate-100">
       {notifications.length > 0 ? (
@@ -233,6 +209,12 @@ function NotificationContent() {
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   return (
     <div className="flex flex-col h-screen-dvh bg-background overflow-hidden">
       <header className="h-16 bg-white border-b flex items-center justify-between px-6 sticky top-0 z-30 shadow-sm shrink-0">
@@ -242,27 +224,31 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
         
         <div className="flex items-center gap-3">
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="rounded-full relative text-muted-foreground h-10 w-10">
-                <Bell className="h-5 w-5" />
-                <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-destructive rounded-full border-2 border-white" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-[85vw] sm:w-[400px] p-0 rounded-l-3xl border-none shadow-2xl">
-              <SheetHeader className="p-6 border-b bg-primary text-white rounded-tl-3xl">
-                <SheetTitle className="text-xl font-bold flex items-center gap-2 text-white">
+          {mounted ? (
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="rounded-full relative text-muted-foreground h-10 w-10">
                   <Bell className="h-5 w-5" />
-                  Notifications
-                </SheetTitle>
-              </SheetHeader>
-              <ScrollArea className="h-[calc(100vh-80px)] bg-slate-50/50">
-                <Suspense fallback={<div className="p-10 text-center text-sm text-muted-foreground">Loading alerts...</div>}>
-                  <NotificationContent />
-                </Suspense>
-              </ScrollArea>
-            </SheetContent>
-          </Sheet>
+                  <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-destructive rounded-full border-2 border-white" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[85vw] sm:w-[400px] p-0 rounded-l-3xl border-none shadow-2xl">
+                <SheetHeader className="p-6 border-b bg-primary text-white rounded-tl-3xl">
+                  <SheetTitle className="text-xl font-bold flex items-center gap-2 text-white">
+                    <Bell className="h-5 w-5" />
+                    Notifications
+                  </SheetTitle>
+                </SheetHeader>
+                <ScrollArea className="h-[calc(100vh-80px)] bg-slate-50/50">
+                  <Suspense fallback={<div className="p-10 text-center text-sm text-muted-foreground">Loading alerts...</div>}>
+                    <NotificationContent />
+                  </Suspense>
+                </ScrollArea>
+              </SheetContent>
+            </Sheet>
+          ) : (
+            <div className="h-10 w-10 rounded-full bg-slate-100 animate-pulse" />
+          )}
         </div>
       </header>
 
@@ -270,9 +256,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {children}
       </main>
 
-      <Suspense fallback={<div className="h-20 bg-white border-t" />}>
-        <DashboardNav />
-      </Suspense>
+      {mounted && (
+        <Suspense fallback={<div className="h-20 bg-white border-t" />}>
+          <DashboardNav />
+        </Suspense>
+      )}
     </div>
   );
 }
