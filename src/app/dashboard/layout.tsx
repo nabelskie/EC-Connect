@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { 
   Heart, 
@@ -23,12 +23,15 @@ import {
   SheetTrigger 
 } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Suspense } from 'react';
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+function DashboardNav() {
   const pathname = usePathname();
-  const router = useRouter();
+  const searchParams = useSearchParams();
+  const roleQuery = searchParams.get('role');
 
-  const currentRole = pathname.includes('admin') ? 'admin' : pathname.includes('volunteer') ? 'volunteer' : 'elderly';
+  // Determine current role based on search params or pathname to ensure persistence
+  const currentRole = roleQuery || (pathname.includes('admin') ? 'admin' : pathname.includes('volunteer') ? 'volunteer' : 'elderly');
 
   const navItems = {
     elderly: [
@@ -50,6 +53,36 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const roleNavItems = navItems[currentRole as keyof typeof navItems] || navItems.elderly;
 
+  return (
+    <nav className="h-20 bg-white border-t flex items-center justify-around px-2 fixed bottom-0 left-0 right-0 z-50 safe-area-bottom shadow-[0_-4_-10px_rgba(0,0,0,0.05)]">
+      {roleNavItems.map((item) => {
+        const Icon = item.icon;
+        const itemPath = item.href.split('?')[0];
+        // Correctly identify active state even with query parameters
+        const isActive = pathname === itemPath || (itemPath === '/dashboard/profile' && pathname === '/dashboard/profile');
+        
+        return (
+          <Link 
+            key={item.href} 
+            href={item.href}
+            className={`flex flex-col items-center justify-center gap-1 w-full h-full transition-all ${
+              isActive ? 'text-accent' : 'text-muted-foreground'
+            }`}
+          >
+            <div className={`p-1.5 rounded-xl transition-colors ${isActive ? 'bg-accent/10' : ''}`}>
+              <Icon className={`h-6 w-6 ${isActive ? 'stroke-[2.5px]' : 'stroke-[2px]'}`} />
+            </div>
+            <span className={`text-[10px] font-bold uppercase tracking-wider ${isActive ? 'opacity-100' : 'opacity-70'}`}>
+              {item.label}
+            </span>
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const notifications = [
     { 
       id: 1, 
@@ -152,29 +185,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {children}
       </main>
 
-      {/* Bottom Tab Bar */}
-      <nav className="h-20 bg-white border-t flex items-center justify-around px-2 fixed bottom-0 left-0 right-0 z-50 safe-area-bottom shadow-[0_-4_-10px_rgba(0,0,0,0.05)]">
-        {roleNavItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = pathname === item.href || (item.href.split('?')[0] === '/dashboard/profile' && pathname === '/dashboard/profile');
-          return (
-            <Link 
-              key={item.href} 
-              href={item.href}
-              className={`flex flex-col items-center justify-center gap-1 w-full h-full transition-all ${
-                isActive ? 'text-accent' : 'text-muted-foreground'
-              }`}
-            >
-              <div className={`p-1.5 rounded-xl transition-colors ${isActive ? 'bg-accent/10' : ''}`}>
-                <Icon className={`h-6 w-6 ${isActive ? 'stroke-[2.5px]' : 'stroke-[2px]'}`} />
-              </div>
-              <span className={`text-[10px] font-bold uppercase tracking-wider ${isActive ? 'opacity-100' : 'opacity-70'}`}>
-                {item.label}
-              </span>
-            </Link>
-          );
-        })}
-      </nav>
+      {/* Bottom Tab Bar wrapped in Suspense for useSearchParams */}
+      <Suspense fallback={<div className="h-20 bg-white border-t" />}>
+        <DashboardNav />
+      </Suspense>
     </div>
   );
 }
