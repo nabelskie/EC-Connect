@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { generateAdminDashboardSummary } from '@/ai/flows/generate-admin-dashboard-summary-flow';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
+import Link from 'next/link';
 
 export default function AdminDashboard() {
   const [aiSummary, setAiSummary] = useState<string>("");
@@ -69,7 +70,7 @@ export default function AdminDashboard() {
     if (!isUsersLoading && !isPendingLoading && !isActiveLoading && !isCompletedLoading && usersData) {
       handleGenerateSummary();
     }
-  }, [isUsersLoading, isPendingLoading, isActiveLoading, isCompletedLoading]);
+  }, [isUsersLoading, isPendingLoading, isActiveLoading, isCompletedLoading, usersData]);
 
   // Combine data for a unified recent activity feed
   const recentActivity = useMemo(() => {
@@ -107,37 +108,45 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <Card className="border-none shadow-sm bg-white p-4">
-          <div className="p-2 w-fit rounded-lg bg-blue-100 text-blue-600 mb-2">
-            <Users className="h-5 w-5" />
-          </div>
-          <div className="text-xl font-bold text-primary">{metrics.totalUsers}</div>
-          <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-tight">Total Users</div>
-        </Card>
+        <Link href="/dashboard/admin/users?role=admin" className="block">
+          <Card className="border-none shadow-sm bg-white p-4 hover:bg-slate-50 transition-colors cursor-pointer">
+            <div className="p-2 w-fit rounded-lg bg-blue-100 text-blue-600 mb-2">
+              <Users className="h-5 w-5" />
+            </div>
+            <div className="text-xl font-bold text-primary">{metrics.totalUsers}</div>
+            <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-tight">Total Users</div>
+          </Card>
+        </Link>
         
-        <Card className="border-none shadow-sm bg-white p-4">
-          <div className="p-2 w-fit rounded-lg bg-orange-100 text-orange-600 mb-2">
-            <FileText className="h-5 w-5" />
-          </div>
-          <div className="text-xl font-bold text-primary">{metrics.totalRequests}</div>
-          <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-tight">Total Requests</div>
-        </Card>
+        <Link href="/dashboard/admin/requests?role=admin" className="block">
+          <Card className="border-none shadow-sm bg-white p-4 hover:bg-slate-50 transition-colors cursor-pointer">
+            <div className="p-2 w-fit rounded-lg bg-orange-100 text-orange-600 mb-2">
+              <FileText className="h-5 w-5" />
+            </div>
+            <div className="text-xl font-bold text-primary">{metrics.totalRequests}</div>
+            <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-tight">Total Requests</div>
+          </Card>
+        </Link>
 
-        <Card className="border-none shadow-sm bg-white p-4">
-          <div className="p-2 w-fit rounded-lg bg-accent/10 text-accent mb-2">
-            <ShieldCheck className="h-5 w-5" />
-          </div>
-          <div className="text-xl font-bold text-primary">{metrics.activeVolunteers}</div>
-          <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-tight">Volunteers</div>
-        </Card>
+        <Link href="/dashboard/admin/users?role=admin&filter=volunteer" className="block">
+          <Card className="border-none shadow-sm bg-white p-4 hover:bg-slate-50 transition-colors cursor-pointer">
+            <div className="p-2 w-fit rounded-lg bg-accent/10 text-accent mb-2">
+              <ShieldCheck className="h-5 w-5" />
+            </div>
+            <div className="text-xl font-bold text-primary">{metrics.activeVolunteers}</div>
+            <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-tight">Volunteers</div>
+          </Card>
+        </Link>
 
-        <Card className="border-none shadow-sm bg-white p-4">
-          <div className="p-2 w-fit rounded-lg bg-emerald-100 text-emerald-600 mb-2">
-            <CheckCircle className="h-5 w-5" />
-          </div>
-          <div className="text-xl font-bold text-primary">{metrics.completedTasks}</div>
-          <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-tight">Completed</div>
-        </Card>
+        <Link href="/dashboard/admin/requests?role=admin&filter=Completed" className="block">
+          <Card className="border-none shadow-sm bg-white p-4 hover:bg-slate-50 transition-colors cursor-pointer">
+            <div className="p-2 w-fit rounded-lg bg-emerald-100 text-emerald-600 mb-2">
+              <CheckCircle className="h-5 w-5" />
+            </div>
+            <div className="text-xl font-bold text-primary">{metrics.completedTasks}</div>
+            <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-tight">Completed</div>
+          </Card>
+        </Link>
       </div>
 
       <Card className="bg-primary/5 border-primary/20 shadow-none overflow-hidden border-2 border-dashed rounded-2xl">
@@ -166,7 +175,9 @@ export default function AdminDashboard() {
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold text-primary">Recent Activity</h2>
-          <Button variant="link" className="text-xs font-bold text-accent h-auto p-0">View All</Button>
+          <Button asChild variant="link" className="text-xs font-bold text-accent h-auto p-0">
+            <Link href="/dashboard/admin/requests?role=admin">View All</Link>
+          </Button>
         </div>
 
         <div className="space-y-2">
