@@ -23,7 +23,7 @@ import {
   SheetTrigger 
 } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Suspense } from 'react';
+import { Suspense, useMemo } from 'react';
 
 function DashboardNav() {
   const pathname = usePathname();
@@ -31,23 +31,29 @@ function DashboardNav() {
   const roleQuery = searchParams.get('role');
 
   // Determine current role based on search params or pathname to ensure persistence
-  const currentRole = roleQuery || (pathname.includes('admin') ? 'admin' : pathname.includes('volunteer') ? 'volunteer' : 'elderly');
+  const currentRole = useMemo(() => {
+    if (roleQuery) return roleQuery;
+    if (pathname.includes('/admin')) return 'admin';
+    if (pathname.includes('/volunteer')) return 'volunteer';
+    if (pathname.includes('/elderly')) return 'elderly';
+    return 'elderly';
+  }, [roleQuery, pathname]);
 
   const navItems = {
     elderly: [
-      { label: 'Home', icon: Home, href: '/dashboard/elderly' },
-      { label: 'Chat', icon: MessageSquare, href: '/chat' },
-      { label: 'Profile', icon: User, href: '/dashboard/profile?role=elderly' },
+      { label: 'Home', icon: Home, href: `/dashboard/elderly?role=elderly` },
+      { label: 'Chat', icon: MessageSquare, href: `/dashboard/chat?role=elderly` },
+      { label: 'Profile', icon: User, href: `/dashboard/profile?role=elderly` },
     ],
     volunteer: [
-      { label: 'Browse', icon: LayoutDashboard, href: '/dashboard/volunteer' },
-      { label: 'Chat', icon: MessageSquare, href: '/chat' },
-      { label: 'Profile', icon: User, href: '/dashboard/profile?role=volunteer' },
+      { label: 'Browse', icon: LayoutDashboard, href: `/dashboard/volunteer?role=volunteer` },
+      { label: 'Chat', icon: MessageSquare, href: `/dashboard/chat?role=volunteer` },
+      { label: 'Profile', icon: User, href: `/dashboard/profile?role=volunteer` },
     ],
     admin: [
-      { label: 'Overview', icon: ShieldCheck, href: '/dashboard/admin' },
-      { label: 'Messages', icon: MessageSquare, href: '/chat' },
-      { label: 'Profile', icon: User, href: '/dashboard/profile?role=admin' },
+      { label: 'Overview', icon: ShieldCheck, href: `/dashboard/admin?role=admin` },
+      { label: 'Messages', icon: MessageSquare, href: `/dashboard/chat?role=admin` },
+      { label: 'Profile', icon: User, href: `/dashboard/profile?role=admin` },
     ]
   };
 
@@ -58,8 +64,7 @@ function DashboardNav() {
       {roleNavItems.map((item) => {
         const Icon = item.icon;
         const itemPath = item.href.split('?')[0];
-        // Correctly identify active state even with query parameters
-        const isActive = pathname === itemPath || (itemPath === '/dashboard/profile' && pathname === '/dashboard/profile');
+        const isActive = pathname === itemPath || (pathname.startsWith(itemPath) && itemPath !== '/dashboard/elderly' && itemPath !== '/dashboard/volunteer' && itemPath !== '/dashboard/admin');
         
         return (
           <Link 
@@ -115,7 +120,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex flex-col h-screen-dvh bg-background overflow-hidden">
-      {/* Mobile Header */}
       <header className="h-16 bg-white border-b flex items-center justify-between px-6 sticky top-0 z-30 shadow-sm shrink-0">
         <div className="flex items-center gap-2">
           <Heart className="h-6 w-6 text-accent fill-accent" />
@@ -180,12 +184,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </header>
 
-      {/* Main Content Scroll Area */}
       <main className="flex-1 overflow-y-auto pb-24 px-4 pt-6 max-w-md mx-auto w-full">
         {children}
       </main>
 
-      {/* Bottom Tab Bar wrapped in Suspense for useSearchParams */}
       <Suspense fallback={<div className="h-20 bg-white border-t" />}>
         <DashboardNav />
       </Suspense>

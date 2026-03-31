@@ -1,7 +1,7 @@
-
 "use client";
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,7 +11,7 @@ import { MapPin, Clock, ArrowRight, ShoppingCart, Truck, Wrench, AlertCircle, He
 export default function VolunteerDashboard() {
   const availableTasks = [
     { 
-      id: 1, 
+      id: '1024', 
       user: 'Mrs. Hapsah', 
       type: 'Grocery', 
       urgency: 'High', 
@@ -20,7 +20,7 @@ export default function VolunteerDashboard() {
       desc: 'Need urgent help getting medications and some rice.' 
     },
     { 
-      id: 2, 
+      id: '1025', 
       user: 'Mr. Lim', 
       type: 'Tech Support', 
       urgency: 'Medium', 
@@ -98,9 +98,11 @@ export default function VolunteerDashboard() {
                       <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {task.location}</span>
                       <span className="flex items-center gap-1 text-accent"><Clock className="h-3 w-3" /> {task.dist}</span>
                     </div>
-                    <Button className="w-full h-12 bg-accent hover:bg-accent/90 text-white font-bold rounded-2xl gap-2 mt-2 shadow-lg shadow-accent/20">
-                      Accept & Chat
-                      <ArrowRight className="h-4 w-4" />
+                    <Button asChild className="w-full h-12 bg-accent hover:bg-accent/90 text-white font-bold rounded-2xl gap-2 mt-2 shadow-lg shadow-accent/20">
+                      <Link href={`/dashboard/chat/RQ${task.id}?role=volunteer`}>
+                        Accept & Chat
+                        <ArrowRight className="h-4 w-4" />
+                      </Link>
                     </Button>
                   </div>
                 </CardContent>
