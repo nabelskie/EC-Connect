@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, Suspense, useEffect } from 'react';
@@ -11,7 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send, Phone, ArrowLeft, ShieldCheck, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useFirestore, useUser, useDoc, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, collection, query, orderBy, serverTimestamp, where } from 'firebase/firestore';
+import { doc, collection, query, serverTimestamp, where } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 function ChatContent() {
@@ -40,14 +39,24 @@ function ChatContent() {
   const messagesQuery = useMemoFirebase(() => {
     if (!requestId || !db || !user) return null;
     // We add the 'participantUserIds' filter to satisfy "Rules are not filters"
+    // We remove the orderBy here to avoid the need for a composite index
     return query(
       collection(db, 'chat_rooms', requestId, 'messages'),
-      where('participantUserIds', 'array-contains', user.uid),
-      orderBy('timestamp', 'asc')
+      where('participantUserIds', 'array-contains', user.uid)
     );
   }, [db, requestId, user]);
 
   const { data: messages, isLoading: isMessagesLoading } = useCollection(messagesQuery);
+
+  // Sort messages on the client side to avoid needing a composite index in Firestore
+  const sortedMessages = useMemo(() => {
+    if (!messages) return [];
+    return [...messages].sort((a, b) => {
+      const timeA = a.timestamp?.toMillis?.() || 0;
+      const timeB = b.timestamp?.toMillis?.() || 0;
+      return timeA - timeB;
+    });
+  }, [messages]);
 
   const chatPartner = useMemo(() => {
     if (!chatRoom) return { name: 'Chat', image: '', roleName: '...' };
@@ -163,8 +172,8 @@ function ChatContent() {
                 <div className="flex justify-center py-10">
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
-              ) : messages && messages.length > 0 ? (
-                messages.map((msg) => {
+              ) : sortedMessages && sortedMessages.length > 0 ? (
+                sortedMessages.map((msg) => {
                   const isMe = msg.senderUserId === user?.uid;
                   const timeStr = msg.timestamp?.toDate ? msg.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '...';
                   
