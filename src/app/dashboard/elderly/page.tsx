@@ -35,7 +35,8 @@ import {
   MapPin,
   Calendar,
   User,
-  Trash2
+  Trash2,
+  XCircle
 } from 'lucide-react';
 import { generateTaskDescription } from '@/ai/flows/generate-task-description-flow';
 import { useToast } from '@/hooks/use-toast';
@@ -128,6 +129,7 @@ export default function ElderlyDashboard() {
       case 'Pending': return <Badge className="bg-yellow-500 text-white rounded-full px-3">Pending</Badge>;
       case 'Accepted': return <Badge className="bg-sky-500 text-white rounded-full px-3">Accepted</Badge>;
       case 'Completed': return <Badge className="bg-emerald-500 text-white rounded-full px-3">Completed</Badge>;
+      case 'Rejected': return <Badge className="bg-destructive text-white rounded-full px-3">Rejected</Badge>;
       default: return <Badge variant="outline" className="rounded-full">{status}</Badge>;
     }
   };
@@ -339,29 +341,41 @@ export default function ElderlyDashboard() {
                     </div>
                   </div>
                   
-                  <div className="flex items-start gap-4 relative z-10">
-                    <div className={`h-5 w-5 rounded-full border-4 border-white shadow-sm mt-0.5 ${
-                      selectedRequest.status === 'Accepted' || selectedRequest.status === 'Completed' ? 'bg-emerald-500' : 'bg-slate-200'
-                    }`} />
-                    <div>
-                      <p className={`text-sm font-bold ${
-                        selectedRequest.status === 'Accepted' || selectedRequest.status === 'Completed' ? 'text-primary' : 'text-muted-foreground'
-                      }`}>Volunteer Accepted</p>
-                      {selectedRequest.volunteer && <p className="text-xs text-muted-foreground">Assigned to {selectedRequest.volunteer}</p>}
+                  {selectedRequest.status === 'Rejected' ? (
+                    <div className="flex items-start gap-4 relative z-10">
+                      <div className="h-5 w-5 rounded-full bg-destructive border-4 border-white shadow-sm mt-0.5" />
+                      <div>
+                        <p className="text-sm font-bold text-destructive">Request Rejected</p>
+                        <p className="text-xs text-muted-foreground">No volunteer available or request declined.</p>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <>
+                      <div className="flex items-start gap-4 relative z-10">
+                        <div className={`h-5 w-5 rounded-full border-4 border-white shadow-sm mt-0.5 ${
+                          selectedRequest.status === 'Accepted' || selectedRequest.status === 'Completed' ? 'bg-emerald-500' : 'bg-slate-200'
+                        }`} />
+                        <div>
+                          <p className={`text-sm font-bold ${
+                            selectedRequest.status === 'Accepted' || selectedRequest.status === 'Completed' ? 'text-primary' : 'text-muted-foreground'
+                          }`}>Volunteer Accepted</p>
+                          {selectedRequest.volunteer && <p className="text-xs text-muted-foreground">Assigned to {selectedRequest.volunteer}</p>}
+                        </div>
+                      </div>
 
-                  <div className="flex items-start gap-4 relative z-10">
-                    <div className={`h-5 w-5 rounded-full border-4 border-white shadow-sm mt-0.5 ${
-                      selectedRequest.status === 'Completed' ? 'bg-emerald-500' : 'bg-slate-200'
-                    }`} />
-                    <div>
-                      <p className={`text-sm font-bold ${
-                        selectedRequest.status === 'Completed' ? 'text-primary' : 'text-muted-foreground'
-                      }`}>Task Completed</p>
-                      {selectedRequest.status === 'Completed' && <p className="text-xs text-muted-foreground">Successfully closed</p>}
-                    </div>
-                  </div>
+                      <div className="flex items-start gap-4 relative z-10">
+                        <div className={`h-5 w-5 rounded-full border-4 border-white shadow-sm mt-0.5 ${
+                          selectedRequest.status === 'Completed' ? 'bg-emerald-500' : 'bg-slate-200'
+                        }`} />
+                        <div>
+                          <p className={`text-sm font-bold ${
+                            selectedRequest.status === 'Completed' ? 'text-primary' : 'text-muted-foreground'
+                          }`}>Task Completed</p>
+                          {selectedRequest.status === 'Completed' && <p className="text-xs text-muted-foreground">Successfully closed</p>}
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -374,7 +388,7 @@ export default function ElderlyDashboard() {
                   </Button>
                 )}
                 
-                {selectedRequest.status !== 'Completed' && (
+                {selectedRequest.status !== 'Completed' && selectedRequest.status !== 'Rejected' && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="outline" className="w-full h-14 rounded-2xl text-destructive hover:bg-destructive/10 border-destructive/20 font-bold gap-2">

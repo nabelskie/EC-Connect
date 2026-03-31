@@ -187,29 +187,41 @@ export default function RequestsHistoryPage() {
                     </div>
                   </div>
                   
-                  <div className="flex items-start gap-4 relative z-10">
-                    <div className={`h-5 w-5 rounded-full border-4 border-white shadow-sm mt-0.5 ${
-                      selectedRequest.status === 'Accepted' || selectedRequest.status === 'Completed' ? 'bg-emerald-500' : 'bg-slate-200'
-                    }`} />
-                    <div>
-                      <p className={`text-sm font-bold ${
-                        selectedRequest.status === 'Accepted' || selectedRequest.status === 'Completed' ? 'text-primary' : 'text-muted-foreground'
-                      }`}>Volunteer Accepted</p>
-                      {selectedRequest.volunteer && <p className="text-xs text-muted-foreground">Assigned to {selectedRequest.volunteer}</p>}
+                  {selectedRequest.status === 'Rejected' ? (
+                    <div className="flex items-start gap-4 relative z-10">
+                      <div className="h-5 w-5 rounded-full bg-destructive border-4 border-white shadow-sm mt-0.5" />
+                      <div>
+                        <p className="text-sm font-bold text-destructive">Request Rejected</p>
+                        <p className="text-xs text-muted-foreground">No volunteer available or request declined.</p>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <>
+                      <div className="flex items-start gap-4 relative z-10">
+                        <div className={`h-5 w-5 rounded-full border-4 border-white shadow-sm mt-0.5 ${
+                          selectedRequest.status === 'Accepted' || selectedRequest.status === 'Completed' ? 'bg-emerald-500' : 'bg-slate-200'
+                        }`} />
+                        <div>
+                          <p className={`text-sm font-bold ${
+                            selectedRequest.status === 'Accepted' || selectedRequest.status === 'Completed' ? 'text-primary' : 'text-muted-foreground'
+                          }`}>Volunteer Accepted</p>
+                          {selectedRequest.volunteer && <p className="text-xs text-muted-foreground">Assigned to {selectedRequest.volunteer}</p>}
+                        </div>
+                      </div>
 
-                  <div className="flex items-start gap-4 relative z-10">
-                    <div className={`h-5 w-5 rounded-full border-4 border-white shadow-sm mt-0.5 ${
-                      selectedRequest.status === 'Completed' ? 'bg-emerald-500' : 'bg-slate-200'
-                    }`} />
-                    <div>
-                      <p className={`text-sm font-bold ${
-                        selectedRequest.status === 'Completed' ? 'text-primary' : 'text-muted-foreground'
-                      }`}>Task Completed</p>
-                      {selectedRequest.status === 'Completed' && <p className="text-xs text-muted-foreground">Successfully closed</p>}
-                    </div>
-                  </div>
+                      <div className="flex items-start gap-4 relative z-10">
+                        <div className={`h-5 w-5 rounded-full border-4 border-white shadow-sm mt-0.5 ${
+                          selectedRequest.status === 'Completed' ? 'bg-emerald-500' : 'bg-slate-200'
+                        }`} />
+                        <div>
+                          <p className={`text-sm font-bold ${
+                            selectedRequest.status === 'Completed' ? 'text-primary' : 'text-muted-foreground'
+                          }`}>Task Completed</p>
+                          {selectedRequest.status === 'Completed' && <p className="text-xs text-muted-foreground">Successfully closed</p>}
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
