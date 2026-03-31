@@ -1,0 +1,369 @@
+{
+  "entities": {
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Represents a user's profile in the ElderCare Connect system, storing essential information and their assigned role.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the UserProfile entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The full name of the user."
+        },
+        "email": {
+          "type": "string",
+          "description": "The email address of the user.",
+          "format": "email"
+        },
+        "role": {
+          "type": "string",
+          "description": "The role of the user within the system (e.g., 'elderly', 'volunteer', 'admin')."
+        },
+        "phone": {
+          "type": "string",
+          "description": "The phone number of the user. (Optional)"
+        },
+        "address": {
+          "type": "string",
+          "description": "The physical address of the user. (Optional)"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the user profile was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "email",
+        "role",
+        "createdAt"
+      ]
+    },
+    "AssistanceRequest": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "AssistanceRequest",
+      "type": "object",
+      "description": "Represents a request for assistance made by an elderly user or caregiver.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the AssistanceRequest entity."
+        },
+        "createdByUserId": {
+          "type": "string",
+          "description": "Reference to the UserProfile who created this request. (Relationship: UserProfile 1:N AssistanceRequest)"
+        },
+        "taskType": {
+          "type": "string",
+          "description": "The type of task requested (e.g., 'Grocery', 'Transport', 'Tech Support', 'Other')."
+        },
+        "description": {
+          "type": "string",
+          "description": "A detailed description of the assistance needed."
+        },
+        "location": {
+          "type": "string",
+          "description": "The location where the assistance is required."
+        },
+        "urgencyLevel": {
+          "type": "string",
+          "description": "The urgency level of the request (e.g., 'Low', 'Medium', 'High')."
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the request (e.g., 'Pending', 'Accepted', 'In Progress', 'Completed')."
+        },
+        "assignedVolunteerId": {
+          "type": "string",
+          "description": "Reference to the UserProfile who accepted and is assigned to this request. Null if not yet assigned. (Relationship: UserProfile 1:N AssistanceRequest)"
+        },
+        "chatRoomId": {
+          "type": "string",
+          "description": "Reference to the ChatRoom created for this assistance request once accepted. Null if no chat initiated. (Relationship: AssistanceRequest 1:1 ChatRoom)"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the assistance request was created.",
+          "format": "date-time"
+        },
+        "acceptedAt": {
+          "type": "string",
+          "description": "Timestamp when the request was accepted by a volunteer. (Optional)",
+          "format": "date-time"
+        },
+        "completedAt": {
+          "type": "string",
+          "description": "Timestamp when the request was marked as completed. (Optional)",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "createdByUserId",
+        "taskType",
+        "description",
+        "location",
+        "urgencyLevel",
+        "status",
+        "createdAt"
+      ]
+    },
+    "ChatRoom": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ChatRoom",
+      "type": "object",
+      "description": "Represents a specific conversation room between two users related to an assistance request.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ChatRoom entity."
+        },
+        "requestId": {
+          "type": "string",
+          "description": "Reference to the AssistanceRequest this chat room is associated with. (Relationship: ChatRoom 1:1 AssistanceRequest)"
+        },
+        "participantUserIds": {
+          "type": "array",
+          "description": "References to the UserProfiles participating in this chat (elderly user/caregiver and volunteer). (Relationship: ChatRoom N:N UserProfile)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the chat room was created.",
+          "format": "date-time"
+        },
+        "lastMessageAt": {
+          "type": "string",
+          "description": "Timestamp of the most recent message in this chat room. (Optional)",
+          "format": "date-time"
+        },
+        "lastMessageSnippet": {
+          "type": "string",
+          "description": "A short snippet of the last message sent in this chat room, for display in chat lists. (Optional)"
+        }
+      },
+      "required": [
+        "id",
+        "requestId",
+        "participantUserIds",
+        "createdAt"
+      ]
+    },
+    "Message": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Message",
+      "type": "object",
+      "description": "Represents an individual message within a ChatRoom.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Message entity."
+        },
+        "chatRoomId": {
+          "type": "string",
+          "description": "Reference to the ChatRoom this message belongs to. (Relationship: ChatRoom 1:N Message)"
+        },
+        "senderUserId": {
+          "type": "string",
+          "description": "Reference to the UserProfile who sent this message. (Relationship: UserProfile 1:N Message)"
+        },
+        "messageText": {
+          "type": "string",
+          "description": "The content of the message."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Timestamp when the message was sent.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "chatRoomId",
+        "senderUserId",
+        "messageText",
+        "timestamp"
+      ]
+    },
+    "Rating": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Rating",
+      "type": "object",
+      "description": "Represents a rating and feedback provided by an elderly user/caregiver for a completed assistance request.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Rating entity."
+        },
+        "requestId": {
+          "type": "string",
+          "description": "Reference to the AssistanceRequest this rating is for. (Relationship: AssistanceRequest 1:1 Rating)"
+        },
+        "volunteerUserId": {
+          "type": "string",
+          "description": "Reference to the UserProfile who was rated (the volunteer). (Relationship: UserProfile 1:N Rating)"
+        },
+        "elderlyUserId": {
+          "type": "string",
+          "description": "Reference to the UserProfile who provided the rating (the elderly user/caregiver). (Relationship: UserProfile 1:N Rating)"
+        },
+        "ratingScore": {
+          "type": "number",
+          "description": "The numerical score given to the volunteer (e.g., 1-5)."
+        },
+        "feedback": {
+          "type": "string",
+          "description": "Textual feedback provided by the elderly user/caregiver. (Optional)"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the rating was submitted.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "requestId",
+        "volunteerUserId",
+        "elderlyUserId",
+        "ratingScore",
+        "createdAt"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "Stores individual user profiles. The document ID (`userId`) must match `request.auth.uid`. Includes the 'role' field for DBAC, which is critical for enforcing role-based access control throughout the application. Users can read/write their own profile; admins have full access.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the user, matching Firebase Authentication UID."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/assistance_requests_pending/{requestId}",
+        "definition": {
+          "entityName": "AssistanceRequest",
+          "schema": {
+            "$ref": "#/backend/entities/AssistanceRequest"
+          },
+          "description": "Collection for assistance requests that are awaiting acceptance by a volunteer. Documents in this collection have a 'status' of 'Pending'. The `createdByUserId` field is denormalized for authorization independence. Volunteers can read; elderly users/caregivers can create their own; no `assignedVolunteerId` is present yet.",
+          "params": [
+            {
+              "name": "requestId",
+              "description": "The unique ID of the assistance request."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/assistance_requests_active/{requestId}",
+        "definition": {
+          "entityName": "AssistanceRequest",
+          "schema": {
+            "$ref": "#/backend/entities/AssistanceRequest"
+          },
+          "description": "Collection for assistance requests that have been accepted by a volunteer and are currently in progress. Documents in this collection have a 'status' of 'Accepted' or 'In Progress'. The `createdByUserId` and `assignedVolunteerId` fields are denormalized for authorization independence. Only the created user, the assigned volunteer, or an admin can read/write these documents.",
+          "params": [
+            {
+              "name": "requestId",
+              "description": "The unique ID of the assistance request."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/assistance_requests_completed/{requestId}",
+        "definition": {
+          "entityName": "AssistanceRequest",
+          "schema": {
+            "$ref": "#/backend/entities/AssistanceRequest"
+          },
+          "description": "Collection for assistance requests that have been marked as completed. Documents in this collection have a 'status' of 'Completed'. The `createdByUserId` and `assignedVolunteerId` fields are denormalized for authorization independence. Only the created user, the assigned volunteer, or an admin can read these documents.",
+          "params": [
+            {
+              "name": "requestId",
+              "description": "The unique ID of the assistance request."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/chat_rooms/{chatRoomId}",
+        "definition": {
+          "entityName": "ChatRoom",
+          "schema": {
+            "$ref": "#/backend/entities/ChatRoom"
+          },
+          "description": "Top-level collection for chat rooms. Each document includes `participantUserIds` (an array of UIDs) denormalized for authorization independence for itself and its subcollection messages. Includes `requestId` to link to the related assistance request. Only users listed in `participantUserIds` can read/write.",
+          "params": [
+            {
+              "name": "chatRoomId",
+              "description": "The unique ID of the chat room."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/chat_rooms/{chatRoomId}/messages/{messageId}",
+        "definition": {
+          "entityName": "Message",
+          "schema": {
+            "$ref": "#/backend/entities/Message"
+          },
+          "description": "Subcollection for messages within a specific chat room. Each message document includes `senderUserId` and crucially, it **denormalizes `participantUserIds` from its parent ChatRoom document** to ensure strict Authorization Independence for message access. Only `senderUserId` can create, and only users in `participantUserIds` can read.",
+          "params": [
+            {
+              "name": "chatRoomId",
+              "description": "The unique ID of the parent chat room."
+            },
+            {
+              "name": "messageId",
+              "description": "The unique ID of the message."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/ratings/{ratingId}",
+        "definition": {
+          "entityName": "Rating",
+          "schema": {
+            "$ref": "#/backend/entities/Rating"
+          },
+          "description": "Collection for ratings provided by elderly users/caregivers to volunteers. The `requestId`, `volunteerUserId`, and `elderlyUserId` fields are denormalized for authorization independence. Only `elderlyUserId` can create; `elderlyUserId`, `volunteerUserId`, or an admin can read.",
+          "params": [
+            {
+              "name": "ratingId",
+              "description": "The unique ID of the rating."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The recommended Firestore structure for ElderCare Connect is designed with a strong emphasis on Authorization Independence, Queryable Authorization Patterns (QAPs), and Structural Segregation, as per the core design principles. This approach minimizes complexity in security rules, enhances scalability, and improves debuggability.\n\n**Authorization Independence (CRITICAL):**\n1.  **User Profiles (`/users/{userId}`):** User-specific data is stored directly under their `userId`, allowing for simple `request.auth.uid == userId` rules without `get()` calls.\n2.  **Assistance Requests (Segregated):** Requests are split into three top-level collections: `/assistance_requests_pending`, `/assistance_requests_active`, and `/assistance_requests_completed`. Each request document explicitly includes `createdByUserId` and `assignedVolunteerId` (when applicable). This denormalization means security rules for any specific request document can check ownership or assignment directly from the `resource.data` without needing to `get()` a parent document. This design also supports atomic state transitions (e.g., moving a request from pending to active).\n3.  **Chat Rooms (`/chat_rooms/{chatRoomId}`):** Each `ChatRoom` document explicitly stores the `participantUserIds` array. This allows security rules to check `request.auth.uid in resource.data.participantUserIds` for read/write access to the chat room itself, without any external `get()` calls.\n4.  **Messages (`/chat_rooms/{chatRoomId}/messages/{messageId}`):** To strictly adhere to the Authorization Independence mandate, each `Message` document will **denormalize the `participantUserIds` array from its parent `ChatRoom` document**. This ensures that security rules for messages can directly evaluate access based on `request.auth.uid in resource.data.participantUserIds`, eliminating the need for `get()` calls to the parent `ChatRoom` document for authorization, thus supporting atomic writes and simplified rule evaluation.\n5.  **Ratings (`/ratings/{ratingId}`):** `elderlyUserId` and `volunteerUserId` are explicitly stored on each `Rating` document, ensuring authorization checks are local to the document.\n\n**Queryable Authorization Patterns (QAPs - Rules are not Filters):**\n1.  **User Profiles:** Although less common for listing, access to a specific user's profile is inherently tied to their `userId`, supporting QAPs for direct access.\n2.  **Assistance Requests:** The structural segregation by status (`_pending`, `_active`, `_completed`) is key for QAPs:\n    *   Volunteers can efficiently `list` all documents in `/assistance_requests_pending` as they are all discoverable by any volunteer. The collection itself implies the 'pending' status.\n    *   Users (elderly/caregivers) can `list` their own active/completed requests by querying `/assistance_requests_active` or `/assistance_requests_completed` using `where('createdByUserId', '==', request.auth.uid)`. Similarly, volunteers can `list` their assigned requests using `where('assignedVolunteerId', '==', request.auth.uid)`. These queries are efficient and filter data at the database level, not through security rules.\n3.  **Chat Rooms:** Listing a user's active chats is achieved by querying `/chat_rooms` with `where('participantUserIds', 'array-contains', request.auth.uid)`. This is a robust and scalable QAP for retrieving user-specific chat lists.\n4.  **Messages:** Listing messages for a specific `chatRoomId` is naturally constrained by the subcollection path. The denormalized `participantUserIds` in each message ensures that read access for individual messages is securely enforced at the rule level, complementing the QAP for listing chats.\n5.  **Ratings:** Users can `list` ratings they submitted or received by querying `/ratings` using `where('elderlyUserId', '==', request.auth.uid)` or `where('volunteerUserId', '==', request.auth.uid)`.\n\n**Structural Segregation & DBAC:**\n*   `UserProfile` documents, stored in `/users/{userId}`, include a `role` field (`elderly`, `volunteer`, `admin`) for Database-Backed Access Control (DBAC). Security rules will reference this role for authorization decisions across the application.\n*   The distinct collections for `assistance_requests_pending`, `assistance_requests_active`, and `assistance_requests_completed` ensure that all documents within a given collection share a homogeneous security posture. This simplifies security rules greatly; for example, rules for `_pending` don't need to consider `assignedVolunteerId` because it's not present, and rules for `_active` can assume an `assignedVolunteerId` exists. This strategy moves complexity from rule logic into the more predictable data structure itself.\n*   Standardized wildcards (e.g., `{userId}`, `{requestId}`) and consistent field names (e.g., `createdByUserId`, `assignedVolunteerId`, `participantUserIds`) ensure data clarity and predictability, making the system easier to understand, maintain, and debug."
+  }
+}

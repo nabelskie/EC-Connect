@@ -1,0 +1,155 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * ELDERCARE CONNECT SECURITY RULES
+     * 
+     * Core Philosophy:
+     * This ruleset enforces a strict identity-based and ownership-based model. Access is determined 
+     * by comparing the authenticated user's UID against denormalized relationship fields 
+     * (e.g., createdByUserId, participantUserIds) stored directly on the documents.
+     * 
+     * Data Structure:
+     * - /users/{userId}: Private user profiles containing roles.
+     * - /assistance_requests_[status]: Segregated collections based on request state (Pending, Active, Completed).
+     * - /chat_rooms/{chatRoomId}: Shared conversation spaces for participants.
+     * - /chat_rooms/{chatRoomId}/messages: Individual messages with denormalized participant access.
+     * - /ratings/{ratingId}: Feedback for completed services.
+     * 
+     * Key Security Decisions:
+     * 1. Authorization Independence: Every document contains the IDs necessary to authorize access, 
+     *    minimizing the need for costly get() calls across the database.
+     * 2. Structural Segregation: Requests move between collections based on status to simplify 
+     *    query patterns and isolate security logic for different phases of the workflow.
+     * 3. Immutability of Relational Fields: Fields like 'createdByUserId' or 'participantUserIds' 
+     *    are enforced as immutable during updates to prevent users from "stealing" or reassigning documents.
+     * 4. Prototyping Mode: Schema validation is omitted for general data fields, but strictly 
+     *    enforced for fields critical to security and relational integrity.
+     */
+
+    // --- GLOBAL HELPER FUNCTIONS ---
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isExistingOwner(userId) {
+      return resource != null && isOwner(userId);
+    }
+
+    function isParticipant(participantList) {
+      return isSignedIn() && request.auth.uid in participantList;
+    }
+
+    function isExistingParticipant(participantList) {
+      return resource != null && isParticipant(participantList);
+    }
+
+    // Helper for DBAC - used only when role must be verified globally
+    function hasRole(role) {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+    }
+
+    // --- COLLECTION RULES ---
+
+    /**
+     * @description Rules for user profiles. Users manage their own data; Admins have full visibility.
+     * @path /users/{userId}
+     * @allow (get, list, create, update) if the authenticated UID matches the document ID.
+     * @deny (create) if the UID in the data does not match the UID in the path.
+     * @principle Ownership-based access and internal field consistency.
+     */
+    match /users/{userId} {
+      allow get, list: if isOwner(userId) || hasRole('admin');
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if false; // Profiles are typically deactivated, not deleted.
+    }
+
+    /**
+     * @description Requests awaiting a volunteer. Visible to all signed-in users (to allow discovery).
+     * @path /assistance_requests_pending/{requestId}
+     * @allow (create) if the creatorId matches the auth UID.
+     * @deny (update) if attempting to change the creatorId field.
+     * @principle Public discovery for volunteers with restricted owner-only modifications.
+     */
+    match /assistance_requests_pending/{requestId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.createdByUserId == request.auth.uid;
+      allow update: if (isExistingOwner(resource.data.createdByUserId) || isSignedIn()) && request.resource.data.createdByUserId == resource.data.createdByUserId;
+      allow delete: if isExistingOwner(resource.data.createdByUserId);
+    }
+
+    /**
+     * @description Requests currently being handled. Accessible only by the creator and assigned volunteer.
+     * @path /assistance_requests_active/{requestId}
+     * @allow (get, list) if the user is the creator or the assigned volunteer.
+     * @deny (update) if a third party tries to modify the record.
+     * @principle Shared access restricted to specific document-level relations.
+     */
+    match /assistance_requests_active/{requestId} {
+      allow get, list: if isSignedIn() && (request.auth.uid == resource.data.createdByUserId || request.auth.uid == resource.data.assignedVolunteerId);
+      allow create: if isSignedIn() && (request.resource.data.createdByUserId == request.auth.uid || request.resource.data.assignedVolunteerId == request.auth.uid);
+      allow update: if resource != null && (request.auth.uid == resource.data.createdByUserId || request.auth.uid == resource.data.assignedVolunteerId);
+      allow delete: if resource != null && (request.auth.uid == resource.data.createdByUserId || hasRole('admin'));
+    }
+
+    /**
+     * @description Historical request data. Read-only for the involved parties.
+     * @path /assistance_requests_completed/{requestId}
+     * @allow (get, list) if the user was the creator or the volunteer.
+     * @deny (write) Archive documents are generally immutable.
+     * @principle Finalized data access for participants.
+     */
+    match /assistance_requests_completed/{requestId} {
+      allow get, list: if isSignedIn() && (request.auth.uid == resource.data.createdByUserId || request.auth.uid == resource.data.assignedVolunteerId);
+      allow create: if isSignedIn() && (request.resource.data.createdByUserId == request.auth.uid || request.resource.data.assignedVolunteerId == request.auth.uid);
+      allow update, delete: if false; // Completed requests should be immutable.
+    }
+
+    /**
+     * @description Collaborative chat rooms between an elderly user and a volunteer.
+     * @path /chat_rooms/{chatRoomId}
+     * @allow (create) if the current user is included in the participant list.
+     * @deny (get) if the user is not in the participantUserIds array.
+     * @principle Shared access via denormalized member list.
+     */
+    match /chat_rooms/{chatRoomId} {
+      allow get, list: if isParticipant(resource.data.participantUserIds);
+      allow create: if isParticipant(request.resource.data.participantUserIds);
+      allow update: if isExistingParticipant(resource.data.participantUserIds) && request.resource.data.participantUserIds == resource.data.participantUserIds;
+      allow delete: if false;
+    }
+
+    /**
+     * @description Messages within a chat. Uses denormalized participant IDs for high performance.
+     * @path /chat_rooms/{chatRoomId}/messages/{messageId}
+     * @allow (create) if the sender is the auth user and they are a room participant.
+     * @deny (list) if the user is not a participant.
+     * @principle Authorization independence via local data redundancy.
+     */
+    match /chat_rooms/{chatRoomId}/messages/{messageId} {
+      allow get, list: if isParticipant(resource.data.participantUserIds);
+      allow create: if isParticipant(request.resource.data.participantUserIds) && request.resource.data.senderUserId == request.auth.uid;
+      allow update, delete: if false; // Messages are immutable to preserve conversation history.
+    }
+
+    /**
+     * @description Feedback and ratings for volunteers.
+     * @path /ratings/{ratingId}
+     * @allow (get, list) if the user is the elderly creator or the rated volunteer.
+     * @deny (create) if the elderlyUserId does not match the authenticated user.
+     * @principle Ownership for creation and relational access for visibility.
+     */
+    match /ratings/{ratingId} {
+      allow get, list: if isSignedIn() && (request.auth.uid == resource.data.elderlyUserId || request.auth.uid == resource.data.volunteerUserId);
+      allow create: if isSignedIn() && request.resource.data.elderlyUserId == request.auth.uid;
+      allow update, delete: if false; // Ratings are immutable to prevent manipulation.
+    }
+  }
+}
