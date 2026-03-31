@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect, Suspense } from 'react';
@@ -21,6 +20,8 @@ import { useSearchParams } from 'next/navigation';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc, deleteDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 function AdminUsersContent() {
   const [mounted, setMounted] = useState(false);
@@ -51,16 +52,22 @@ function AdminUsersContent() {
     });
   }, [usersData, searchTerm, roleFilter]);
 
-  const handleDeleteUser = async (user: any) => {
-    try {
-      await deleteDoc(doc(db, 'users', user.id));
-      toast({
-        title: "User Removed",
-        description: "User profile has been deleted from the database.",
+  const handleDeleteUser = (user: any) => {
+    const docRef = doc(db, 'users', user.id);
+    deleteDoc(docRef)
+      .then(() => {
+        toast({
+          title: "User Removed",
+          description: "User profile has been deleted from the database.",
+        });
+      })
+      .catch(async (err) => {
+        const permissionError = new FirestorePermissionError({
+          path: docRef.path,
+          operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
       });
-    } catch (e) {
-      console.error("Delete failed", e);
-    }
   };
 
   if (!mounted) return null;

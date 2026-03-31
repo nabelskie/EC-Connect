@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect, Suspense } from 'react';
@@ -26,6 +25,8 @@ import { useSearchParams } from 'next/navigation';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc, deleteDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 function AdminRequestsContent() {
   const [mounted, setMounted] = useState(false);
@@ -76,21 +77,29 @@ function AdminRequestsContent() {
     });
   }, [allRequests, searchTerm, statusFilter]);
 
-  const handleDelete = async (e: React.MouseEvent, request: any) => {
-    e.stopPropagation(); // Prevent opening the detail sheet
-    try {
-      let collName = 'assistance_requests_pending';
-      if (request.status === 'Active' || request.status === 'Accepted') collName = 'assistance_requests_active';
-      if (request.status === 'Completed') collName = 'assistance_requests_completed';
-      
-      await deleteDoc(doc(db, collName, request.id));
-      toast({
-        title: "Request Deleted",
-        description: "The assistance request has been permanently removed.",
+  const handleDelete = (e: React.MouseEvent, request: any) => {
+    e.stopPropagation();
+    
+    let collName = 'assistance_requests_pending';
+    if (request.status === 'Active' || request.status === 'Accepted') collName = 'assistance_requests_active';
+    if (request.status === 'Completed') collName = 'assistance_requests_completed';
+    
+    const docRef = doc(db, collName, request.id);
+    
+    deleteDoc(docRef)
+      .then(() => {
+        toast({
+          title: "Request Deleted",
+          description: "The assistance request has been permanently removed.",
+        });
+      })
+      .catch(async (err) => {
+        const permissionError = new FirestorePermissionError({
+          path: docRef.path,
+          operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
       });
-    } catch (e) {
-      console.error("Delete failed", e);
-    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -125,7 +134,6 @@ function AdminRequestsContent() {
             className="pl-10 h-12 rounded-2xl bg-white border-none shadow-sm"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            suppressHydrationWarning
           />
         </div>
         
