@@ -1,10 +1,9 @@
-
 "use client";
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, ChevronRight, ArrowLeft, MessageSquare, Loader2 } from 'lucide-react';
+import { Search, ChevronRight, ArrowLeft, MessageSquare, Loader2, SearchX } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -94,10 +93,19 @@ function ChatInboxContent() {
           ))}
 
           {!isLoading && (!chatRooms || chatRooms.length === 0) && (
-            <div className="text-center py-20 opacity-50">
-              <MessageSquare className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-lg font-bold">No messages yet</p>
-              <p className="text-sm">Once a request is connected, you can chat here.</p>
+            <div className="text-center py-20 bg-white rounded-[2.5rem] border-2 border-dashed border-slate-100 flex flex-col items-center justify-center gap-4 mx-2">
+              <div className="p-4 bg-slate-50 rounded-full">
+                <MessageSquare className="h-10 w-10 text-slate-300" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-lg font-bold text-primary">No Chats Available</p>
+                <p className="text-xs text-muted-foreground max-w-[220px] mx-auto leading-relaxed">
+                  {role === 'volunteer' 
+                    ? "Accept an assistance request to start a conversation with a resident." 
+                    : "Once a volunteer accepts your request, you'll be able to chat with them here."
+                  }
+                </p>
+              </div>
             </div>
           )}
         </div>

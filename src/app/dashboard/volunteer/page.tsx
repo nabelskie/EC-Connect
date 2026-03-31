@@ -18,7 +18,9 @@ import {
   Heart,
   Filter,
   CheckCircle2,
-  Loader2
+  Loader2,
+  MessageSquare,
+  SearchX
 } from 'lucide-react';
 import { 
   DropdownMenu, 
@@ -42,14 +44,12 @@ export default function VolunteerDashboard() {
   const { user, isUserLoading } = useUser();
   const [filter, setFilter] = useState('All');
 
-  // Handle unauthenticated state
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.push('/auth/login');
     }
   }, [user, isUserLoading, router]);
 
-  // Fetch Pending Tasks - ONLY if user is signed in
   const pendingQuery = useMemoFirebase(() => {
     if (!user) return null;
     return collection(db, 'assistance_requests_pending');
@@ -57,7 +57,6 @@ export default function VolunteerDashboard() {
   
   const { data: pendingTasks, isLoading: isPendingLoading } = useCollection(pendingQuery);
 
-  // Fetch Active Tasks assigned to this volunteer - ONLY if user is signed in
   const activeQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(collection(db, 'assistance_requests_active'), where('assignedVolunteerId', '==', user.uid));
@@ -80,7 +79,6 @@ export default function VolunteerDashboard() {
     const activeRef = doc(db, 'assistance_requests_active', task.id);
     const pendingRef = doc(db, 'assistance_requests_pending', task.id);
 
-    // 1. Move to Active
     setDoc(activeRef, {
       ...task,
       status: 'Accepted',
@@ -94,7 +92,6 @@ export default function VolunteerDashboard() {
       }));
     });
 
-    // 2. Remove from Pending
     deleteDoc(pendingRef).catch(async (err) => {
       errorEmitter.emit('permission-error', new FirestorePermissionError({
         path: pendingRef.path,
@@ -102,7 +99,6 @@ export default function VolunteerDashboard() {
       }));
     });
 
-    // 3. Create Chat Room
     const chatRoomRef = collection(db, 'chat_rooms');
     addDoc(chatRoomRef, {
       requestId: task.id,
@@ -240,10 +236,16 @@ export default function VolunteerDashboard() {
             ))}
 
             {!isPendingLoading && availableTasks.length === 0 && (
-              <div className="text-center py-12 opacity-50">
-                <AlertCircle className="h-10 w-10 mx-auto mb-2 text-muted-foreground" />
-                <p className="text-sm font-bold">No requests found</p>
-                <p className="text-[10px]">Try changing your filter or check back later.</p>
+              <div className="text-center py-20 bg-white rounded-[2.5rem] border-2 border-dashed border-slate-100 flex flex-col items-center justify-center gap-4">
+                <div className="p-4 bg-slate-50 rounded-full">
+                  <SearchX className="h-10 w-10 text-slate-300" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-lg font-bold text-primary">No Requests Available</p>
+                  <p className="text-xs text-muted-foreground max-w-[200px] mx-auto leading-relaxed">
+                    There are no open assistance requests {filter !== 'All' ? `for ${filter}` : ''} right now. Check back soon!
+                  </p>
+                </div>
               </div>
             )}
           </div>
@@ -292,13 +294,15 @@ export default function VolunteerDashboard() {
             ))}
 
             {!isActiveLoading && (!activeTasks || activeTasks.length === 0) && (
-              <div className="text-center py-12 bg-white rounded-3xl border-2 border-dashed border-muted">
-                <div className="max-w-[180px] mx-auto space-y-3">
-                  <div className="p-3 bg-muted/20 rounded-full w-14 h-14 flex items-center justify-center mx-auto">
-                    <Clock className="h-7 w-7 text-muted-foreground" />
-                  </div>
-                  <h3 className="text-sm font-bold text-primary">No active tasks</h3>
-                  <p className="text-[10px] text-muted-foreground leading-tight">Pick a task from the Available tab to start helping!</p>
+              <div className="text-center py-20 bg-white rounded-[2.5rem] border-2 border-dashed border-slate-100 flex flex-col items-center justify-center gap-4">
+                <div className="p-4 bg-slate-50 rounded-full">
+                  <Clock className="h-10 w-10 text-slate-300" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-lg font-bold text-primary">No Active Tasks</p>
+                  <p className="text-xs text-muted-foreground max-w-[200px] mx-auto leading-relaxed">
+                    You haven't accepted any tasks yet. Head over to the "Available" tab to start helping!
+                  </p>
                 </div>
               </div>
             )}
