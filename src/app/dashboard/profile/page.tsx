@@ -13,7 +13,6 @@ function ProfileContent() {
   const searchParams = useSearchParams();
   const role = searchParams.get('role') || 'elderly';
 
-  // Mock user data based on role
   const userData = useMemo(() => {
     if (role === 'volunteer') {
       return {
@@ -41,7 +40,7 @@ function ProfileContent() {
       return {
         name: "Hapsah Binti Ahmad",
         role: "Elderly Resident",
-        email: "hapsah@example.com",
+        email: "capsah@example.com",
         phone: "012-3456789",
         address: "Block C, Room 102, PKS Residential",
         joinDate: "October 2024",

@@ -33,7 +33,6 @@ function DashboardNav() {
   const searchParams = useSearchParams();
   const roleQuery = searchParams.get('role');
 
-  // Determine current role based on search params or pathname to ensure persistence
   const currentRole = useMemo(() => {
     if (roleQuery) return roleQuery;
     if (pathname.includes('/admin')) return 'admin';
@@ -123,15 +122,6 @@ function NotificationContent() {
         icon: MessageCircle,
         color: 'text-sky-500'
       },
-      { 
-        id: 3, 
-        title: 'Task Completed', 
-        message: 'Ahmad has completed your Transportation request.', 
-        time: 'Yesterday', 
-        unread: false,
-        icon: CheckCircle2,
-        color: 'text-slate-400'
-      },
     ],
     volunteer: [
       { 
@@ -145,15 +135,6 @@ function NotificationContent() {
       },
       { 
         id: 2, 
-        title: 'Message from Resident', 
-        message: 'Mr. Lim: "Thank you for the tech help!"', 
-        time: '3 hours ago', 
-        unread: true,
-        icon: MessageCircle,
-        color: 'text-sky-500'
-      },
-      { 
-        id: 3, 
         title: 'Hours Verified', 
         message: 'Admin has verified your 2 hours of service.', 
         time: 'Yesterday', 
@@ -166,7 +147,7 @@ function NotificationContent() {
       { 
         id: 1, 
         title: 'New User Registration', 
-        message: 'A new student volunteer has just registered.', 
+        message: 'A new student volunteer has registered.', 
         time: '10 mins ago', 
         unread: true,
         icon: UserPlus,
@@ -174,17 +155,8 @@ function NotificationContent() {
       },
       { 
         id: 2, 
-        title: 'Urgent Flag', 
-        message: 'A transportation request has been pending for > 2 hours.', 
-        time: '45 mins ago', 
-        unread: true,
-        icon: AlertCircle,
-        color: 'text-destructive'
-      },
-      { 
-        id: 3, 
         title: 'Weekly Report', 
-        message: 'Your automated system summary is ready to view.', 
+        message: 'Your automated system summary is ready.', 
         time: 'Yesterday', 
         unread: false,
         icon: BarChart3,
