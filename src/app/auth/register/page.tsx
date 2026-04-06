@@ -79,7 +79,6 @@ export default function RegisterPage() {
       })
       .catch((err: any) => {
         setIsLoading(false);
-        console.error("Registration Error:", err.code, err.message);
         
         let errorMessage = "An error occurred during registration.";
         if (err.code === 'auth/email-already-in-use') {

@@ -64,7 +64,7 @@ export default function LoginPage() {
 
           router.push(`/dashboard/${role}?role=${role}`);
         } catch (error) {
-          console.error("Redirection logic failed:", error);
+          // Centrally handled or ignored for redirection phase
         }
       };
       checkRoleAndRedirect();
@@ -87,7 +87,6 @@ export default function LoginPage() {
       })
       .catch((err: any) => {
         setIsSubmitting(false);
-        console.error("Login Error:", err.code, err.message);
         
         let errorMessage = "Invalid email or password. Please try again.";
         if (err.code === 'auth/invalid-credential') {
