@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -28,17 +29,26 @@ export default function LoginPage() {
     setMounted(true);
   }, []);
 
-  // Redirect if user is already logged in
+  // Redirect logic when user state is detected
   useEffect(() => {
     if (user && !isUserLoading && mounted) {
       const checkRoleAndRedirect = async () => {
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        if (userDoc.exists()) {
-          const role = userDoc.data().role;
-          router.push(`/dashboard/${role}?role=${role}`);
-        } else {
-          // If no profile exists yet (rare case), send to registration
-          router.push('/auth/register');
+        try {
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          if (userDoc.exists()) {
+            const role = userDoc.data().role;
+            // Ensure redirection to the correct dashboard based on the database role
+            router.push(`/dashboard/${role}?role=${role}`);
+          } else {
+            // Check if it's the specific admin email if no doc exists yet
+            if (user.email === 'admineld@gmail.com') {
+               router.push('/dashboard/admin?role=admin');
+            } else {
+               router.push('/auth/register');
+            }
+          }
+        } catch (error) {
+          console.error("Redirection error:", error);
         }
       };
       checkRoleAndRedirect();
@@ -49,7 +59,7 @@ export default function LoginPage() {
     e.preventDefault();
     setIsSubmitting(true);
 
-    signInWithEmailAndPassword(auth, email, password)
+    signInWithEmailAndPassword(auth, email.toLowerCase().trim(), password)
       .catch((err: any) => {
         setIsSubmitting(false);
         toast({
@@ -94,6 +104,7 @@ export default function LoginPage() {
                 className="h-12 text-lg"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                suppressHydrationWarning
               />
             </div>
             <div className="space-y-2">
@@ -110,12 +121,14 @@ export default function LoginPage() {
                 className="h-12 text-lg"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                suppressHydrationWarning
               />
             </div>
             <Button 
               type="submit" 
               className="w-full h-12 text-lg bg-primary hover:bg-primary/90 mt-2" 
               disabled={isSubmitting}
+              suppressHydrationWarning
             >
               {isSubmitting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : 'Sign In'}
             </Button>
