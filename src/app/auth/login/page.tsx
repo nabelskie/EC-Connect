@@ -11,7 +11,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Heart, Loader2, AlertCircle } from 'lucide-react';
 import { useAuth, useFirestore, useUser } from '@/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 export default function LoginPage() {
@@ -33,39 +33,43 @@ export default function LoginPage() {
 
   // Redirect logic when user state is detected
   useEffect(() => {
-    if (user && !isUserLoading && mounted) {
+    if (user && !isUserLoading && mounted && db) {
       const checkRoleAndRedirect = async () => {
         try {
           const userEmail = user.email?.toLowerCase().trim();
+          const userDocRef = doc(db, 'users', user.uid);
+          const userDoc = await getDoc(userDocRef);
           
-          // 1. Immediate override for the specific system administrator email
-          if (userEmail === ADMIN_EMAIL) {
-            console.log("Admin email detected, routing to admin console...");
-            router.push('/dashboard/admin?role=admin');
-            return;
+          let role = 'elderly';
+
+          if (userDoc.exists()) {
+            role = userDoc.data().role;
+            
+            // Self-healing: if it's the admin email but role isn't admin, fix it
+            if (userEmail === ADMIN_EMAIL && role !== 'admin') {
+              await updateDoc(userDocRef, { role: 'admin' });
+              role = 'admin';
+            }
+          } else if (userEmail === ADMIN_EMAIL) {
+            // If doc doesn't exist but it's the admin email, create it
+            await setDoc(userDocRef, {
+              id: user.uid,
+              name: "System Administrator",
+              email: userEmail,
+              role: 'admin',
+              createdAt: new Date().toISOString()
+            });
+            role = 'admin';
           }
 
-          // 2. Standard role check for all other users
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
-          if (userDoc.exists()) {
-            const role = userDoc.data().role;
-            router.push(`/dashboard/${role}?role=${role}`);
-          } else {
-            // If logged in but no profile exists, send to register
-            router.push('/auth/register');
-          }
+          router.push(`/dashboard/${role}?role=${role}`);
         } catch (error) {
           console.error("Redirection logic failed:", error);
-          toast({
-            variant: "destructive",
-            title: "Navigation Error",
-            description: "We couldn't determine your role. Please try logging in again.",
-          });
         }
       };
       checkRoleAndRedirect();
     }
-  }, [user, isUserLoading, db, router, mounted, toast]);
+  }, [user, isUserLoading, db, router, mounted]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,7 +80,6 @@ export default function LoginPage() {
 
     signInWithEmailAndPassword(auth, targetEmail, password)
       .then(() => {
-        // Redirection is handled by the useEffect watching the 'user' state
         toast({
           title: "Sign-in successful",
           description: "Preparing your dashboard...",
@@ -87,8 +90,11 @@ export default function LoginPage() {
         console.error("Login Error:", err.code, err.message);
         
         let errorMessage = "Invalid email or password. Please try again.";
-        if (err.code === 'auth/user-not-found') errorMessage = "No account found with this email.";
-        if (err.code === 'auth/wrong-password') errorMessage = "Incorrect password. Please try again.";
+        if (err.code === 'auth/invalid-credential') {
+          errorMessage = "Incorrect credentials. Please check your email and password.";
+        } else if (err.code === 'auth/user-not-found') {
+          errorMessage = "No account found with this email.";
+        }
 
         toast({
           variant: "destructive",
@@ -105,6 +111,8 @@ export default function LoginPage() {
       </div>
     );
   }
+
+  const isAdminEmail = email.toLowerCase().trim() === ADMIN_EMAIL;
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
@@ -170,10 +178,10 @@ export default function LoginPage() {
             </Link>
           </div>
           
-          {email.toLowerCase().trim() === ADMIN_EMAIL && (
+          {isAdminEmail && (
             <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100 text-[10px] text-muted-foreground italic">
               <AlertCircle className="h-3 w-3 text-accent shrink-0" />
-              Administrator login detected. Ensure you have registered this account first.
+              Administrator detected. Note: Initial password is "eldadmin123".
             </div>
           )}
         </CardFooter>

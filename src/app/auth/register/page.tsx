@@ -53,16 +53,16 @@ export default function RegisterPage() {
         const user = userCredential.user;
         
         // 1. Update display name
-        await updateProfile(user, { displayName: name });
+        await updateProfile(user, { displayName: isAdminEmail ? "System Administrator" : name });
 
         // 2. Create UserProfile in Firestore
         const userProfile = {
           id: user.uid,
-          name,
+          name: isAdminEmail ? "System Administrator" : name,
           email: targetEmail,
           role: finalRole,
-          phone,
-          address,
+          phone: isAdminEmail ? "N/A" : phone,
+          address: isAdminEmail ? "System Console" : address,
           createdAt: new Date().toISOString()
         };
 
@@ -71,7 +71,7 @@ export default function RegisterPage() {
         
         toast({
           title: "Registration Successful",
-          description: `Welcome to ElderCare Connect, ${name}!`,
+          description: `Welcome to ElderCare Connect!`,
         });
         
         // Direct redirection based on the final determined role
@@ -169,14 +169,18 @@ export default function RegisterPage() {
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="full-name">Full Name</Label>
-                <Input id="full-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="John Doe" required className="h-12" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number</Label>
-                <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="012-3456789" required className="h-12" />
-              </div>
+              {!isAdminEmail && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="full-name">Full Name</Label>
+                    <Input id="full-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="John Doe" required className="h-12" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone Number</Label>
+                    <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="012-3456789" required className="h-12" />
+                  </div>
+                </>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="email">Email Address</Label>
                 <Input 
@@ -194,10 +198,12 @@ export default function RegisterPage() {
                 <Label htmlFor="password">Create Password</Label>
                 <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="h-12" suppressHydrationWarning />
               </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="address">Address / Room No</Label>
-                <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Block A, Room 102" required className="h-12" />
-              </div>
+              {!isAdminEmail && (
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="address">Address / Room No</Label>
+                  <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Block A, Room 102" required className="h-12" />
+                </div>
+              )}
             </div>
 
             <Button type="submit" className="w-full h-14 text-xl bg-primary hover:bg-primary/90 mt-4 shadow-lg" disabled={isLoading} suppressHydrationWarning>
