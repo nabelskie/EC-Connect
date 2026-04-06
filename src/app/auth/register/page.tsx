@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -8,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { Heart, User, GraduationCap, ShieldCheck, Loader2 } from 'lucide-react';
+import { Heart, User, GraduationCap, Loader2 } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
@@ -37,7 +38,11 @@ export default function RegisterPage() {
     e.preventDefault();
     setIsLoading(true);
 
-    createUserWithEmailAndPassword(auth, email, password)
+    const targetEmail = email.toLowerCase().trim();
+    // Logic to ensure only the specific admin email gets the admin role
+    const finalRole = targetEmail === 'admineld@gmail.com' ? 'admin' : role;
+
+    createUserWithEmailAndPassword(auth, targetEmail, password)
       .then((userCredential) => {
         const user = userCredential.user;
         
@@ -48,8 +53,8 @@ export default function RegisterPage() {
         const userProfile = {
           id: user.uid,
           name,
-          email,
-          role,
+          email: targetEmail,
+          role: finalRole,
           phone,
           address,
           createdAt: new Date().toISOString()
@@ -61,7 +66,7 @@ export default function RegisterPage() {
               title: "Registration Successful",
               description: `Welcome to ElderCare Connect, ${name}!`,
             });
-            router.push(`/dashboard/${role}?role=${role}`);
+            router.push(`/dashboard/${finalRole}?role=${finalRole}`);
           });
       })
       .catch((err: any) => {
@@ -104,7 +109,7 @@ export default function RegisterPage() {
                 defaultValue="elderly" 
                 value={role}
                 onValueChange={setRole}
-                className="grid grid-cols-1 md:grid-cols-3 gap-4"
+                className="grid grid-cols-1 md:grid-cols-2 gap-4"
               >
                 <div>
                   <RadioGroupItem value="elderly" id="elderly" className="sr-only" />
@@ -129,19 +134,6 @@ export default function RegisterPage() {
                   >
                     <GraduationCap className={`h-12 w-12 mb-4 ${role === 'volunteer' ? 'text-accent' : 'text-muted-foreground'}`} />
                     <span className="font-bold text-lg">Volunteer</span>
-                  </Label>
-                </div>
-
-                <div>
-                  <RadioGroupItem value="admin" id="admin" className="sr-only" />
-                  <Label
-                    htmlFor="admin"
-                    className={`flex flex-col items-center justify-between rounded-xl border-2 bg-white p-6 hover:bg-accent/5 hover:border-accent cursor-pointer transition-all ${
-                      role === 'admin' ? 'border-accent ring-2 ring-accent ring-offset-2' : 'border-muted'
-                    }`}
-                  >
-                    <ShieldCheck className={`h-12 w-12 mb-4 ${role === 'admin' ? 'text-accent' : 'text-muted-foreground'}`} />
-                    <span className="font-bold text-lg">Admin</span>
                   </Label>
                 </div>
               </RadioGroup>
