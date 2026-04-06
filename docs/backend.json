@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "UserProfile": {
@@ -30,6 +31,10 @@
         "address": {
           "type": "string",
           "description": "The physical address of the user. (Optional)"
+        },
+        "fcmToken": {
+          "type": "string",
+          "description": "Token for Firebase Cloud Messaging notifications. (Optional)"
         },
         "createdAt": {
           "type": "string",

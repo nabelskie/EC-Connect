@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Suspense, useMemo, useState, useEffect } from 'react';
+import { useFcm } from '@/firebase/messaging/use-fcm';
 
 function DashboardNav() {
   const pathname = usePathname();
@@ -217,6 +218,9 @@ function NotificationContent() {
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
+  
+  // Initialize Cloud Messaging
+  useFcm();
 
   useEffect(() => {
     setMounted(true);
