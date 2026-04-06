@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect, Suspense } from 'react';
@@ -13,11 +14,12 @@ import {
   Mail, 
   Phone,
   Loader2,
-  Trash2
+  Trash2,
+  AlertCircle
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, doc, deleteDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -30,14 +32,29 @@ function AdminUsersContent() {
   const initialFilter = searchParams.get('filter') || 'All';
   const [roleFilter, setRoleFilter] = useState(initialFilter);
   const db = useFirestore();
+  const { user } = useUser();
   const { toast } = useToast();
+
+  const ADMIN_EMAIL = 'adminkn@gmail.com';
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const usersQuery = useMemoFirebase(() => collection(db, 'users'), [db]);
-  const { data: usersData, isLoading } = useCollection(usersQuery);
+  const userProfileRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user]);
+
+  const { data: profile, isLoading: isProfileLoading } = useDoc(userProfileRef);
+  
+  const isAdminConfirmed = useMemo(() => {
+    if (!user) return false;
+    return user.email?.toLowerCase() === ADMIN_EMAIL || profile?.role === 'admin';
+  }, [user, profile]);
+
+  const usersQuery = useMemoFirebase(() => (isAdminConfirmed && user) ? collection(db, 'users') : null, [db, isAdminConfirmed, user]);
+  const { data: usersData, isLoading: isUsersLoading, error: usersError } = useCollection(usersQuery);
 
   const filteredUsers = useMemo(() => {
     if (!usersData) return [];
@@ -70,7 +87,26 @@ function AdminUsersContent() {
       });
   };
 
-  if (!mounted) return null;
+  if (!mounted || isProfileLoading) {
+    return (
+      <div className="flex justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (usersError || !isAdminConfirmed) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-4 text-center px-6">
+        <AlertCircle className="h-12 w-12 text-destructive" />
+        <h2 className="text-xl font-bold text-primary">Access Denied</h2>
+        <p className="text-sm text-muted-foreground">Only system administrators can view the directory.</p>
+        <Button asChild variant="outline" className="rounded-xl">
+           <Link href="/dashboard/admin?role=admin">Back to Console</Link>
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -114,7 +150,7 @@ function AdminUsersContent() {
 
       <ScrollArea className="h-[calc(100vh-280px)]">
         <div className="space-y-3 px-1">
-          {isLoading && filteredUsers.length === 0 ? (
+          {isUsersLoading ? (
             <div className="flex justify-center py-20">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
@@ -155,7 +191,7 @@ function AdminUsersContent() {
             </Card>
           ))}
           
-          {filteredUsers.length === 0 && !isLoading && (
+          {filteredUsers.length === 0 && !isUsersLoading && (
             <div className="text-center py-20 opacity-30 italic text-sm">
               No users found matching your filters.
             </div>

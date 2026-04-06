@@ -28,9 +28,13 @@ export default function AdminDashboard() {
   const { data: profile, isLoading: isProfileLoading } = useDoc(userProfileRef);
   
   // Confirmed admin if role matches or email matches
-  const isAdminConfirmed = profile?.role === 'admin' || user?.email?.toLowerCase() === ADMIN_EMAIL;
+  // We prioritize the email check for instant access
+  const isAdminConfirmed = useMemo(() => {
+    if (!user) return false;
+    return user.email?.toLowerCase() === ADMIN_EMAIL || profile?.role === 'admin';
+  }, [user, profile]);
 
-  // Fetch real-time data from Firestore collections ONLY if confirmed admin and we have a user
+  // Fetch real-time data from Firestore collections ONLY if confirmed admin and profile is loaded or we are the master email
   const usersQuery = useMemoFirebase(() => (isAdminConfirmed && user) ? collection(db, 'users') : null, [db, isAdminConfirmed, user]);
   const pendingQuery = useMemoFirebase(() => (isAdminConfirmed && user) ? collection(db, 'assistance_requests_pending') : null, [db, isAdminConfirmed, user]);
   const activeQuery = useMemoFirebase(() => (isAdminConfirmed && user) ? collection(db, 'assistance_requests_active') : null, [db, isAdminConfirmed, user]);
@@ -66,7 +70,7 @@ export default function AdminDashboard() {
   }, [usersData, pendingData, activeData, completedData]);
 
   const handleGenerateSummary = async () => {
-    if (isAiLoading || !isAdminConfirmed || !usersData) return;
+    if (isAiLoading || !isAdminConfirmed || !usersData || usersData.length === 0) return;
     setIsAiLoading(true);
     try {
       const result = await generateAdminDashboardSummary(metrics);
@@ -80,7 +84,7 @@ export default function AdminDashboard() {
 
   // Automatically generate summary when data is first loaded
   useEffect(() => {
-    if (!isUsersLoading && !isPendingLoading && !isActiveLoading && !isCompletedLoading && usersData && isAdminConfirmed) {
+    if (!isUsersLoading && !isPendingLoading && !isActiveLoading && !isCompletedLoading && usersData && usersData.length > 0 && isAdminConfirmed) {
       handleGenerateSummary();
     }
   }, [isUsersLoading, isPendingLoading, isActiveLoading, isCompletedLoading, usersData, isAdminConfirmed]);
@@ -101,6 +105,7 @@ export default function AdminDashboard() {
       .slice(0, 5);
   }, [pendingData, activeData, completedData]);
 
+  // We are "loading" if we have a user but haven't confirmed admin status or fetched first results
   const isInitialLoading = isProfileLoading || (isAdminConfirmed && !usersData && !usersError);
 
   if (isInitialLoading) {
@@ -111,7 +116,7 @@ export default function AdminDashboard() {
     );
   }
 
-  if (usersError && !usersData) {
+  if ((usersError || !isAdminConfirmed) && !isInitialLoading) {
     return (
       <div className="flex flex-col h-[calc(100vh-160px)] items-center justify-center gap-4 text-center px-6">
         <div className="p-4 bg-destructive/10 rounded-full">

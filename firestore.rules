@@ -13,18 +13,20 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Safely checks if the current user is an admin.
-    // Includes an explicit check for the primary administrator email as a fallback.
+    // Optimized isAdmin check: Prioritizes the hardcoded admin email to avoid 
+    // latency or failures from document fetching during initial registration/login.
     function isAdmin() {
       return isSignedIn() && (
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-        request.auth.token.email == 'adminkn@gmail.com'
+        request.auth.token.email == 'adminkn@gmail.com' ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
       );
     }
 
     // Safely checks if the current user is a volunteer.
     function isVolunteer() {
       return isSignedIn() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'volunteer';
     }
 
