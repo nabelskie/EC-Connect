@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -23,27 +22,26 @@ export function useFcm() {
       try {
         const permission = await Notification.requestPermission();
         if (permission === 'granted') {
-          // STEP 7: Replace 'YOUR_VAPID_KEY_HERE' with the key from your Firebase Console
-          // Project Settings > Cloud Messaging > Web Push certificates
+          // VAPID Key provided by the user
           const token = await getToken(messaging, {
-            vapidKey: 'YOUR_VAPID_KEY_HERE' 
+            vapidKey: 'BHh38CGgZpJ89x0p6OUhva-ODJu37Gw9EY-2P3uwkDuuo_K5AOVlD51PmV6dwqEAZDJlR7zdDyZIPZzqSXsUb1k' 
           });
 
           if (token) {
             setFcmToken(token);
-            // Update the user profile with the token so the backend knows where to send notifications
+            // Update the user profile with the token so the system knows where to send notifications
             const userRef = doc(db, 'users', user.uid);
-            // We use updateDoc to only update the token field
+            // Using updateDoc to update only the token field to avoid overwriting other data
             await updateDoc(userRef, { fcmToken: token });
-            console.log('FCM Token registered:', token);
+            console.log('FCM Token registered successfully');
           } else {
             console.warn('No registration token available. Request permission to generate one.');
           }
         } else {
-          console.warn('Notification permission denied.');
+          console.warn('Notification permission denied by user.');
         }
       } catch (err) {
-        console.error('An error occurred while retrieving token. ', err);
+        console.error('An error occurred while retrieving token: ', err);
       }
     };
 
@@ -52,8 +50,7 @@ export function useFcm() {
     // Listen for foreground messages (when the user has the app open)
     const unsubscribe = onMessage(messaging, (payload) => {
       console.log('Foreground message received: ', payload);
-      // Foreground messages don't automatically show a system notification
-      // You could trigger a custom UI toast here if desired.
+      // Foreground messages are handled here. You can add a toast notification if needed.
     });
 
     return () => unsubscribe();
