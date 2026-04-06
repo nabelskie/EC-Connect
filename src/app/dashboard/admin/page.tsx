@@ -5,25 +5,34 @@ import { useEffect, useState, useMemo } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Users, FileText, CheckCircle, Clock, Search, Filter, ShieldCheck, Sparkles, ChevronRight, Loader2 } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { Users, FileText, CheckCircle, Clock, Search, Filter, ShieldCheck, Sparkles, ChevronRight, Loader2, AlertCircle } from 'lucide-react';
 import { generateAdminDashboardSummary } from '@/ai/flows/generate-admin-dashboard-summary-flow';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
 import Link from 'next/link';
 
 export default function AdminDashboard() {
   const [aiSummary, setAiSummary] = useState<string>("");
   const [isAiLoading, setIsAiLoading] = useState(false);
   const db = useFirestore();
+  const { user } = useUser();
 
-  // Fetch real-time data from Firestore collections
-  const usersQuery = useMemoFirebase(() => collection(db, 'users'), [db]);
-  const pendingQuery = useMemoFirebase(() => collection(db, 'assistance_requests_pending'), [db]);
-  const activeQuery = useMemoFirebase(() => collection(db, 'assistance_requests_active'), [db]);
-  const completedQuery = useMemoFirebase(() => collection(db, 'assistance_requests_completed'), [db]);
+  // Fetch the admin's own profile to confirm role before starting broad queries
+  const userProfileRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user]);
 
-  const { data: usersData, isLoading: isUsersLoading } = useCollection(usersQuery);
+  const { data: profile, isLoading: isProfileLoading } = useDoc(userProfileRef);
+  const isAdminConfirmed = profile?.role === 'admin';
+
+  // Fetch real-time data from Firestore collections ONLY if confirmed admin
+  const usersQuery = useMemoFirebase(() => isAdminConfirmed ? collection(db, 'users') : null, [db, isAdminConfirmed]);
+  const pendingQuery = useMemoFirebase(() => isAdminConfirmed ? collection(db, 'assistance_requests_pending') : null, [db, isAdminConfirmed]);
+  const activeQuery = useMemoFirebase(() => isAdminConfirmed ? collection(db, 'assistance_requests_active') : null, [db, isAdminConfirmed]);
+  const completedQuery = useMemoFirebase(() => isAdminConfirmed ? collection(db, 'assistance_requests_completed') : null, [db, isAdminConfirmed]);
+
+  const { data: usersData, isLoading: isUsersLoading, error: usersError } = useCollection(usersQuery);
   const { data: pendingData, isLoading: isPendingLoading } = useCollection(pendingQuery);
   const { data: activeData, isLoading: isActiveLoading } = useCollection(activeQuery);
   const { data: completedData, isLoading: isCompletedLoading } = useCollection(completedQuery);
@@ -53,7 +62,7 @@ export default function AdminDashboard() {
   }, [usersData, pendingData, activeData, completedData]);
 
   const handleGenerateSummary = async () => {
-    if (isAiLoading || !usersData) return;
+    if (isAiLoading || !isAdminConfirmed || !usersData) return;
     setIsAiLoading(true);
     try {
       const result = await generateAdminDashboardSummary(metrics);
@@ -67,10 +76,10 @@ export default function AdminDashboard() {
 
   // Automatically generate summary when data is first loaded
   useEffect(() => {
-    if (!isUsersLoading && !isPendingLoading && !isActiveLoading && !isCompletedLoading && usersData) {
+    if (!isUsersLoading && !isPendingLoading && !isActiveLoading && !isCompletedLoading && usersData && isAdminConfirmed) {
       handleGenerateSummary();
     }
-  }, [isUsersLoading, isPendingLoading, isActiveLoading, isCompletedLoading, usersData]);
+  }, [isUsersLoading, isPendingLoading, isActiveLoading, isCompletedLoading, usersData, isAdminConfirmed]);
 
   // Combine data for a unified recent activity feed
   const recentActivity = useMemo(() => {
@@ -88,12 +97,29 @@ export default function AdminDashboard() {
       .slice(0, 5);
   }, [pendingData, activeData, completedData]);
 
-  const isDataLoading = isUsersLoading || isPendingLoading || isActiveLoading || isCompletedLoading;
+  const isDataLoading = isProfileLoading || isUsersLoading || isPendingLoading || isActiveLoading || isCompletedLoading;
 
   if (isDataLoading && !usersData) {
     return (
       <div className="flex h-[calc(100vh-160px)] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (usersError) {
+    return (
+      <div className="flex flex-col h-[calc(100vh-160px)] items-center justify-center gap-4 text-center px-6">
+        <div className="p-4 bg-destructive/10 rounded-full">
+           <AlertCircle className="h-12 w-12 text-destructive" />
+        </div>
+        <h2 className="text-xl font-bold text-primary">System Access Limited</h2>
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          We're having trouble accessing the system management records. Please ensure your account has administrative privileges and try again.
+        </p>
+        <Button onClick={() => window.location.reload()} variant="outline" className="rounded-xl mt-2">
+          Refresh Access
+        </Button>
       </div>
     );
   }
@@ -159,7 +185,7 @@ export default function AdminDashboard() {
             variant="ghost" 
             size="sm" 
             onClick={handleGenerateSummary} 
-            disabled={isAiLoading || !usersData} 
+            disabled={isAiLoading || !isAdminConfirmed || !usersData} 
             className="text-[10px] h-7 px-2 font-bold uppercase"
           >
             {isAiLoading ? "..." : "Refresh"}
@@ -199,7 +225,7 @@ export default function AdminDashboard() {
               <div className="text-right">
                 <Badge className={`text-[8px] h-4 px-1 ${
                   req.status === 'Completed' ? 'bg-emerald-500' : 
-                  req.status === 'Active' ? 'bg-sky-500' : 'bg-yellow-500'
+                  req.status === 'Accepted' || req.status === 'Active' ? 'bg-sky-500' : 'bg-yellow-500'
                 }`}>
                   {req.status}
                 </Badge>

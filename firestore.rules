@@ -13,18 +13,16 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Safely checks if the current user has a specific role.
-    function hasRole(role) {
+    // Safely checks if the current user is an admin by reading their user document.
+    function isAdmin() {
       return isSignedIn() && 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    function isAdmin() {
-      // Check if user is signed in and has admin role doc
-      return isSignedIn() && (
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
-      );
+    // Safely checks if the current user is a volunteer.
+    function isVolunteer() {
+      return isSignedIn() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'volunteer';
     }
 
     function isOwner(userId) {
@@ -33,7 +31,7 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow get: if isOwner(userId) || isAdmin();
-      // Allow admins to list the whole directory for management
+      // Allow admins to list the whole directory
       allow list: if isAdmin();
       allow create: if isSignedIn() && request.auth.uid == userId;
       allow update: if isOwner(userId) || isAdmin();
@@ -43,19 +41,17 @@ service cloud.firestore {
     match /assistance_requests_pending/{requestId} {
       allow get, list: if isSignedIn();
       allow create: if isSignedIn();
-      // Allow the creator, admins, or any volunteer (to accept/claim the task) to update/delete
+      // Allow the creator, admins, or any volunteer to claim/update/delete
       allow update, delete: if isSignedIn() && (
         request.auth.uid == resource.data.createdByUserId || 
         isAdmin() ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'volunteer')
+        isVolunteer()
       );
     }
 
     match /assistance_requests_active/{requestId} {
-      allow get: if isSignedIn();
-      // Allow participants or admins to list
-      allow list: if isSignedIn();
+      // Allow participants or admins to see and list active requests
+      allow get, list: if isSignedIn();
       allow create: if isSignedIn();
       allow update: if isSignedIn() && (
         request.auth.uid == resource.data.createdByUserId || 
@@ -75,8 +71,7 @@ service cloud.firestore {
     }
 
     match /chat_rooms/{chatRoomId} {
-      // Allow get if document doesn't exist yet (race condition handling) 
-      // or if user is participant/admin
+      // Allow get if user is participant/admin
       allow get: if isSignedIn() && (
         resource == null || 
         request.auth.uid in resource.data.participantUserIds || 
