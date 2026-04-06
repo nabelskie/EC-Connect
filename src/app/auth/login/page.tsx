@@ -25,6 +25,8 @@ export default function LoginPage() {
   const { user, isUserLoading } = useUser();
   const { toast } = useToast();
 
+  const ADMIN_EMAIL = 'admineld@gmail.com';
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -34,18 +36,18 @@ export default function LoginPage() {
     if (user && !isUserLoading && mounted) {
       const checkRoleAndRedirect = async () => {
         try {
+          // If the email matches the hardcoded admin email, prioritize admin dashboard
+          if (user.email?.toLowerCase().trim() === ADMIN_EMAIL) {
+            router.push('/dashboard/admin?role=admin');
+            return;
+          }
+
           const userDoc = await getDoc(doc(db, 'users', user.uid));
           if (userDoc.exists()) {
             const role = userDoc.data().role;
-            // Ensure redirection to the correct dashboard based on the database role
             router.push(`/dashboard/${role}?role=${role}`);
           } else {
-            // Check if it's the specific admin email if no doc exists yet
-            if (user.email === 'admineld@gmail.com') {
-               router.push('/dashboard/admin?role=admin');
-            } else {
-               router.push('/auth/register');
-            }
+            router.push('/auth/register');
           }
         } catch (error) {
           console.error("Redirection error:", error);
@@ -59,7 +61,12 @@ export default function LoginPage() {
     e.preventDefault();
     setIsSubmitting(true);
 
-    signInWithEmailAndPassword(auth, email.toLowerCase().trim(), password)
+    const targetEmail = email.toLowerCase().trim();
+
+    signInWithEmailAndPassword(auth, targetEmail, password)
+      .then(() => {
+        // Redirection is handled by the useEffect above
+      })
       .catch((err: any) => {
         setIsSubmitting(false);
         toast({

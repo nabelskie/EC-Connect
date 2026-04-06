@@ -30,11 +30,13 @@ export default function RegisterPage() {
   const db = useFirestore();
   const { toast } = useToast();
 
+  const ADMIN_EMAIL = 'admineld@gmail.com';
+
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const isAdminEmail = email.toLowerCase().trim() === 'admineld@gmail.com';
+  const isAdminEmail = email.toLowerCase().trim() === ADMIN_EMAIL;
 
   const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,11 +47,11 @@ export default function RegisterPage() {
     const finalRole = isAdminEmail ? 'admin' : role;
 
     createUserWithEmailAndPassword(auth, targetEmail, password)
-      .then((userCredential) => {
+      .then(async (userCredential) => {
         const user = userCredential.user;
         
         // 1. Update display name
-        updateProfile(user, { displayName: name });
+        await updateProfile(user, { displayName: name });
 
         // 2. Create UserProfile in Firestore
         const userProfile = {
@@ -62,15 +64,15 @@ export default function RegisterPage() {
           createdAt: new Date().toISOString()
         };
 
-        setDoc(doc(db, 'users', user.uid), userProfile)
-          .then(() => {
-            toast({
-              title: "Registration Successful",
-              description: `Welcome to ElderCare Connect, ${name}!`,
-            });
-            // Direct redirection to the appropriate dashboard
-            router.push(`/dashboard/${finalRole}?role=${finalRole}`);
-          });
+        await setDoc(doc(db, 'users', user.uid), userProfile);
+        
+        toast({
+          title: "Registration Successful",
+          description: `Welcome to ElderCare Connect, ${name}!`,
+        });
+        
+        // Direct redirection to the appropriate dashboard
+        router.push(`/dashboard/${finalRole}?role=${finalRole}`);
       })
       .catch((err: any) => {
         setIsLoading(false);
@@ -173,11 +175,12 @@ export default function RegisterPage() {
                   placeholder="john@example.com" 
                   required 
                   className="h-12" 
+                  suppressHydrationWarning
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Create Password</Label>
-                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="h-12" />
+                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="h-12" suppressHydrationWarning />
               </div>
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="address">Address / Room No</Label>
@@ -185,7 +188,7 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            <Button type="submit" className="w-full h-14 text-xl bg-primary hover:bg-primary/90 mt-4" disabled={isLoading}>
+            <Button type="submit" className="w-full h-14 text-xl bg-primary hover:bg-primary/90 mt-4" disabled={isLoading} suppressHydrationWarning>
               {isLoading ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : 'Complete Registration'}
             </Button>
           </form>
