@@ -30,7 +30,7 @@ export default function RegisterPage() {
   const db = useFirestore();
   const { toast } = useToast();
 
-  const ADMIN_EMAIL = 'admineld@gmail.com';
+  const ADMIN_EMAIL = 'adminkn@gmail.com';
 
   useEffect(() => {
     setMounted(true);
@@ -221,7 +221,7 @@ export default function RegisterPage() {
           {isAdminEmail && (
             <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100 text-[10px] text-muted-foreground italic max-w-sm text-center">
               <AlertCircle className="h-3 w-3 text-accent shrink-0" />
-              Note: The system administrator password is set to "eldadmin123".
+              Note: The system administrator password is set to "knadmin123".
             </div>
           )}
         </CardFooter>

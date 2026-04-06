@@ -25,7 +25,7 @@ export default function LoginPage() {
   const { user, isUserLoading } = useUser();
   const { toast } = useToast();
 
-  const ADMIN_EMAIL = 'admineld@gmail.com';
+  const ADMIN_EMAIL = 'adminkn@gmail.com';
 
   useEffect(() => {
     setMounted(true);
@@ -180,7 +180,7 @@ export default function LoginPage() {
           {isAdminEmail && (
             <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100 text-[10px] text-muted-foreground italic">
               <AlertCircle className="h-3 w-3 text-accent shrink-0" />
-              Administrator detected. Note: Initial password is "eldadmin123".
+              Administrator detected. Note: Initial password is "knadmin123".
             </div>
           )}
         </CardFooter>
