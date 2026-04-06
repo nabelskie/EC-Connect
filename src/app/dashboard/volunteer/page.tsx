@@ -98,6 +98,9 @@ export default function VolunteerDashboard() {
       return;
     }
 
+    // Generate a persistent chat ID based on the pair of users
+    const chatRoomId = [residentId, volunteerId].sort().join('_');
+
     let residentName = 'Resident';
     try {
       const residentDoc = await getDoc(doc(db, 'users', residentId));
@@ -117,6 +120,7 @@ export default function VolunteerDashboard() {
       assignedVolunteerId: volunteerId,
       volunteerName: volunteerName,
       residentName: residentName,
+      chatRoomId: chatRoomId, // Store the shared chat ID on the request
       acceptedAt: serverTimestamp(),
     }).catch(async (err) => {
       errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -133,32 +137,32 @@ export default function VolunteerDashboard() {
       }));
     });
 
-    const chatRoomId = task.id; 
     const chatRoomRef = doc(db, 'chat_rooms', chatRoomId);
     const participantUserIds = [residentId, volunteerId];
     
+    // Use merge: true so we don't wipe previous history if this pair has chatted before
     setDoc(chatRoomRef, {
       id: chatRoomId,
-      requestId: task.id,
+      requestId: task.id, // Update with the latest request context
       participantUserIds: participantUserIds,
       residentName: residentName,
       volunteerName: volunteerName,
       createdAt: serverTimestamp(),
-      lastMessageSnippet: `Volunteer ${volunteerName} has accepted your request.`,
+      lastMessageSnippet: `Volunteer ${volunteerName} has accepted your request: ${task.taskType}`,
       lastMessageAt: serverTimestamp(),
-    }).then(() => {
+    }, { merge: true }).then(() => {
       const messagesRef = collection(db, 'chat_rooms', chatRoomId, 'messages');
       addDoc(messagesRef, {
         chatRoomId: chatRoomId,
         senderUserId: volunteerId,
-        messageText: "Hello! I'm here to help.",
+        messageText: `I've accepted your request for ${task.taskType}. I'm here to help!`,
         timestamp: serverTimestamp(),
         participantUserIds: participantUserIds
       });
     }).catch(async (err) => {
       errorEmitter.emit('permission-error', new FirestorePermissionError({
         path: chatRoomRef.path,
-        operation: 'create',
+        operation: 'write',
         requestResourceData: { id: chatRoomId, requestId: task.id },
       }));
     });
@@ -168,7 +172,7 @@ export default function VolunteerDashboard() {
       description: `You are now helping ${residentName}.`,
     });
     
-    router.push(`/dashboard/chat/${task.id}?role=volunteer`);
+    router.push(`/dashboard/chat/${chatRoomId}?role=volunteer`);
   };
 
   const getUrgencyColor = (urgency: string) => {
@@ -330,7 +334,7 @@ export default function VolunteerDashboard() {
                       <MapPin className="h-3 w-3" /> {task.location}
                     </div>
                     <Button asChild size="sm" className="bg-primary text-white rounded-xl h-9 px-4 text-xs font-bold gap-2">
-                      <Link href={`/dashboard/chat/${task.id}?role=volunteer`}>
+                      <Link href={`/dashboard/chat/${task.chatRoomId || task.id}?role=volunteer`}>
                         Go to Chat
                         <ArrowRight className="h-3 w-3" />
                       </Link>

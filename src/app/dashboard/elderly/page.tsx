@@ -423,7 +423,7 @@ export default function ElderlyDashboard() {
                 {selectedRequest.status === 'Accepted' && (
                   <div className="flex flex-col gap-3">
                     <Button asChild className="w-full h-14 rounded-2xl bg-accent hover:bg-accent/90 font-bold">
-                      <Link href={`/dashboard/chat/${selectedRequest.id}?role=elderly`}>
+                      <Link href={`/dashboard/chat/${selectedRequest.chatRoomId || selectedRequest.id}?role=elderly`}>
                         Chat with Volunteer
                       </Link>
                     </Button>

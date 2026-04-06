@@ -91,7 +91,7 @@ function ChatInboxContent() {
             const partnerRole = role === 'volunteer' ? 'Resident' : 'Volunteer';
             
             return (
-              <Link key={chat.id} href={`/dashboard/chat/${chat.requestId}?role=${role}`}>
+              <Link key={chat.id} href={`/dashboard/chat/${chat.id}?role=${role}`}>
                 <Card className="border-none shadow-sm rounded-3xl overflow-hidden active:bg-slate-50 transition-colors mb-3">
                   <CardContent className="p-4 flex items-center gap-4">
                     <div className="relative">
