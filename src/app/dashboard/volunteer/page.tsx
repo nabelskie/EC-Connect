@@ -33,9 +33,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, setDoc, deleteDoc, getDoc, serverTimestamp, addDoc } from 'firebase/firestore';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { collection, query, where, doc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { setDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export default function VolunteerDashboard() {
   const { toast } = useToast();
@@ -93,12 +92,11 @@ export default function VolunteerDashboard() {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Could not identify the resident for this request.",
+        description: "Could not identify the resident.",
       });
       return;
     }
 
-    // Generate a persistent chat ID based on the pair of users
     const chatRoomId = [residentId, volunteerId].sort().join('_');
 
     let residentName = 'Resident';
@@ -108,67 +106,49 @@ export default function VolunteerDashboard() {
         residentName = residentDoc.data().name || 'Resident';
       }
     } catch (e) {
-      console.error("Could not fetch resident profile", e);
+      // Silent fail for resident name, fallback to default
     }
 
     const activeRef = doc(db, 'assistance_requests_active', task.id);
     const pendingRef = doc(db, 'assistance_requests_pending', task.id);
 
-    setDoc(activeRef, {
+    setDocumentNonBlocking(activeRef, {
       ...task,
       status: 'Accepted',
       assignedVolunteerId: volunteerId,
       volunteerName: volunteerName,
       residentName: residentName,
-      chatRoomId: chatRoomId, // Store the shared chat ID on the request
+      chatRoomId: chatRoomId,
       acceptedAt: serverTimestamp(),
-    }).catch(async (err) => {
-      errorEmitter.emit('permission-error', new FirestorePermissionError({
-        path: activeRef.path,
-        operation: 'create',
-        requestResourceData: task,
-      }));
-    });
+    }, { merge: true });
 
-    deleteDoc(pendingRef).catch(async (err) => {
-      errorEmitter.emit('permission-error', new FirestorePermissionError({
-        path: pendingRef.path,
-        operation: 'delete',
-      }));
-    });
+    deleteDocumentNonBlocking(pendingRef);
 
     const chatRoomRef = doc(db, 'chat_rooms', chatRoomId);
     const participantUserIds = [residentId, volunteerId];
     
-    // Use merge: true so we don't wipe previous history if this pair has chatted before
-    setDoc(chatRoomRef, {
+    setDocumentNonBlocking(chatRoomRef, {
       id: chatRoomId,
-      requestId: task.id, // Update with the latest request context
+      requestId: task.id,
       participantUserIds: participantUserIds,
       residentName: residentName,
       volunteerName: volunteerName,
       createdAt: serverTimestamp(),
       lastMessageSnippet: `Volunteer ${volunteerName} has accepted your request: ${task.taskType}`,
       lastMessageAt: serverTimestamp(),
-    }, { merge: true }).then(() => {
-      const messagesRef = collection(db, 'chat_rooms', chatRoomId, 'messages');
-      addDoc(messagesRef, {
-        chatRoomId: chatRoomId,
-        senderUserId: volunteerId,
-        messageText: `I've accepted your request for ${task.taskType}. I'm here to help!`,
-        timestamp: serverTimestamp(),
-        participantUserIds: participantUserIds
-      });
-    }).catch(async (err) => {
-      errorEmitter.emit('permission-error', new FirestorePermissionError({
-        path: chatRoomRef.path,
-        operation: 'write',
-        requestResourceData: { id: chatRoomId, requestId: task.id },
-      }));
+    }, { merge: true });
+
+    const messagesRef = collection(db, 'chat_rooms', chatRoomId, 'messages');
+    addDocumentNonBlocking(messagesRef, {
+      chatRoomId: chatRoomId,
+      senderUserId: volunteerId,
+      messageText: `I've accepted your request for ${task.taskType}. I'm here to help!`,
+      timestamp: serverTimestamp(),
+      participantUserIds: participantUserIds
     });
 
     toast({
-      title: "Task Accepted!",
+      title: "Task Accepted",
       description: `You are now helping ${residentName}.`,
     });
     

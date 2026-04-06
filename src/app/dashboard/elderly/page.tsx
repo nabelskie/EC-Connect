@@ -42,7 +42,8 @@ import {
 import { generateTaskDescription } from '@/ai/flows/generate-task-description-flow';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, doc } from 'firebase/firestore';
+import { setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export default function ElderlyDashboard() {
   const { toast } = useToast();
@@ -99,95 +100,79 @@ export default function ElderlyDashboard() {
       });
       setFormData({ ...formData, initialDesc: result.generatedDescription });
     } catch (error) {
-      console.error("AI failed", error);
+      // AI errors handled by Genkit flow
     } finally {
       setIsAiLoading(false);
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (!formData.type || !formData.initialDesc || !user) return;
     
     setIsSubmitting(true);
+    const requestId = Math.random().toString(36).substring(7);
+    const requestData = {
+      id: requestId,
+      createdByUserId: user.uid,
+      taskType: formData.type,
+      description: formData.initialDesc,
+      location: formData.location || 'Not specified',
+      urgencyLevel: formData.urgency,
+      status: 'Pending',
+      createdAt: new Date().toISOString()
+    };
+
+    const docRef = doc(db, 'assistance_requests_pending', requestId);
+    setDocumentNonBlocking(docRef, requestData, { merge: true });
+
+    // Assume success locally for a smooth UI
+    setIsSubmitting(false);
+    setShowForm(false);
     
-    try {
-      const requestId = Math.random().toString(36).substring(7);
-      const requestData = {
-        id: requestId,
-        createdByUserId: user.uid,
-        taskType: formData.type,
-        description: formData.initialDesc,
-        location: formData.location || 'Not specified',
-        urgencyLevel: formData.urgency,
-        status: 'Pending',
-        createdAt: new Date().toISOString()
-      };
+    toast({
+      title: "Request Submitted",
+      description: "Volunteers have been notified of your request.",
+    });
 
-      await setDoc(doc(db, 'assistance_requests_pending', requestId), requestData);
-
-      setIsSubmitting(false);
-      setShowForm(false);
-      
-      toast({
-        title: "Request Submitted Successfully",
-        description: "Volunteers have been notified of your request.",
-      });
-
-      setFormData({
-        type: '',
-        initialDesc: '',
-        location: '',
-        urgency: 'Low'
-      });
-    } catch (error) {
-      console.error("Submission failed", error);
-      setIsSubmitting(false);
-    }
+    setFormData({
+      type: '',
+      initialDesc: '',
+      location: '',
+      urgency: 'Low'
+    });
   };
 
-  const handleCancelRequest = async (request: any) => {
-    try {
-      const collectionName = request.status === 'Pending' ? 'assistance_requests_pending' : 'assistance_requests_active';
-      await deleteDoc(doc(db, collectionName, request.id));
-      setSelectedRequest(null);
-      toast({
-        title: "Request Cancelled",
-        description: "Your assistance request has been removed.",
-      });
-    } catch (e) {
-      console.error("Cancellation failed", e);
-    }
+  const handleCancelRequest = (request: any) => {
+    const collectionName = request.status === 'Pending' ? 'assistance_requests_pending' : 'assistance_requests_active';
+    const docRef = doc(db, collectionName, request.id);
+    deleteDocumentNonBlocking(docRef);
+    setSelectedRequest(null);
+    toast({
+      title: "Request Cancelled",
+      description: "Your assistance request has been removed.",
+    });
   };
 
-  const handleCompleteRequest = async (request: any) => {
+  const handleCompleteRequest = (request: any) => {
     if (!user) return;
-    try {
-      const requestId = request.id;
-      const completedData = {
-        ...request,
-        status: 'Completed',
-        completedAt: new Date().toISOString()
-      };
+    const requestId = request.id;
+    const completedData = {
+      ...request,
+      status: 'Completed',
+      completedAt: new Date().toISOString()
+    };
 
-      // Move the document to the completed collection
-      await setDoc(doc(db, 'assistance_requests_completed', requestId), completedData);
-      
-      // Delete from active
-      await deleteDoc(doc(db, 'assistance_requests_active', requestId));
-      
-      setSelectedRequest(null);
-      toast({
-        title: "Task Completed",
-        description: "Thank you for letting us know! The volunteer and admin have been updated.",
-      });
-    } catch (e) {
-      console.error("Completion failed", e);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Could not mark the task as completed. Please try again.",
-      });
-    }
+    const completedRef = doc(db, 'assistance_requests_completed', requestId);
+    const activeRef = doc(db, 'assistance_requests_active', requestId);
+
+    setDocumentNonBlocking(completedRef, completedData, { merge: true });
+    deleteDocumentNonBlocking(activeRef);
+    
+    setSelectedRequest(null);
+    toast({
+      title: "Task Completed",
+      description: "Thank you! The status has been updated.",
+    });
   };
 
   const getStatusBadge = (status: string) => {

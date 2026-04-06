@@ -25,9 +25,10 @@ service cloud.firestore {
 
     // Safely checks if the current user is a volunteer.
     function isVolunteer() {
-      return isSignedIn() && 
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'volunteer';
+      return isSignedIn() && (
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'volunteer')
+      );
     }
 
     function isOwner(userId) {
