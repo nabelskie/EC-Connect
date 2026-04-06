@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { Heart, User, GraduationCap, Loader2, ShieldCheck } from 'lucide-react';
+import { Heart, User, GraduationCap, Loader2, ShieldCheck, AlertCircle } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
@@ -40,6 +40,8 @@ export default function RegisterPage() {
 
   const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoading) return;
+
     setIsLoading(true);
 
     const targetEmail = email.toLowerCase().trim();
@@ -64,6 +66,7 @@ export default function RegisterPage() {
           createdAt: new Date().toISOString()
         };
 
+        // We use setDoc to specify the document ID as the User's UID
         await setDoc(doc(db, 'users', user.uid), userProfile);
         
         toast({
@@ -71,15 +74,24 @@ export default function RegisterPage() {
           description: `Welcome to ElderCare Connect, ${name}!`,
         });
         
-        // Direct redirection to the appropriate dashboard
+        // Direct redirection based on the final determined role
         router.push(`/dashboard/${finalRole}?role=${finalRole}`);
       })
       .catch((err: any) => {
         setIsLoading(false);
+        console.error("Registration Error:", err.code, err.message);
+        
+        let errorMessage = "An error occurred during registration.";
+        if (err.code === 'auth/email-already-in-use') {
+          errorMessage = "This email is already registered. Please log in instead.";
+        } else if (err.code === 'auth/weak-password') {
+          errorMessage = "Password is too weak. Please use at least 6 characters.";
+        }
+
         toast({
           variant: "destructive",
           title: "Registration Failed",
-          description: err.message || "An error occurred during registration.",
+          description: errorMessage,
         });
       });
   };
@@ -145,13 +157,13 @@ export default function RegisterPage() {
                 </RadioGroup>
               </div>
             ) : (
-              <div className="p-6 bg-primary/5 rounded-2xl border-2 border-primary/20 border-dashed flex items-center gap-4 text-primary">
+              <div className="p-6 bg-primary/5 rounded-2xl border-2 border-primary/20 border-dashed flex items-center gap-4 text-primary animate-in fade-in zoom-in duration-300">
                 <div className="p-3 bg-primary/10 rounded-full">
                   <ShieldCheck className="h-8 w-8" />
                 </div>
                 <div>
                   <h3 className="font-bold text-lg">Administrator Detected</h3>
-                  <p className="text-xs opacity-70">This account will be granted system-wide management access.</p>
+                  <p className="text-xs opacity-70">This account will be granted full system-wide management access.</p>
                 </div>
               </div>
             )}
@@ -188,18 +200,25 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            <Button type="submit" className="w-full h-14 text-xl bg-primary hover:bg-primary/90 mt-4" disabled={isLoading} suppressHydrationWarning>
+            <Button type="submit" className="w-full h-14 text-xl bg-primary hover:bg-primary/90 mt-4 shadow-lg" disabled={isLoading} suppressHydrationWarning>
               {isLoading ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : 'Complete Registration'}
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="justify-center">
+        <CardFooter className="justify-center flex-col gap-4">
           <div className="text-sm text-muted-foreground">
             Already have an account?{' '}
             <Link href="/auth/login" className="font-semibold text-accent hover:underline">
               Log in instead
             </Link>
           </div>
+          
+          {isAdminEmail && (
+            <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100 text-[10px] text-muted-foreground italic max-w-sm text-center">
+              <AlertCircle className="h-3 w-3 text-accent shrink-0" />
+              Note: The system administrator password is set to "eldadmin123".
+            </div>
+          )}
         </CardFooter>
       </Card>
     </div>

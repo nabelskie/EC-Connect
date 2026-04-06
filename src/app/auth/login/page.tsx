@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { Heart, Loader2 } from 'lucide-react';
+import { Heart, Loader2, AlertCircle } from 'lucide-react';
 import { useAuth, useFirestore, useUser } from '@/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
@@ -36,43 +36,64 @@ export default function LoginPage() {
     if (user && !isUserLoading && mounted) {
       const checkRoleAndRedirect = async () => {
         try {
-          // If the email matches the hardcoded admin email, prioritize admin dashboard
-          if (user.email?.toLowerCase().trim() === ADMIN_EMAIL) {
+          const userEmail = user.email?.toLowerCase().trim();
+          
+          // 1. Immediate override for the specific system administrator email
+          if (userEmail === ADMIN_EMAIL) {
+            console.log("Admin email detected, routing to admin console...");
             router.push('/dashboard/admin?role=admin');
             return;
           }
 
+          // 2. Standard role check for all other users
           const userDoc = await getDoc(doc(db, 'users', user.uid));
           if (userDoc.exists()) {
             const role = userDoc.data().role;
             router.push(`/dashboard/${role}?role=${role}`);
           } else {
+            // If logged in but no profile exists, send to register
             router.push('/auth/register');
           }
         } catch (error) {
-          console.error("Redirection error:", error);
+          console.error("Redirection logic failed:", error);
+          toast({
+            variant: "destructive",
+            title: "Navigation Error",
+            description: "We couldn't determine your role. Please try logging in again.",
+          });
         }
       };
       checkRoleAndRedirect();
     }
-  }, [user, isUserLoading, db, router, mounted]);
+  }, [user, isUserLoading, db, router, mounted, toast]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
+    if (isSubmitting) return;
 
+    setIsSubmitting(true);
     const targetEmail = email.toLowerCase().trim();
 
     signInWithEmailAndPassword(auth, targetEmail, password)
       .then(() => {
-        // Redirection is handled by the useEffect above
+        // Redirection is handled by the useEffect watching the 'user' state
+        toast({
+          title: "Sign-in successful",
+          description: "Preparing your dashboard...",
+        });
       })
       .catch((err: any) => {
         setIsSubmitting(false);
+        console.error("Login Error:", err.code, err.message);
+        
+        let errorMessage = "Invalid email or password. Please try again.";
+        if (err.code === 'auth/user-not-found') errorMessage = "No account found with this email.";
+        if (err.code === 'auth/wrong-password') errorMessage = "Incorrect password. Please try again.";
+
         toast({
           variant: "destructive",
           title: "Login Failed",
-          description: "Invalid email or password. Please try again.",
+          description: errorMessage,
         });
       });
   };
@@ -148,6 +169,13 @@ export default function LoginPage() {
               Register here
             </Link>
           </div>
+          
+          {email.toLowerCase().trim() === ADMIN_EMAIL && (
+            <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100 text-[10px] text-muted-foreground italic">
+              <AlertCircle className="h-3 w-3 text-accent shrink-0" />
+              Administrator login detected. Ensure you have registered this account first.
+            </div>
+          )}
         </CardFooter>
       </Card>
     </div>
