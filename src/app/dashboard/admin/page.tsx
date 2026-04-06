@@ -17,6 +17,8 @@ export default function AdminDashboard() {
   const db = useFirestore();
   const { user } = useUser();
 
+  const ADMIN_EMAIL = 'adminkn@gmail.com';
+
   // Fetch the admin's own profile to confirm role before starting broad queries
   const userProfileRef = useMemoFirebase(() => {
     if (!user) return null;
@@ -24,13 +26,15 @@ export default function AdminDashboard() {
   }, [db, user]);
 
   const { data: profile, isLoading: isProfileLoading } = useDoc(userProfileRef);
-  const isAdminConfirmed = profile?.role === 'admin';
+  
+  // Confirmed admin if role matches or email matches
+  const isAdminConfirmed = profile?.role === 'admin' || user?.email?.toLowerCase() === ADMIN_EMAIL;
 
-  // Fetch real-time data from Firestore collections ONLY if confirmed admin
-  const usersQuery = useMemoFirebase(() => isAdminConfirmed ? collection(db, 'users') : null, [db, isAdminConfirmed]);
-  const pendingQuery = useMemoFirebase(() => isAdminConfirmed ? collection(db, 'assistance_requests_pending') : null, [db, isAdminConfirmed]);
-  const activeQuery = useMemoFirebase(() => isAdminConfirmed ? collection(db, 'assistance_requests_active') : null, [db, isAdminConfirmed]);
-  const completedQuery = useMemoFirebase(() => isAdminConfirmed ? collection(db, 'assistance_requests_completed') : null, [db, isAdminConfirmed]);
+  // Fetch real-time data from Firestore collections ONLY if confirmed admin and we have a user
+  const usersQuery = useMemoFirebase(() => (isAdminConfirmed && user) ? collection(db, 'users') : null, [db, isAdminConfirmed, user]);
+  const pendingQuery = useMemoFirebase(() => (isAdminConfirmed && user) ? collection(db, 'assistance_requests_pending') : null, [db, isAdminConfirmed, user]);
+  const activeQuery = useMemoFirebase(() => (isAdminConfirmed && user) ? collection(db, 'assistance_requests_active') : null, [db, isAdminConfirmed, user]);
+  const completedQuery = useMemoFirebase(() => (isAdminConfirmed && user) ? collection(db, 'assistance_requests_completed') : null, [db, isAdminConfirmed, user]);
 
   const { data: usersData, isLoading: isUsersLoading, error: usersError } = useCollection(usersQuery);
   const { data: pendingData, isLoading: isPendingLoading } = useCollection(pendingQuery);
@@ -68,7 +72,7 @@ export default function AdminDashboard() {
       const result = await generateAdminDashboardSummary(metrics);
       setAiSummary(result.summary);
     } catch (err) {
-      console.error("AI Insight generation failed:", err);
+      // AI generation handled by flow retry logic
     } finally {
       setIsAiLoading(false);
     }
@@ -97,9 +101,9 @@ export default function AdminDashboard() {
       .slice(0, 5);
   }, [pendingData, activeData, completedData]);
 
-  const isDataLoading = isProfileLoading || isUsersLoading || isPendingLoading || isActiveLoading || isCompletedLoading;
+  const isInitialLoading = isProfileLoading || (isAdminConfirmed && !usersData && !usersError);
 
-  if (isDataLoading && !usersData) {
+  if (isInitialLoading) {
     return (
       <div className="flex h-[calc(100vh-160px)] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -107,7 +111,7 @@ export default function AdminDashboard() {
     );
   }
 
-  if (usersError) {
+  if (usersError && !usersData) {
     return (
       <div className="flex flex-col h-[calc(100vh-160px)] items-center justify-center gap-4 text-center px-6">
         <div className="p-4 bg-destructive/10 rounded-full">
@@ -233,7 +237,7 @@ export default function AdminDashboard() {
               </div>
             </Card>
           ))}
-          {(!isDataLoading && recentActivity.length === 0) && (
+          {(!isUsersLoading && recentActivity.length === 0) && (
             <div className="text-center py-10 opacity-30 italic text-sm">
               No recent requests found in the system.
             </div>
