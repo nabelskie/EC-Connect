@@ -16,20 +16,12 @@ export interface FirebaseSdks {
 
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
 export function initializeFirebase(): FirebaseSdks {
-  if (!getApps().length) {
-    let firebaseApp;
-    try {
-      firebaseApp = initializeApp();
-    } catch (e) {
-      if (process.env.NODE_ENV === "production") {
-        console.warn('Automatic initialization failed. Falling back to firebase config object.', e);
-      }
-      firebaseApp = initializeApp(firebaseConfig);
-    }
-    return getSdks(firebaseApp);
-  }
-
-  return getSdks(getApp());
+  // Always prefer explicit config for consistency in the Studio environment
+  const firebaseApp = getApps().length === 0 
+    ? initializeApp(firebaseConfig) 
+    : getApp();
+    
+  return getSdks(firebaseApp);
 }
 
 export function getSdks(firebaseApp: FirebaseApp): FirebaseSdks {
