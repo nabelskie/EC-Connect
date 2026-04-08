@@ -97,17 +97,22 @@ export default function VolunteerDashboard() {
       return;
     }
 
-    const chatRoomId = [residentId, volunteerId].sort().join('_');
-
-    let residentName = 'Resident';
-    try {
-      const residentDoc = await getDoc(doc(db, 'users', residentId));
-      if (residentDoc.exists()) {
-        residentName = residentDoc.data().name || 'Resident';
+    // Use the name from the task if available, or try to fetch it from the profile
+    let residentName = task.createdByName || 'Resident';
+    
+    // If it's a generic "Resident", attempt to fetch the profile to get the actual name
+    if (residentName === 'Resident') {
+      try {
+        const residentDoc = await getDoc(doc(db, 'users', residentId));
+        if (residentDoc.exists()) {
+          residentName = residentDoc.data().name || 'Resident';
+        }
+      } catch (e) {
+        // Fallback to task value if profile lookup fails
       }
-    } catch (e) {
-      // Silent fail for resident name, fallback to default
     }
+
+    const chatRoomId = [residentId, volunteerId].sort().join('_');
 
     const activeRef = doc(db, 'assistance_requests_active', task.id);
     const pendingRef = doc(db, 'assistance_requests_pending', task.id);
@@ -117,7 +122,7 @@ export default function VolunteerDashboard() {
       status: 'Accepted',
       assignedVolunteerId: volunteerId,
       volunteerName: volunteerName,
-      residentName: residentName,
+      residentName: residentName, // Now correctly populated
       chatRoomId: chatRoomId,
       acceptedAt: serverTimestamp(),
     }, { merge: true });
@@ -247,7 +252,7 @@ export default function VolunteerDashboard() {
                       </div>
                       <div>
                         <div className="font-bold text-sm text-primary">{task.taskType}</div>
-                        <div className="text-[10px] text-muted-foreground font-semibold uppercase">Resident ID: {task.createdByUserId?.slice(0, 5)}</div>
+                        <div className="text-[10px] text-muted-foreground font-semibold uppercase">{task.createdByName || 'Resident'}</div>
                       </div>
                     </div>
                     <Badge variant="outline" className={`text-[10px] rounded-lg ${getUrgencyColor(task.urgencyLevel)}`}>
@@ -304,7 +309,7 @@ export default function VolunteerDashboard() {
                       </div>
                       <div>
                         <div className="font-bold text-sm text-primary">{task.taskType}</div>
-                        <div className="text-[10px] text-muted-foreground font-semibold uppercase">Resident ID: {task.createdByUserId?.slice(0, 5)}</div>
+                        <div className="text-[10px] text-muted-foreground font-semibold uppercase">{task.residentName || 'Resident'}</div>
                       </div>
                     </div>
                     <Badge className="bg-emerald-500 text-white text-[8px] h-5 uppercase">{task.status}</Badge>

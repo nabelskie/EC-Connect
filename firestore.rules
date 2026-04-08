@@ -36,7 +36,8 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow get: if isOwner(userId) || isAdmin();
+      // Allow any signed-in user to read a profile to see names in chats/requests
+      allow get: if isSignedIn();
       // Allow admins to list the whole directory
       allow list: if isAdmin();
       allow create: if isSignedIn() && request.auth.uid == userId;

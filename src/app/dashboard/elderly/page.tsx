@@ -114,6 +114,7 @@ export default function ElderlyDashboard() {
     const requestData = {
       id: requestId,
       createdByUserId: user.uid,
+      createdByName: user.displayName || 'Resident',
       taskType: formData.type,
       description: formData.initialDesc,
       location: formData.location || 'Not specified',
