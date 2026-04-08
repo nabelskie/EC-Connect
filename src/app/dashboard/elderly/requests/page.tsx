@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, Suspense } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -16,22 +17,58 @@ import {
   MapPin,
   Calendar,
   User,
-  Filter
+  Filter,
+  Loader2
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
 
-export default function RequestsHistoryPage() {
+function RequestsHistoryContent() {
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [activeFilter, setActiveFilter] = useState<string>('All');
+  const [mounted, setMounted] = useState(false);
+  const db = useFirestore();
+  const { user } = useUser();
 
-  const allRequests = [
-    { id: 1, type: 'Groceries', status: 'Pending', date: 'Oct 24, 2024', desc: 'Need help buying milk and bread from the local market.', location: 'Block C, Room 102', urgency: 'Medium' },
-    { id: 2, type: 'Transportation', status: 'Accepted', date: 'Oct 23, 2024', desc: 'Ride to the clinic for monthly health checkup.', location: 'Lobby Block A', urgency: 'High', volunteer: 'Sarah (Student)' },
-    { id: 3, type: 'Tech Support', status: 'Completed', date: 'Oct 21, 2024', desc: 'Setting up my new phone and installing WhatsApp.', location: 'Block C, Room 102', urgency: 'Low', volunteer: 'Jason (Student)' },
-    { id: 4, type: 'Groceries', status: 'Completed', date: 'Oct 10, 2024', desc: 'Weekly grocery run for vegetables and fruits.', location: 'Local Market', urgency: 'Low', volunteer: 'Ahmad (Student)' },
-    { id: 5, type: 'Transportation', status: 'Rejected', date: 'Oct 05, 2024', desc: 'Urgent ride to the hospital, but no student was available at the time.', location: 'Block B', urgency: 'High' },
-  ];
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Fetch all types of requests for this user
+  const pendingQuery = useMemoFirebase(() => {
+    if (!user || !mounted) return null;
+    return query(collection(db, 'assistance_requests_pending'), where('createdByUserId', '==', user.uid));
+  }, [db, user, mounted]);
+
+  const activeQuery = useMemoFirebase(() => {
+    if (!user || !mounted) return null;
+    return query(collection(db, 'assistance_requests_active'), where('createdByUserId', '==', user.uid));
+  }, [db, user, mounted]);
+
+  const completedQuery = useMemoFirebase(() => {
+    if (!user || !mounted) return null;
+    return query(collection(db, 'assistance_requests_completed'), where('createdByUserId', '==', user.uid));
+  }, [db, user, mounted]);
+
+  const { data: pendingData, isLoading: isPendingLoading } = useCollection(pendingQuery);
+  const { data: activeData, isLoading: isActiveLoading } = useCollection(activeQuery);
+  const { data: completedData, isLoading: isCompletedLoading } = useCollection(completedQuery);
+
+  const allRequests = useMemo(() => {
+    const combined = [
+      ...(pendingData || []).map(r => ({ ...r, status: 'Pending' })),
+      ...(activeData || []).map(r => ({ ...r, status: 'Accepted' })),
+      ...(completedData || []).map(r => ({ ...r, status: 'Completed' }))
+    ];
+    
+    return combined.sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
+    });
+  }, [pendingData, activeData, completedData]);
 
   const filteredRequests = useMemo(() => {
     if (activeFilter === 'All') return allRequests;
@@ -43,8 +80,7 @@ export default function RequestsHistoryPage() {
       case 'Pending': return <Badge className="bg-yellow-500 text-white rounded-full px-3">Pending</Badge>;
       case 'Accepted': return <Badge className="bg-sky-500 text-white rounded-full px-3">Accepted</Badge>;
       case 'Completed': return <Badge className="bg-emerald-500 text-white rounded-full px-3">Completed</Badge>;
-      case 'Rejected': return <Badge variant="destructive" className="rounded-full px-3">Rejected</Badge>;
-      default: return <Badge variant="outline" className="rounded-full">{status}</Badge>;
+      default: return <Badge variant="outline" className="rounded-full px-3">{status}</Badge>;
     }
   };
 
@@ -57,7 +93,20 @@ export default function RequestsHistoryPage() {
     }
   };
 
-  const filters = ['All', 'Pending', 'Accepted', 'Completed', 'Rejected'];
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return 'Recent';
+    try {
+      return new Date(dateStr).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch (e) {
+      return dateStr;
+    }
+  };
+
+  const filters = ['All', 'Pending', 'Accepted', 'Completed'];
+
+  if (!mounted) return null;
+
+  const isLoading = isPendingLoading || isActiveLoading || isCompletedLoading;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -91,7 +140,12 @@ export default function RequestsHistoryPage() {
       </div>
 
       <div className="space-y-4">
-        {filteredRequests.map((req) => (
+        {isLoading && allRequests.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 gap-2 opacity-40">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-[10px] font-bold uppercase">Loading your history...</p>
+          </div>
+        ) : filteredRequests.map((req) => (
           <Card 
             key={req.id} 
             className="border-none shadow-sm rounded-3xl overflow-hidden active:bg-slate-50 transition-colors cursor-pointer"
@@ -99,14 +153,14 @@ export default function RequestsHistoryPage() {
           >
             <CardContent className="p-5 flex items-start gap-4">
               <div className="p-3 rounded-2xl bg-accent/10 text-accent shrink-0">
-                {getTypeIcon(req.type)}
+                {getTypeIcon(req.taskType)}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="font-bold text-primary truncate text-lg">{req.type}</span>
-                  <span className="text-[10px] text-muted-foreground font-semibold uppercase">{req.date.split(',')[0]}</span>
+                  <span className="font-bold text-primary truncate text-lg">{req.taskType}</span>
+                  <span className="text-[10px] text-muted-foreground font-semibold uppercase">{formatDate(req.createdAt).split(',')[0]}</span>
                 </div>
-                <p className="text-sm text-muted-foreground leading-relaxed mb-3 line-clamp-2">{req.desc}</p>
+                <p className="text-sm text-muted-foreground leading-relaxed mb-3 line-clamp-2">{req.description}</p>
                 <div className="flex items-center justify-between">
                   {getStatusBadge(req.status)}
                   <ChevronRight className="h-5 w-5 text-muted-foreground/30" />
@@ -116,11 +170,11 @@ export default function RequestsHistoryPage() {
           </Card>
         ))}
 
-        {filteredRequests.length === 0 && (
+        {!isLoading && filteredRequests.length === 0 && (
           <div className="text-center py-24 bg-white rounded-[2.5rem] border-2 border-dashed border-slate-100 mx-1">
              <Filter className="h-12 w-12 mx-auto mb-4 text-slate-200" />
              <p className="text-lg font-bold text-primary">No {activeFilter === 'All' ? '' : activeFilter} Requests</p>
-             <p className="text-sm text-muted-foreground max-w-[200px] mx-auto">There are no requests matching this status right now.</p>
+             <p className="text-sm text-muted-foreground max-w-[200px] mx-auto">There are no requests matching this status in your history.</p>
           </div>
         )}
       </div>
@@ -132,13 +186,13 @@ export default function RequestsHistoryPage() {
               <SheetHeader className="text-left space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="p-4 rounded-2xl bg-accent/10 text-accent w-fit">
-                    {getTypeIcon(selectedRequest.type)}
+                    {getTypeIcon(selectedRequest.taskType)}
                   </div>
                   {getStatusBadge(selectedRequest.status)}
                 </div>
-                <SheetTitle className="text-2xl font-bold text-primary">{selectedRequest.type} Help</SheetTitle>
+                <SheetTitle className="text-2xl font-bold text-primary">{selectedRequest.taskType} Help</SheetTitle>
                 <SheetDescription className="text-base leading-relaxed text-slate-600 italic">
-                  "{selectedRequest.desc}"
+                  "{selectedRequest.description}"
                 </SheetDescription>
               </SheetHeader>
 
@@ -159,18 +213,18 @@ export default function RequestsHistoryPage() {
                   </div>
                   <div>
                     <Label className="text-[10px] text-muted-foreground uppercase font-bold">Requested On</Label>
-                    <p className="text-primary font-medium">{selectedRequest.date}</p>
+                    <p className="text-primary font-medium">{formatDate(selectedRequest.createdAt)}</p>
                   </div>
                 </div>
 
-                {selectedRequest.volunteer && (
+                {selectedRequest.volunteerName && (
                   <div className="flex items-start gap-4">
                     <div className="p-2 rounded-lg bg-emerald-50 text-emerald-500">
                       <User className="h-5 w-5" />
                     </div>
                     <div>
                       <Label className="text-[10px] text-muted-foreground uppercase font-bold">Volunteer Assigned</Label>
-                      <p className="text-primary font-medium">{selectedRequest.volunteer}</p>
+                      <p className="text-primary font-medium">{selectedRequest.volunteerName}</p>
                     </div>
                   </div>
                 )}
@@ -183,45 +237,37 @@ export default function RequestsHistoryPage() {
                     <div className="h-5 w-5 rounded-full bg-emerald-500 border-4 border-white shadow-sm mt-0.5" />
                     <div>
                       <p className="text-sm font-bold text-primary">Request Submitted</p>
-                      <p className="text-xs text-muted-foreground">{selectedRequest.date}</p>
+                      <p className="text-xs text-muted-foreground">{formatDate(selectedRequest.createdAt)}</p>
                     </div>
                   </div>
                   
-                  {selectedRequest.status === 'Rejected' ? (
-                    <div className="flex items-start gap-4 relative z-10">
-                      <div className="h-5 w-5 rounded-full bg-destructive border-4 border-white shadow-sm mt-0.5" />
-                      <div>
-                        <p className="text-sm font-bold text-destructive">Request Rejected</p>
-                        <p className="text-xs text-muted-foreground">No volunteer available or request declined.</p>
-                      </div>
+                  <div className="flex items-start gap-4 relative z-10">
+                    <div className={`h-5 w-5 rounded-full border-4 border-white shadow-sm mt-0.5 ${
+                      selectedRequest.status === 'Accepted' || selectedRequest.status === 'Completed' ? 'bg-emerald-500' : 'bg-slate-200'
+                    }`} />
+                    <div>
+                      <p className={`text-sm font-bold ${
+                        selectedRequest.status === 'Accepted' || selectedRequest.status === 'Completed' ? 'text-primary' : 'text-muted-foreground'
+                      }`}>Volunteer Accepted</p>
+                      {selectedRequest.volunteerName && <p className="text-xs text-muted-foreground">Assigned to {selectedRequest.volunteerName}</p>}
                     </div>
-                  ) : (
-                    <>
-                      <div className="flex items-start gap-4 relative z-10">
-                        <div className={`h-5 w-5 rounded-full border-4 border-white shadow-sm mt-0.5 ${
-                          selectedRequest.status === 'Accepted' || selectedRequest.status === 'Completed' ? 'bg-emerald-500' : 'bg-slate-200'
-                        }`} />
-                        <div>
-                          <p className={`text-sm font-bold ${
-                            selectedRequest.status === 'Accepted' || selectedRequest.status === 'Completed' ? 'text-primary' : 'text-muted-foreground'
-                          }`}>Volunteer Accepted</p>
-                          {selectedRequest.volunteer && <p className="text-xs text-muted-foreground">Assigned to {selectedRequest.volunteer}</p>}
-                        </div>
-                      </div>
+                  </div>
 
-                      <div className="flex items-start gap-4 relative z-10">
-                        <div className={`h-5 w-5 rounded-full border-4 border-white shadow-sm mt-0.5 ${
-                          selectedRequest.status === 'Completed' ? 'bg-emerald-500' : 'bg-slate-200'
-                        }`} />
-                        <div>
-                          <p className={`text-sm font-bold ${
-                            selectedRequest.status === 'Completed' ? 'text-primary' : 'text-muted-foreground'
-                          }`}>Task Completed</p>
-                          {selectedRequest.status === 'Completed' && <p className="text-xs text-muted-foreground">Successfully closed</p>}
-                        </div>
-                      </div>
-                    </>
-                  )}
+                  <div className="flex items-start gap-4 relative z-10">
+                    <div className={`h-5 w-5 rounded-full border-4 border-white shadow-sm mt-0.5 ${
+                      selectedRequest.status === 'Completed' ? 'bg-emerald-500' : 'bg-slate-200'
+                    }`} />
+                    <div>
+                      <p className={`text-sm font-bold ${
+                        selectedRequest.status === 'Completed' ? 'text-primary' : 'text-muted-foreground'
+                      }`}>Task Completed</p>
+                      {selectedRequest.status === 'Completed' && (
+                        <p className="text-xs text-muted-foreground">
+                          Finished on {formatDate(selectedRequest.completedAt)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -229,5 +275,13 @@ export default function RequestsHistoryPage() {
         </SheetContent>
       </Sheet>
     </div>
+  );
+}
+
+export default function RequestsHistoryPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center py-20"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>}>
+      <RequestsHistoryContent />
+    </Suspense>
   );
 }
