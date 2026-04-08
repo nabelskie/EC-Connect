@@ -97,19 +97,15 @@ export default function VolunteerDashboard() {
       return;
     }
 
-    // Use the name from the task if available, or try to fetch it from the profile
+    // Explicitly fetch the resident's name from their profile for the chat room
     let residentName = task.createdByName || 'Resident';
-    
-    // If it's a generic "Resident", attempt to fetch the profile to get the actual name
-    if (residentName === 'Resident') {
-      try {
-        const residentDoc = await getDoc(doc(db, 'users', residentId));
-        if (residentDoc.exists()) {
-          residentName = residentDoc.data().name || 'Resident';
-        }
-      } catch (e) {
-        // Fallback to task value if profile lookup fails
+    try {
+      const residentDoc = await getDoc(doc(db, 'users', residentId));
+      if (residentDoc.exists() && residentDoc.data().name) {
+        residentName = residentDoc.data().name;
       }
+    } catch (e) {
+      // Fallback to task value
     }
 
     const chatRoomId = [residentId, volunteerId].sort().join('_');
@@ -122,7 +118,7 @@ export default function VolunteerDashboard() {
       status: 'Accepted',
       assignedVolunteerId: volunteerId,
       volunteerName: volunteerName,
-      residentName: residentName, // Now correctly populated
+      residentName: residentName,
       chatRoomId: chatRoomId,
       acceptedAt: serverTimestamp(),
     }, { merge: true });

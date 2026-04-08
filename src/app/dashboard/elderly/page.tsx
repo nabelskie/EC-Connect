@@ -42,7 +42,7 @@ import {
 import { generateTaskDescription } from '@/ai/flows/generate-task-description-flow';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc } from 'firebase/firestore';
+import { collection, query, where, doc, getDoc } from 'firebase/firestore';
 import { setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export default function ElderlyDashboard() {
@@ -106,15 +106,27 @@ export default function ElderlyDashboard() {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!formData.type || !formData.initialDesc || !user) return;
     
     setIsSubmitting(true);
+
+    // Fetch the real name from the Firestore profile to avoid 'Resident' fallback
+    let nameToUse = user.displayName;
+    try {
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      if (userDoc.exists()) {
+        nameToUse = userDoc.data().name;
+      }
+    } catch (e) {
+      // Fallback to displayName
+    }
+
     const requestId = Math.random().toString(36).substring(7);
     const requestData = {
       id: requestId,
       createdByUserId: user.uid,
-      createdByName: user.displayName || 'Resident',
+      createdByName: nameToUse || 'Resident',
       taskType: formData.type,
       description: formData.initialDesc,
       location: formData.location || 'Not specified',
@@ -126,7 +138,6 @@ export default function ElderlyDashboard() {
     const docRef = doc(db, 'assistance_requests_pending', requestId);
     setDocumentNonBlocking(docRef, requestData, { merge: true });
 
-    // Assume success locally for a smooth UI
     setIsSubmitting(false);
     setShowForm(false);
     
