@@ -4,11 +4,13 @@ ElderCare Connect is a modern, real-time application built with Next.js and Fire
 
 ## Key Features
 
-- **Role-Based Dashboards**: Tailored experiences for Residents, Volunteers, and Administrators.
-- **Real-Time Assistance**: Residents can request help for Groceries, Transport, or Tech Support.
-- **AI-Powered Refinement**: Uses Google Genkit (Gemini) to help residents write clearer task descriptions and provide admins with system insights.
-- **Persistent Chat**: Secure, 1-on-1 messaging history between residents and volunteers.
-- **Automated Workflow**: Tasks move seamlessly from Pending to Active to Completed, with full visibility in the Firebase Console.
+- **Role-Based Dashboards**: Tailored experiences for Residents (Elderly), Volunteers (Students), and Administrators.
+- **Persistent 1-on-1 Chat**: Message history is preserved between users across different assistance requests.
+- **Real-Time Assistance Tracking**: Monitor requests as they move from Pending to Active to Completed in the Firebase Console.
+- **AI-Powered Assistance**: 
+  - **Residents**: Get help writing clear task descriptions with Gemini.
+  - **Admins**: Receive automated system performance summaries.
+- **Push Notifications**: Integrated Firebase Cloud Messaging (FCM) to alert users of new requests and messages.
 
 ## Tech Stack
 
@@ -18,37 +20,36 @@ ElderCare Connect is a modern, real-time application built with Next.js and Fire
 - **AI**: Google Genkit with Gemini 2.5 Flash
 - **Styling**: Tailwind CSS & ShadCN UI
 
-## How to Sync with GitHub
+## How to Sync with GitHub (Move to VS Code)
 
-To push this project to your own GitHub repository, follow these steps in your terminal:
+To move this project from Firebase Studio to your local **VS Code**, follow these steps:
 
-1. **Initialize a local Git repository**:
-   ```bash
-   git init
-   ```
+### 1. Push from Firebase Studio to GitHub
+In the terminal here in Firebase Studio:
+```bash
+git init
+git add .
+git commit -m "Initial commit of ElderCare Connect"
+# Create a new repo on GitHub.com first, then:
+git remote add origin <YOUR_GITHUB_REPO_URL>
+git branch -M main
+git push -u origin main
+```
 
-2. **Add your files to the staging area**:
-   ```bash
-   git add .
-   ```
-
-3. **Commit the files**:
-   ```bash
-   git commit -m "Initial commit of ElderCare Connect"
-   ```
-
-4. **Create a new repository on GitHub**. Do not initialize it with a README, license, or gitignore.
-
-5. **Link your local repository to GitHub and push**:
-   ```bash
-   git remote add origin <YOUR_GITHUB_REPO_URL>
-   git branch -M main
-   git push -u origin main
-   ```
+### 2. Setup on your local machine
+Once the code is on GitHub:
+1. **Clone**: Open your local terminal and run `git clone <YOUR_GITHUB_REPO_URL>`.
+2. **Open**: Open the folder in VS Code.
+3. **Install**: Run `npm install` to install all dependencies.
+4. **Environment**: Ensure your `src/firebase/config.ts` matches your project settings.
+5. **Run**: Run `npm run dev` to start the local preview at `http://localhost:3000`.
 
 ## Firebase Console Tracking
 
-You can monitor all activity in real-time by visiting your Firebase Console.
-- **Firestore**: Check the `assistance_requests_*` collections to see task movement.
-- **Authentication**: Manage user accounts and administrative roles.
-- **Genkit**: Monitor AI flow executions and performance.
+You can monitor all activity in real-time by visiting your [Firebase Console](https://console.firebase.google.com/).
+- **Firestore**: Check `assistance_requests_pending`, `assistance_requests_active`, and `assistance_requests_completed` to see task movement.
+- **Authentication**: Manage user accounts (Admins use `adminkn@gmail.com`).
+- **Cloud Messaging**: View registered `fcmToken` strings in user profiles.
+
+---
+*Built for Politeknik Kuching Sarawak - Connecting Generations.*
