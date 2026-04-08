@@ -18,7 +18,9 @@ import {
   Calendar,
   User,
   Filter,
-  Loader2
+  Loader2,
+  Clock,
+  CheckCircle2
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -36,7 +38,7 @@ function RequestsHistoryContent() {
     setMounted(true);
   }, []);
 
-  // Fetch all types of requests for this user
+  // Fetch all types of requests for this user across all three states
   const pendingQuery = useMemoFirebase(() => {
     if (!user || !mounted) return null;
     return query(collection(db, 'assistance_requests_pending'), where('createdByUserId', '==', user.uid));
@@ -63,6 +65,7 @@ function RequestsHistoryContent() {
       ...(completedData || []).map(r => ({ ...r, status: 'Completed' }))
     ];
     
+    // Sort by creation date descending
     return combined.sort((a, b) => {
       const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
@@ -109,10 +112,10 @@ function RequestsHistoryContent() {
   const isLoading = isPendingLoading || isActiveLoading || isCompletedLoading;
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="space-y-6 animate-in fade-in duration-500 pb-10">
       <div className="flex items-center gap-4">
         <Link 
-          href="/dashboard/elderly" 
+          href="/dashboard/elderly?role=elderly" 
           className="p-2 -ml-2 hover:bg-slate-100 rounded-full transition-colors"
         >
           <ArrowLeft className="h-6 w-6 text-primary" />
@@ -130,7 +133,7 @@ function RequestsHistoryContent() {
             className={cn(
               "rounded-full px-4 h-8 text-[10px] font-bold uppercase tracking-wider transition-all shrink-0",
               activeFilter === f 
-                ? "bg-primary text-white border-primary" 
+                ? "bg-primary text-white border-primary shadow-sm" 
                 : "text-muted-foreground border-slate-200 bg-white"
             )}
           >
@@ -148,7 +151,7 @@ function RequestsHistoryContent() {
         ) : filteredRequests.map((req) => (
           <Card 
             key={req.id} 
-            className="border-none shadow-sm rounded-3xl overflow-hidden active:bg-slate-50 transition-colors cursor-pointer"
+            className="border-none shadow-sm rounded-3xl overflow-hidden active:bg-slate-50 transition-colors cursor-pointer border border-transparent hover:border-slate-100"
             onClick={() => setSelectedRequest(req)}
           >
             <CardContent className="p-5 flex items-start gap-4">
@@ -171,16 +174,20 @@ function RequestsHistoryContent() {
         ))}
 
         {!isLoading && filteredRequests.length === 0 && (
-          <div className="text-center py-24 bg-white rounded-[2.5rem] border-2 border-dashed border-slate-100 mx-1">
-             <Filter className="h-12 w-12 mx-auto mb-4 text-slate-200" />
-             <p className="text-lg font-bold text-primary">No {activeFilter === 'All' ? '' : activeFilter} Requests</p>
-             <p className="text-sm text-muted-foreground max-w-[200px] mx-auto">There are no requests matching this status in your history.</p>
+          <div className="text-center py-24 bg-white rounded-[2.5rem] border-2 border-dashed border-slate-100 mx-1 flex flex-col items-center justify-center gap-4">
+             <div className="p-4 bg-slate-50 rounded-full">
+               <Filter className="h-10 w-10 text-slate-200" />
+             </div>
+             <div className="space-y-1">
+               <p className="text-lg font-bold text-primary">No {activeFilter === 'All' ? '' : activeFilter} Requests</p>
+               <p className="text-xs text-muted-foreground max-w-[200px] mx-auto">There are no requests matching this status in your history.</p>
+             </div>
           </div>
         )}
       </div>
 
       <Sheet open={!!selectedRequest} onOpenChange={() => setSelectedRequest(null)}>
-        <SheetContent side="bottom" className="rounded-t-[3rem] h-[80vh] px-6 py-8">
+        <SheetContent side="bottom" className="rounded-t-[3rem] h-[85vh] px-6 py-8">
           {selectedRequest && (
             <div className="space-y-6 h-full overflow-y-auto pb-10">
               <SheetHeader className="text-left space-y-4">
@@ -249,7 +256,11 @@ function RequestsHistoryContent() {
                       <p className={`text-sm font-bold ${
                         selectedRequest.status === 'Accepted' || selectedRequest.status === 'Completed' ? 'text-primary' : 'text-muted-foreground'
                       }`}>Volunteer Accepted</p>
-                      {selectedRequest.volunteerName && <p className="text-xs text-muted-foreground">Assigned to {selectedRequest.volunteerName}</p>}
+                      {selectedRequest.volunteerName ? (
+                        <p className="text-xs text-muted-foreground">Assigned to {selectedRequest.volunteerName}</p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">Awaiting a student volunteer</p>
+                      )}
                     </div>
                   </div>
 
@@ -270,6 +281,16 @@ function RequestsHistoryContent() {
                   </div>
                 </div>
               </div>
+
+              {selectedRequest.status === 'Accepted' && (
+                <div className="pt-4">
+                  <Button asChild className="w-full h-14 rounded-2xl bg-accent hover:bg-accent/90 font-bold shadow-lg shadow-accent/20">
+                    <Link href={`/dashboard/chat/${selectedRequest.chatRoomId || selectedRequest.id}?role=elderly`}>
+                      Chat with Volunteer
+                    </Link>
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </SheetContent>
