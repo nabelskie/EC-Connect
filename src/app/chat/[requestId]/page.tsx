@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/componen
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, Phone, Info, ArrowLeft, ShieldCheck } from 'lucide-react';
+import { Send, ArrowLeft, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 
 export default function ChatPage() {
@@ -61,14 +61,6 @@ export default function ChatPage() {
                 <div className="h-2 w-2 rounded-full bg-emerald-400"></div> Online
               </div>
             </div>
-          </div>
-          <div className="flex items-center gap-1 md:gap-2">
-            <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 rounded-full h-9 w-9 md:h-11 md:w-11">
-              <Phone className="h-4 w-4 md:h-5 md:w-5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 rounded-full h-9 w-9 md:h-11 md:w-11">
-              <Info className="h-4 w-4 md:h-5 md:w-5" />
-            </Button>
           </div>
         </CardHeader>
 

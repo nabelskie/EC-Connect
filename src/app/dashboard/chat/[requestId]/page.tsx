@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/componen
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, Phone, ArrowLeft, ShieldCheck, Loader2 } from 'lucide-react';
+import { Send, ArrowLeft, ShieldCheck, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useFirestore, useUser, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, serverTimestamp, where } from 'firebase/firestore';
@@ -38,8 +38,6 @@ function ChatContent() {
   // Fetch real messages from subcollection with a security filter
   const messagesQuery = useMemoFirebase(() => {
     if (!requestId || !db || !user) return null;
-    // We add the 'participantUserIds' filter to satisfy "Rules are not filters"
-    // We remove the orderBy here to avoid the need for a composite index
     return query(
       collection(db, 'chat_rooms', requestId, 'messages'),
       where('participantUserIds', 'array-contains', user.uid)
@@ -88,13 +86,11 @@ function ChatContent() {
       senderUserId: user.uid,
       messageText: messageText,
       timestamp: serverTimestamp(),
-      // Denormalize participants for security rules as per backend.json guidelines
       participantUserIds: chatRoom.participantUserIds || []
     };
 
     addDocumentNonBlocking(messagesRef, messageData);
     
-    // Update parent snippet
     updateDocumentNonBlocking(doc(db, 'chat_rooms', requestId), {
       lastMessageSnippet: messageText,
       lastMessageAt: serverTimestamp()
@@ -114,7 +110,6 @@ function ChatContent() {
     );
   }
 
-  // If there's a permission error or the room genuinely doesn't exist after loading
   if (roomError || (mounted && !isRoomLoading && !chatRoom)) {
     return (
       <div className="h-full flex flex-col items-center justify-center py-20 gap-3 text-center px-6">
@@ -153,11 +148,6 @@ function ChatContent() {
                 <div className="h-2 w-2 rounded-full bg-emerald-400"></div> {chatPartner.roleName}
               </div>
             </div>
-          </div>
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 rounded-full h-9 w-9">
-              <Phone className="h-4 w-4" />
-            </Button>
           </div>
         </CardHeader>
 
