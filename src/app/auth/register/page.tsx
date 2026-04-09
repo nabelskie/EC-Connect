@@ -258,7 +258,7 @@ export default function RegisterPage() {
               </div>
               {!isAdminEmail && (
                 <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="address">Address / Room No</Label>
+                  <Label htmlFor="address">Address</Label>
                   <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Block A, Room 102" required className="h-12" />
                 </div>
               )}

@@ -127,7 +127,7 @@ function ProfileContent() {
                 <MapPin className="h-5 w-5" />
               </div>
               <div className="flex-1">
-                <Label className="text-[10px] text-muted-foreground uppercase font-bold">Address / Room</Label>
+                <Label className="text-[10px] text-muted-foreground uppercase font-bold">Address</Label>
                 <p className="text-primary font-medium">{profileData.address || 'Not provided'}</p>
               </div>
             </div>
