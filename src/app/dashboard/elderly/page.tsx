@@ -38,7 +38,8 @@ import {
   User,
   Trash2,
   CheckCircle2,
-  ArrowRight
+  ArrowRight,
+  Monitor
 } from 'lucide-react';
 import { generateTaskDescription } from '@/ai/flows/generate-task-description-flow';
 import { useToast } from '@/hooks/use-toast';
@@ -61,6 +62,7 @@ export default function ElderlyDashboard() {
     fromLocation: '',
     toLocation: '',
     address: '',
+    device: '',
     urgency: 'Low' as 'Low' | 'Medium' | 'High'
   });
 
@@ -98,13 +100,13 @@ export default function ElderlyDashboard() {
       let combinedLocation = '';
       if (formData.type === 'Transportation') {
         combinedLocation = `From: ${formData.fromLocation} To: ${formData.toLocation}`;
-      } else if (formData.type === 'Groceries') {
+      } else if (formData.type === 'Groceries' || formData.type === 'Tech Support') {
         combinedLocation = formData.address;
       }
 
       const result = await generateTaskDescription({
         taskType: formData.type as 'Groceries' | 'Transportation' | 'Tech Support',
-        initialDescription: formData.initialDesc,
+        initialDescription: formData.device ? `Device: ${formData.device}. ${formData.initialDesc}` : formData.initialDesc,
         location: combinedLocation,
         urgencyLevel: formData.urgency
       });
@@ -133,12 +135,19 @@ export default function ElderlyDashboard() {
 
     const requestId = Math.random().toString(36).substring(7);
     
-    // Construct final location string
+    // Construct final location and description
     let finalLocation = 'Not specified';
+    let finalDescription = formData.initialDesc;
+
     if (formData.type === 'Transportation') {
       finalLocation = `From: ${formData.fromLocation || 'N/A'} To: ${formData.toLocation || 'N/A'}`;
     } else if (formData.type === 'Groceries') {
       finalLocation = formData.address || 'Not specified';
+    } else if (formData.type === 'Tech Support') {
+      finalLocation = formData.address || 'Not specified';
+      if (formData.device) {
+        finalDescription = `[Device: ${formData.device}] ${formData.initialDesc}`;
+      }
     }
 
     const requestData = {
@@ -146,7 +155,7 @@ export default function ElderlyDashboard() {
       createdByUserId: user.uid,
       createdByName: nameToUse || 'Elderly',
       taskType: formData.type,
-      description: formData.initialDesc,
+      description: finalDescription,
       location: finalLocation,
       urgencyLevel: formData.urgency,
       status: 'Pending',
@@ -170,6 +179,7 @@ export default function ElderlyDashboard() {
       fromLocation: '',
       toLocation: '',
       address: '',
+      device: '',
       urgency: 'Low'
     });
   };
@@ -291,27 +301,34 @@ export default function ElderlyDashboard() {
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Details</Label>
-                <Button 
-                  variant="link" 
-                  size="sm" 
-                  onClick={handleAiHelp} 
-                  disabled={isAiLoading || !formData.type || !formData.initialDesc} 
-                  className="text-accent font-bold gap-1 p-0"
-                >
-                  {isAiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                  AI Refine
-                </Button>
+            {formData.type === 'Tech Support' && (
+              <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="space-y-2">
+                  <Label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Device Type</Label>
+                  <Select onValueChange={(val) => setFormData({...formData, device: val})}>
+                    <SelectTrigger className="h-14 rounded-2xl text-lg">
+                      <SelectValue placeholder="Select Device" />
+                    </SelectTrigger>
+                    <SelectContent className="z-[110]">
+                      <SelectItem value="Smartphone">Smartphone (Handphone)</SelectItem>
+                      <SelectItem value="Tablet">Tablet (iPad/Tab)</SelectItem>
+                      <SelectItem value="Laptop">Laptop / Computer</SelectItem>
+                      <SelectItem value="Printer">Printer</SelectItem>
+                      <SelectItem value="Other">Other Device</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Address</Label>
+                  <Input 
+                    placeholder="Where should the volunteer go?" 
+                    className="h-14 rounded-2xl text-lg"
+                    value={formData.address}
+                    onChange={(e) => setFormData({...formData, address: e.target.value})}
+                  />
+                </div>
               </div>
-              <Textarea 
-                placeholder="What specifically do you need help with?" 
-                className="min-h-[120px] rounded-2xl text-lg p-4"
-                value={formData.initialDesc}
-                onChange={(e) => setFormData({...formData, initialDesc: e.target.value})}
-              />
-            </div>
+            )}
 
             {formData.type === 'Groceries' && (
               <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
@@ -352,6 +369,28 @@ export default function ElderlyDashboard() {
                 </div>
               </div>
             )}
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Details</Label>
+                <Button 
+                  variant="link" 
+                  size="sm" 
+                  onClick={handleAiHelp} 
+                  disabled={isAiLoading || !formData.type || !formData.initialDesc} 
+                  className="text-accent font-bold gap-1 p-0"
+                >
+                  {isAiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                  AI Refine
+                </Button>
+              </div>
+              <Textarea 
+                placeholder="What specifically do you need help with?" 
+                className="min-h-[120px] rounded-2xl text-lg p-4"
+                value={formData.initialDesc}
+                onChange={(e) => setFormData({...formData, initialDesc: e.target.value})}
+              />
+            </div>
 
             <div className="pt-4">
               <Button 
