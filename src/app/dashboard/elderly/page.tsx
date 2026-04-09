@@ -60,6 +60,7 @@ export default function ElderlyDashboard() {
     initialDesc: '',
     fromLocation: '',
     toLocation: '',
+    address: '',
     urgency: 'Low' as 'Low' | 'Medium' | 'High'
   });
 
@@ -94,9 +95,12 @@ export default function ElderlyDashboard() {
     if (!formData.type || !formData.initialDesc) return;
     setIsAiLoading(true);
     try {
-      const combinedLocation = formData.type === 'Transportation' 
-        ? `From: ${formData.fromLocation} To: ${formData.toLocation}`
-        : '';
+      let combinedLocation = '';
+      if (formData.type === 'Transportation') {
+        combinedLocation = `From: ${formData.fromLocation} To: ${formData.toLocation}`;
+      } else if (formData.type === 'Groceries') {
+        combinedLocation = formData.address;
+      }
 
       const result = await generateTaskDescription({
         taskType: formData.type as 'Groceries' | 'Transportation' | 'Tech Support',
@@ -133,6 +137,8 @@ export default function ElderlyDashboard() {
     let finalLocation = 'Not specified';
     if (formData.type === 'Transportation') {
       finalLocation = `From: ${formData.fromLocation || 'N/A'} To: ${formData.toLocation || 'N/A'}`;
+    } else if (formData.type === 'Groceries') {
+      finalLocation = formData.address || 'Not specified';
     }
 
     const requestData = {
@@ -163,6 +169,7 @@ export default function ElderlyDashboard() {
       initialDesc: '',
       fromLocation: '',
       toLocation: '',
+      address: '',
       urgency: 'Low'
     });
   };
@@ -305,6 +312,18 @@ export default function ElderlyDashboard() {
                 onChange={(e) => setFormData({...formData, initialDesc: e.target.value})}
               />
             </div>
+
+            {formData.type === 'Groceries' && (
+              <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                <Label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Delivery Address</Label>
+                <Input 
+                  placeholder="e.g. Block A, Room 102" 
+                  className="h-14 rounded-2xl text-lg"
+                  value={formData.address}
+                  onChange={(e) => setFormData({...formData, address: e.target.value})}
+                />
+              </div>
+            )}
 
             {formData.type === 'Transportation' && (
               <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
