@@ -169,7 +169,7 @@ export default function RegisterPage() {
                       }`}
                     >
                       <User className={`h-12 w-12 mb-4 ${role === 'elderly' ? 'text-accent' : 'text-muted-foreground'}`} />
-                      <span className="font-bold text-lg">Resident</span>
+                      <span className="font-bold text-lg">Elderly</span>
                     </Label>
                   </div>
 
@@ -208,7 +208,7 @@ export default function RegisterPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="phone">Phone Number</Label>
-                    <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="012-3456789" required className="h-12" />
+                    <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0123456789" required className="h-12" />
                     <p className="text-[10px] text-muted-foreground">Length must be 10-11 digits.</p>
                   </div>
                 </>

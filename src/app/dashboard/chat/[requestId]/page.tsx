@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, Suspense, useEffect } from 'react';
@@ -62,7 +63,7 @@ function ChatContent() {
     // Determine which name to show based on the current user's role
     const isVolunteer = role === 'volunteer';
     const partnerName = isVolunteer ? chatRoom.residentName : chatRoom.volunteerName;
-    const partnerRole = isVolunteer ? 'Resident' : 'Volunteer';
+    const partnerRole = isVolunteer ? 'Elderly' : 'Volunteer';
     const partnerId = isVolunteer ? chatRoom.participantUserIds?.[0] : chatRoom.participantUserIds?.[1];
 
     return { 

@@ -75,8 +75,12 @@ function ProfileContent() {
     ? new Date(profileData.createdAt).toLocaleDateString('en-MY', { year: 'numeric', month: 'long' })
     : 'Recently';
 
-  const displayRole = profileData.role === 'elderly' ? 'Resident' : 
-                    profileData.role.charAt(0).toUpperCase() + profileData.role.slice(1);
+  const getDisplayRole = (role: string) => {
+    if (role === 'elderly') return 'Elderly';
+    if (role === 'volunteer') return 'Volunteer';
+    if (role === 'admin') return 'Admin';
+    return role.charAt(0).toUpperCase() + role.slice(1);
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -91,7 +95,7 @@ function ProfileContent() {
           <h1 className="text-2xl font-headline font-bold text-primary">{profileData.name}</h1>
           <div className="flex items-center justify-center gap-1 mt-1 text-accent font-bold uppercase text-[10px] tracking-widest">
             <RoleIcon className="h-3 w-3" />
-            {displayRole}
+            {getDisplayRole(profileData.role)}
           </div>
         </div>
       </div>

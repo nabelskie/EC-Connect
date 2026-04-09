@@ -87,6 +87,13 @@ function AdminUsersContent() {
       });
   };
 
+  const getDisplayRole = (role: string) => {
+    if (role === 'elderly') return 'Elderly';
+    if (role === 'volunteer') return 'Volunteer';
+    if (role === 'admin') return 'Admin';
+    return role;
+  };
+
   if (!mounted || isProfileLoading) {
     return (
       <div className="flex justify-center py-20">
@@ -142,7 +149,7 @@ function AdminUsersContent() {
                 roleFilter === r ? 'bg-primary text-white border-primary' : 'bg-white text-muted-foreground border-slate-200'
               }`}
             >
-              {r === 'elderly' ? 'Resident' : r}
+              {getDisplayRole(r)}
             </Button>
           ))}
         </div>
@@ -165,7 +172,7 @@ function AdminUsersContent() {
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-primary truncate">{user.name}</span>
                   <Badge variant="outline" className="text-[8px] h-4 px-1 leading-none uppercase shrink-0">
-                    {user.role === 'elderly' ? 'Resident' : user.role}
+                    {getDisplayRole(user.role)}
                   </Badge>
                 </div>
                 <div className="flex flex-col gap-0.5 mt-1">

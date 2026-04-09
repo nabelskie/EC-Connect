@@ -88,7 +88,7 @@ function ChatInboxContent() {
           ) : sortedChatRooms.map((chat) => {
             // Determine partner name and role based on current user's role
             const partnerName = role === 'volunteer' ? chat.residentName : chat.volunteerName;
-            const partnerRole = role === 'volunteer' ? 'Resident' : 'Volunteer';
+            const partnerRole = role === 'volunteer' ? 'Elderly' : 'Volunteer';
             
             return (
               <Link key={chat.id} href={`/dashboard/chat/${chat.id}?role=${role}`}>
@@ -137,7 +137,7 @@ function ChatInboxContent() {
                 <p className="text-lg font-bold text-primary">No Chats Available</p>
                 <p className="text-xs text-muted-foreground max-w-[220px] mx-auto leading-relaxed">
                   {role === 'volunteer' 
-                    ? "Accept a request to start a conversation with a resident." 
+                    ? "Accept a request to start a conversation with an elderly member." 
                     : "Once a volunteer accepts your request, you'll be able to chat here."
                   }
                 </p>
