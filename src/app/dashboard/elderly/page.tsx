@@ -371,6 +371,23 @@ export default function ElderlyDashboard() {
             )}
 
             <div className="space-y-2">
+              <Label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Urgency Level</Label>
+              <Select 
+                value={formData.urgency} 
+                onValueChange={(val) => setFormData({...formData, urgency: val as 'Low' | 'Medium' | 'High'})}
+              >
+                <SelectTrigger className="h-14 rounded-2xl text-lg">
+                  <SelectValue placeholder="Select Urgency" />
+                </SelectTrigger>
+                <SelectContent className="z-[110]">
+                  <SelectItem value="Low">Low - Not Urgent</SelectItem>
+                  <SelectItem value="Medium">Medium - Needed Soon</SelectItem>
+                  <SelectItem value="High">High - Urgent / Emergency</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Details</Label>
                 <Button 
@@ -438,7 +455,10 @@ export default function ElderlyDashboard() {
                     <span className="text-[10px] text-muted-foreground font-semibold">{formatDate(req.createdAt)}</span>
                   </div>
                   <p className="text-xs text-muted-foreground truncate mb-2">{req.description}</p>
-                  {getStatusBadge(req.status)}
+                  <div className="flex items-center gap-2">
+                    {getStatusBadge(req.status)}
+                    {req.urgencyLevel === 'High' && <Badge variant="destructive" className="text-[8px] h-5">Urgent</Badge>}
+                  </div>
                 </div>
                 <ChevronRight className="h-5 w-5 text-muted-foreground/30" />
               </CardContent>
@@ -479,6 +499,16 @@ export default function ElderlyDashboard() {
                   <div>
                     <Label className="text-[10px] text-muted-foreground uppercase font-bold">Location Details</Label>
                     <p className="text-primary font-medium">{selectedRequest.location}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <div className="p-2 rounded-lg bg-slate-50 text-slate-400">
+                    <Clock className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground uppercase font-bold">Urgency</Label>
+                    <p className={`font-bold ${selectedRequest.urgencyLevel === 'High' ? 'text-destructive' : 'text-primary'}`}>{selectedRequest.urgencyLevel}</p>
                   </div>
                 </div>
 
