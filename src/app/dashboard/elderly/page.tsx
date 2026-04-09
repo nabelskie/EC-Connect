@@ -37,7 +37,8 @@ import {
   Calendar,
   User,
   Trash2,
-  CheckCircle2
+  CheckCircle2,
+  ArrowRight
 } from 'lucide-react';
 import { generateTaskDescription } from '@/ai/flows/generate-task-description-flow';
 import { useToast } from '@/hooks/use-toast';
@@ -57,7 +58,8 @@ export default function ElderlyDashboard() {
   const [formData, setFormData] = useState({
     type: '',
     initialDesc: '',
-    location: '',
+    fromLocation: '',
+    toLocation: '',
     urgency: 'Low' as 'Low' | 'Medium' | 'High'
   });
 
@@ -92,10 +94,14 @@ export default function ElderlyDashboard() {
     if (!formData.type || !formData.initialDesc) return;
     setIsAiLoading(true);
     try {
+      const combinedLocation = formData.type === 'Transportation' 
+        ? `From: ${formData.fromLocation} To: ${formData.toLocation}`
+        : '';
+
       const result = await generateTaskDescription({
         taskType: formData.type as 'Groceries' | 'Transportation' | 'Tech Support',
         initialDescription: formData.initialDesc,
-        location: formData.location,
+        location: combinedLocation,
         urgencyLevel: formData.urgency
       });
       setFormData({ ...formData, initialDesc: result.generatedDescription });
@@ -111,7 +117,6 @@ export default function ElderlyDashboard() {
     
     setIsSubmitting(true);
 
-    // Fetch the real name from the Firestore profile to avoid 'Resident' fallback
     let nameToUse = user.displayName;
     try {
       const userDoc = await getDoc(doc(db, 'users', user.uid));
@@ -119,17 +124,24 @@ export default function ElderlyDashboard() {
         nameToUse = userDoc.data().name;
       }
     } catch (e) {
-      // Fallback to displayName
+      // Fallback
     }
 
     const requestId = Math.random().toString(36).substring(7);
+    
+    // Construct final location string
+    let finalLocation = 'Not specified';
+    if (formData.type === 'Transportation') {
+      finalLocation = `From: ${formData.fromLocation || 'N/A'} To: ${formData.toLocation || 'N/A'}`;
+    }
+
     const requestData = {
       id: requestId,
       createdByUserId: user.uid,
-      createdByName: nameToUse || 'Resident',
+      createdByName: nameToUse || 'Elderly',
       taskType: formData.type,
       description: formData.initialDesc,
-      location: formData.location || 'Not specified',
+      location: finalLocation,
       urgencyLevel: formData.urgency,
       status: 'Pending',
       createdAt: new Date().toISOString()
@@ -149,7 +161,8 @@ export default function ElderlyDashboard() {
     setFormData({
       type: '',
       initialDesc: '',
-      location: '',
+      fromLocation: '',
+      toLocation: '',
       urgency: 'Low'
     });
   };
@@ -293,15 +306,33 @@ export default function ElderlyDashboard() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Location / Meeting Point</Label>
-              <Input 
-                placeholder="e.g. Block C, Lobby" 
-                className="h-14 rounded-2xl text-lg"
-                value={formData.location}
-                onChange={(e) => setFormData({...formData, location: e.target.value})}
-              />
-            </div>
+            {formData.type === 'Transportation' && (
+              <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="space-y-2">
+                  <Label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">From (Pick-up)</Label>
+                  <Input 
+                    placeholder="e.g. My Home / Block A" 
+                    className="h-14 rounded-2xl text-lg"
+                    value={formData.fromLocation}
+                    onChange={(e) => setFormData({...formData, fromLocation: e.target.value})}
+                  />
+                </div>
+                <div className="flex justify-center py-0">
+                  <div className="h-8 w-8 rounded-full bg-slate-50 flex items-center justify-center border border-slate-100">
+                    <ArrowRight className="h-4 w-4 text-slate-300 rotate-90" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">To (Destination)</Label>
+                  <Input 
+                    placeholder="e.g. General Hospital / Market" 
+                    className="h-14 rounded-2xl text-lg"
+                    value={formData.toLocation}
+                    onChange={(e) => setFormData({...formData, toLocation: e.target.value})}
+                  />
+                </div>
+              </div>
+            )}
 
             <div className="pt-4">
               <Button 
@@ -388,7 +419,7 @@ export default function ElderlyDashboard() {
                     <MapPin className="h-5 w-5" />
                   </div>
                   <div>
-                    <Label className="text-[10px] text-muted-foreground uppercase font-bold">Location</Label>
+                    <Label className="text-[10px] text-muted-foreground uppercase font-bold">Location Details</Label>
                     <p className="text-primary font-medium">{selectedRequest.location}</p>
                   </div>
                 </div>
