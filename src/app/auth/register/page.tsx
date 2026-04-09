@@ -66,6 +66,19 @@ export default function RegisterPage() {
       return;
     }
 
+    // 3. Phone Number Validation (10-11 digits)
+    if (!isAdminEmail) {
+      const numericPhone = phone.replace(/\D/g, '');
+      if (numericPhone.length < 10 || numericPhone.length > 11) {
+        toast({
+          variant: "destructive",
+          title: "Registration Failed",
+          description: "Phone number must be between 10 and 11 digits long.",
+        });
+        return;
+      }
+    }
+
     setIsLoading(true);
 
     const targetEmail = email.toLowerCase().trim();
@@ -196,6 +209,7 @@ export default function RegisterPage() {
                   <div className="space-y-2">
                     <Label htmlFor="phone">Phone Number</Label>
                     <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="012-3456789" required className="h-12" />
+                    <p className="text-[10px] text-muted-foreground">Length must be 10-11 digits.</p>
                   </div>
                 </>
               )}
