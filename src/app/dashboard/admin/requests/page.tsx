@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect, Suspense } from 'react';
@@ -16,7 +17,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { 
   ArrowLeft, 
@@ -33,16 +33,15 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, doc, deleteDoc } from 'firebase/firestore';
+import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
 
 function AdminRequestsContent() {
   const [mounted, setMounted] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
+  const [requestToDelete, setRequestToDelete] = useState<any>(null);
   const searchParams = useSearchParams();
   const initialFilter = searchParams.get('filter') || 'All';
   const [statusFilter, setStatusFilter] = useState(initialFilter);
@@ -88,30 +87,29 @@ function AdminRequestsContent() {
     });
   }, [allRequests, searchTerm, statusFilter]);
 
-  const handleDelete = (request: any) => {
+  const confirmDelete = () => {
+    if (!requestToDelete) return;
+    
+    const request = requestToDelete;
     let collName = 'assistance_requests_pending';
     if (request.status === 'Active' || request.status === 'Accepted') collName = 'assistance_requests_active';
     if (request.status === 'Completed') collName = 'assistance_requests_completed';
     
     const docRef = doc(db, collName, request.id);
     
-    deleteDoc(docRef)
-      .then(() => {
-        toast({
-          title: "Request Deleted",
-          description: "The assistance request has been permanently removed.",
-        });
-        if (selectedRequest?.id === request.id) {
-          setSelectedRequest(null);
-        }
-      })
-      .catch(async (err) => {
-        const permissionError = new FirestorePermissionError({
-          path: docRef.path,
-          operation: 'delete',
-        });
-        errorEmitter.emit('permission-error', permissionError);
-      });
+    // Non-blocking delete to keep UI fluid
+    deleteDocumentNonBlocking(docRef);
+    
+    toast({
+      title: "Request Deleted",
+      description: "The assistance request is being removed from the system.",
+    });
+
+    // Close any open overlays immediately
+    setRequestToDelete(null);
+    if (selectedRequest?.id === request.id) {
+      setSelectedRequest(null);
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -202,37 +200,17 @@ function AdminRequestsContent() {
                   <span className="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-lg group-hover:bg-white"><User className="h-3 w-3" /> {req.createdByUserId?.slice(0, 5)}</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8 text-destructive hover:bg-destructive/10 rounded-full"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent className="rounded-3xl max-w-[90vw] mx-auto">
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delete Request?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This action cannot be undone. This request will be permanently removed from the system.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter className="flex flex-col gap-2">
-                        <AlertDialogAction 
-                          onClick={() => handleDelete(req)}
-                          className="bg-destructive hover:bg-destructive/90 h-12 rounded-xl font-bold"
-                        >
-                          Yes, Delete Permanently
-                        </AlertDialogAction>
-                        <AlertDialogCancel className="h-12 rounded-xl font-bold border-none bg-slate-100">
-                          Cancel
-                        </AlertDialogCancel>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 text-destructive hover:bg-destructive/10 rounded-full"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setRequestToDelete(req);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                   <ChevronRight className="h-4 w-4 text-muted-foreground/20 group-hover:text-primary transition-colors" />
                 </div>
               </div>
@@ -247,6 +225,7 @@ function AdminRequestsContent() {
         </div>
       </ScrollArea>
 
+      {/* Details Sheet */}
       <Sheet open={!!selectedRequest} onOpenChange={() => setSelectedRequest(null)}>
         <SheetContent side="bottom" className="rounded-t-[3rem] h-[85vh] px-6 py-8">
           {selectedRequest && (
@@ -324,41 +303,42 @@ function AdminRequestsContent() {
               </div>
 
               <div className="pt-6">
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button 
-                      variant="destructive" 
-                      className="w-full h-14 rounded-2xl font-bold gap-2"
-                    >
-                      <Trash2 className="h-5 w-5" />
-                      Remove Request From System
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent className="rounded-3xl max-w-[90vw] mx-auto">
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This will permanently delete the assistance request from the database. This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter className="flex flex-col gap-2">
-                      <AlertDialogAction 
-                        onClick={() => handleDelete(selectedRequest)}
-                        className="bg-destructive hover:bg-destructive/90 h-12 rounded-xl font-bold"
-                      >
-                        Yes, Delete Request
-                      </AlertDialogAction>
-                      <AlertDialogCancel className="h-12 rounded-xl font-bold border-none bg-slate-100">
-                        Keep Request
-                      </AlertDialogCancel>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                <Button 
+                  variant="destructive" 
+                  className="w-full h-14 rounded-2xl font-bold gap-2"
+                  onClick={() => setRequestToDelete(selectedRequest)}
+                >
+                  <Trash2 className="h-5 w-5" />
+                  Remove Request From System
+                </Button>
               </div>
             </div>
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Centralized Delete Confirmation Dialog */}
+      <AlertDialog open={!!requestToDelete} onOpenChange={(open) => !open && setRequestToDelete(null)}>
+        <AlertDialogContent className="rounded-3xl max-w-[90vw] mx-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Request?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This request will be permanently removed from the system records.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex flex-col gap-2">
+            <AlertDialogAction 
+              onClick={confirmDelete}
+              className="bg-destructive hover:bg-destructive/90 h-12 rounded-xl font-bold"
+            >
+              Yes, Delete Permanently
+            </AlertDialogAction>
+            <AlertDialogCancel className="h-12 rounded-xl font-bold border-none bg-slate-100">
+              Cancel
+            </AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect, Suspense } from 'react';
@@ -16,7 +17,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { 
   ArrowLeft, 
@@ -29,15 +29,14 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
-import { collection, doc, deleteDoc } from 'firebase/firestore';
+import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc, deleteDocumentNonBlocking } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
 
 function AdminUsersContent() {
   const [mounted, setMounted] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [userToDelete, setUserToDelete] = useState<any>(null);
   const searchParams = useSearchParams();
   const initialFilter = searchParams.get('filter') || 'All';
   const [roleFilter, setRoleFilter] = useState(initialFilter);
@@ -79,22 +78,19 @@ function AdminUsersContent() {
     });
   }, [usersData, searchTerm, roleFilter]);
 
-  const handleDeleteUser = (userToDelete: any) => {
+  const confirmDeleteUser = () => {
+    if (!userToDelete) return;
     const docRef = doc(db, 'users', userToDelete.id);
-    deleteDoc(docRef)
-      .then(() => {
-        toast({
-          title: "User Removed",
-          description: "User profile has been deleted from the database.",
-        });
-      })
-      .catch(async (err) => {
-        const permissionError = new FirestorePermissionError({
-          path: docRef.path,
-          operation: 'delete',
-        });
-        errorEmitter.emit('permission-error', permissionError);
-      });
+    
+    // Non-blocking delete to prevent UI lockup
+    deleteDocumentNonBlocking(docRef);
+    
+    toast({
+      title: "User Removed",
+      description: `${userToDelete.name}'s profile is being deleted.`,
+    });
+    
+    setUserToDelete(null);
   };
 
   const getDisplayRole = (role: string) => {
@@ -156,7 +152,7 @@ function AdminUsersContent() {
               size="sm"
               onClick={() => setRoleFilter(r)}
               className={`rounded-full px-4 h-8 text-[10px] font-bold uppercase shrink-0 ${
-                roleFilter === r ? 'bg-primary text-white border-primary' : 'bg-white text-muted-foreground border-slate-200'
+                roleFilter === r ? 'bg-primary text-white border-primary shadow-md' : 'bg-white text-muted-foreground border-slate-200'
               }`}
             >
               {getDisplayRole(r)}
@@ -197,36 +193,14 @@ function AdminUsersContent() {
                 </div>
               </div>
 
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="text-destructive hover:bg-destructive/10 rounded-full h-9 w-9 shrink-0"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent className="rounded-3xl max-w-[90vw] mx-auto">
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Remove User?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will delete <strong>{u.name}</strong> from the community directory. They will lose access to the system.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter className="flex flex-col gap-2">
-                    <AlertDialogAction 
-                      onClick={() => handleDeleteUser(u)}
-                      className="bg-destructive hover:bg-destructive/90 h-12 rounded-xl font-bold"
-                    >
-                      Yes, Remove User
-                    </AlertDialogAction>
-                    <AlertDialogCancel className="h-12 rounded-xl font-bold border-none bg-slate-100">
-                      Cancel
-                    </AlertDialogCancel>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="text-destructive hover:bg-destructive/10 rounded-full h-9 w-9 shrink-0"
+                onClick={() => setUserToDelete(u)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </Card>
           ))}
           
@@ -237,6 +211,29 @@ function AdminUsersContent() {
           )}
         </div>
       </ScrollArea>
+
+      {/* Centralized User Deletion Dialog */}
+      <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
+        <AlertDialogContent className="rounded-3xl max-w-[90vw] mx-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove User?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will delete <strong>{userToDelete?.name}</strong> from the community directory. They will immediately lose access to the system.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex flex-col gap-2">
+            <AlertDialogAction 
+              onClick={confirmDeleteUser}
+              className="bg-destructive hover:bg-destructive/90 h-12 rounded-xl font-bold"
+            >
+              Yes, Remove User
+            </AlertDialogAction>
+            <AlertDialogCancel className="h-12 rounded-xl font-bold border-none bg-slate-100">
+              Cancel
+            </AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
