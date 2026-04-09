@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { Heart, User, GraduationCap, Loader2, ShieldCheck, AlertCircle } from 'lucide-react';
+import { Heart, User, GraduationCap, Loader2, ShieldCheck, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
@@ -21,6 +21,9 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
@@ -42,20 +45,38 @@ export default function RegisterPage() {
     e.preventDefault();
     if (isLoading) return;
 
+    // 1. Password Matching Validation
+    if (password !== confirmPassword) {
+      toast({
+        variant: "destructive",
+        title: "Registration Failed",
+        description: "Passwords do not match.",
+      });
+      return;
+    }
+
+    // 2. Password Complexity Validation (Letter and Number)
+    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d).+$/;
+    if (!passwordRegex.test(password)) {
+      toast({
+        variant: "destructive",
+        title: "Registration Failed",
+        description: "Password must contain a combination of letters and numbers.",
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     const targetEmail = email.toLowerCase().trim();
-    // Strictly force 'admin' role if the email matches the provided admin address
     const finalRole = isAdminEmail ? 'admin' : role;
 
     createUserWithEmailAndPassword(auth, targetEmail, password)
       .then(async (userCredential) => {
         const user = userCredential.user;
         
-        // 1. Update display name
         await updateProfile(user, { displayName: isAdminEmail ? "System Administrator" : name });
 
-        // 2. Create UserProfile in Firestore
         const userProfile = {
           id: user.uid,
           name: isAdminEmail ? "System Administrator" : name,
@@ -66,7 +87,6 @@ export default function RegisterPage() {
           createdAt: new Date().toISOString()
         };
 
-        // We use setDoc to specify the document ID as the User's UID
         await setDoc(doc(db, 'users', user.uid), userProfile);
         
         toast({
@@ -74,7 +94,6 @@ export default function RegisterPage() {
           description: `Welcome to ElderCare Connect!`,
         });
         
-        // Direct redirection based on the final determined role
         router.push(`/dashboard/${finalRole}?role=${finalRole}`);
       })
       .catch((err: any) => {
@@ -195,7 +214,47 @@ export default function RegisterPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Create Password</Label>
-                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="h-12" suppressHydrationWarning />
+                <div className="relative">
+                  <Input 
+                    id="password" 
+                    type={showPassword ? "text" : "password"} 
+                    value={password} 
+                    onChange={(e) => setPassword(e.target.value)} 
+                    required 
+                    className="h-12 pr-10" 
+                    placeholder="Min. 6 chars (A-z, 0-9)"
+                    suppressHydrationWarning 
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirm-password">Confirm Password</Label>
+                <div className="relative">
+                  <Input 
+                    id="confirm-password" 
+                    type={showConfirmPassword ? "text" : "password"} 
+                    value={confirmPassword} 
+                    onChange={(e) => setConfirmPassword(e.target.value)} 
+                    required 
+                    className="h-12 pr-10" 
+                    placeholder="Repeat password"
+                    suppressHydrationWarning 
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
               </div>
               {!isAdminEmail && (
                 <div className="space-y-2 md:col-span-2">
