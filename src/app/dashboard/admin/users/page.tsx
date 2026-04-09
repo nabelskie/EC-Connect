@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect, Suspense } from 'react';
@@ -8,6 +7,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { 
   ArrowLeft, 
   Search, 
@@ -69,8 +79,8 @@ function AdminUsersContent() {
     });
   }, [usersData, searchTerm, roleFilter]);
 
-  const handleDeleteUser = (user: any) => {
-    const docRef = doc(db, 'users', user.id);
+  const handleDeleteUser = (userToDelete: any) => {
+    const docRef = doc(db, 'users', userToDelete.id);
     deleteDoc(docRef)
       .then(() => {
         toast({
@@ -161,40 +171,62 @@ function AdminUsersContent() {
             <div className="flex justify-center py-20">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
-          ) : filteredUsers.map((user) => (
-            <Card key={user.id} className="border-none shadow-sm rounded-2xl p-4 flex items-center gap-4 active:bg-slate-50 transition-colors">
+          ) : filteredUsers.map((u) => (
+            <Card key={u.id} className="border-none shadow-sm rounded-2xl p-4 flex items-center gap-4 active:bg-slate-50 transition-colors">
               <Avatar className="h-12 w-12 border-2 border-slate-50 shrink-0">
-                <AvatarImage src={`https://picsum.photos/seed/${user.id}/100/100`} />
-                <AvatarFallback>{user.name?.[0] || 'U'}</AvatarFallback>
+                <AvatarImage src={`https://picsum.photos/seed/${u.id}/100/100`} />
+                <AvatarFallback>{u.name?.[0] || 'U'}</AvatarFallback>
               </Avatar>
               
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-primary truncate">{user.name}</span>
+                  <span className="font-bold text-primary truncate">{u.name}</span>
                   <Badge variant="outline" className="text-[8px] h-4 px-1 leading-none uppercase shrink-0">
-                    {getDisplayRole(user.role)}
+                    {getDisplayRole(u.role)}
                   </Badge>
                 </div>
                 <div className="flex flex-col gap-0.5 mt-1">
                   <div className="flex items-center gap-1 text-[10px] text-muted-foreground truncate">
-                    <Mail className="h-2.5 w-2.5" /> {user.email}
+                    <Mail className="h-2.5 w-2.5" /> {u.email}
                   </div>
-                  {user.phone && (
+                  {u.phone && (
                     <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                      <Phone className="h-2.5 w-2.5" /> {user.phone}
+                      <Phone className="h-2.5 w-2.5" /> {u.phone}
                     </div>
                   )}
                 </div>
               </div>
 
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="text-destructive hover:bg-destructive/10 rounded-full h-9 w-9 shrink-0"
-                onClick={() => handleDeleteUser(user)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="text-destructive hover:bg-destructive/10 rounded-full h-9 w-9 shrink-0"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="rounded-3xl max-w-[90vw] mx-auto">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Remove User?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will delete <strong>{u.name}</strong> from the community directory. They will lose access to the system.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter className="flex flex-col gap-2">
+                    <AlertDialogAction 
+                      onClick={() => handleDeleteUser(u)}
+                      className="bg-destructive hover:bg-destructive/90 h-12 rounded-xl font-bold"
+                    >
+                      Yes, Remove User
+                    </AlertDialogAction>
+                    <AlertDialogCancel className="h-12 rounded-xl font-bold border-none bg-slate-100">
+                      Cancel
+                    </AlertDialogCancel>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </Card>
           ))}
           
