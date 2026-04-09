@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { Heart, Loader2, AlertCircle } from 'lucide-react';
+import { Heart, Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { useAuth, useFirestore, useUser } from '@/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
@@ -18,6 +18,7 @@ export default function LoginPage() {
   const [mounted, setMounted] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
   const auth = useAuth();
@@ -146,19 +147,28 @@ export default function LoginPage() {
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Password</Label>
               </div>
-              <Input 
-                id="password" 
-                type="password" 
-                required 
-                className="h-12 text-lg"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                suppressHydrationWarning
-              />
+              <div className="relative">
+                <Input 
+                  id="password" 
+                  type={showPassword ? "text" : "password"} 
+                  required 
+                  className="h-12 text-lg pr-12"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  suppressHydrationWarning
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors p-2"
+                >
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
             </div>
             <Button 
               type="submit" 
-              className="w-full h-12 text-lg bg-primary hover:bg-primary/90 mt-2" 
+              className="w-full h-12 text-lg bg-primary hover:bg-primary/90 mt-2 shadow-lg" 
               disabled={isSubmitting}
               suppressHydrationWarning
             >
