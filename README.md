@@ -36,7 +36,16 @@ git branch -M main
 git push -u origin main
 ```
 
-### 2. Setup on your local machine
+### 2. Updating GitHub with New Changes
+When you make changes in Firebase Studio and want them to appear on GitHub, run these commands in the terminal:
+```bash
+git add .
+git commit -m "Updated features in ElderCare Connect"
+git push
+```
+*Note: Changes are NOT automatic. You must run these commands every time you want to update GitHub.*
+
+### 3. Setup on your local machine (VS Code)
 Once the code is on GitHub:
 1. **Clone**: Open your local terminal and run `git clone <YOUR_GITHUB_REPO_URL>`.
 2. **Open**: Open the folder in VS Code.
