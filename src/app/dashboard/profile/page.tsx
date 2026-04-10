@@ -6,6 +6,17 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Label } from '@/components/ui/label';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { LogOut, User, Phone, Mail, MapPin, ShieldCheck, GraduationCap, Loader2, Calendar } from 'lucide-react';
 import { Suspense, useMemo, useState, useEffect } from 'react';
 import { useAuth, useUser, useDoc, useMemoFirebase, useFirestore } from '@/firebase';
@@ -150,19 +161,38 @@ function ProfileContent() {
           </CardContent>
         </Card>
 
-        <Button 
-          variant="destructive" 
-          className="w-full h-14 rounded-2xl font-bold gap-2 text-lg shadow-lg shadow-destructive/10 mt-4"
-          onClick={handleLogout}
-          disabled={isLoggingOut}
-        >
-          {isLoggingOut ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : (
-            <LogOut className="h-5 w-5" />
-          )}
-          {isLoggingOut ? 'Logging out...' : 'Logout'}
-        </Button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button 
+              variant="destructive" 
+              className="w-full h-14 rounded-2xl font-bold gap-2 text-lg shadow-lg shadow-destructive/10 mt-4"
+              disabled={isLoggingOut}
+            >
+              <LogOut className="h-5 w-5" />
+              Logout
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent className="rounded-3xl max-w-[90vw] mx-auto">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-xl font-bold">Sign Out?</AlertDialogTitle>
+              <AlertDialogDescription className="text-sm">
+                Are you sure you want to log out of your ElderCare Connect account?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="flex flex-col gap-2 mt-4">
+              <AlertDialogAction 
+                onClick={handleLogout}
+                className="bg-destructive hover:bg-destructive/90 h-12 rounded-xl font-bold shadow-lg shadow-destructive/20"
+              >
+                {isLoggingOut ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
+                Yes, Sign Out
+              </AlertDialogAction>
+              <AlertDialogCancel className="h-12 rounded-xl font-bold border-none bg-slate-100 hover:bg-slate-200 transition-colors">
+                Cancel
+              </AlertDialogCancel>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
