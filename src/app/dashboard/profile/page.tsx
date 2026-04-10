@@ -46,9 +46,10 @@ import {
   Eye,
   EyeOff,
   UserCircle,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Upload
 } from 'lucide-react';
-import { Suspense, useMemo, useState, useEffect } from 'react';
+import { Suspense, useMemo, useState, useEffect, useRef } from 'react';
 import { useAuth, useUser, useDoc, useMemoFirebase, useFirestore, updateDocumentNonBlocking } from '@/firebase';
 import { signOut, updatePassword, updateProfile } from 'firebase/auth';
 import { doc } from 'firebase/firestore';
@@ -73,6 +74,7 @@ function ProfileContent() {
   const [editAddress, setEditAddress] = useState('');
   const [editGender, setEditGender] = useState('');
   const [editPhotoURL, setEditPhotoURL] = useState('');
+  const [tempPhotoPreview, setTempPhotoPreview] = useState<string | null>(null);
   
   // Password state
   const [newPassword, setNewPassword] = useState('');
@@ -80,6 +82,8 @@ function ProfileContent() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -114,15 +118,30 @@ function ProfileContent() {
     }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setTempPhotoPreview(base64String);
+        setEditPhotoURL(base64String);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSaveProfile = async () => {
     if (!authUser || !userRef) return;
     setIsSaving(true);
     
     try {
+      const finalPhotoURL = editPhotoURL;
+
       // Update Firebase Auth Profile info
       await updateProfile(authUser, { 
         displayName: editName,
-        photoURL: editPhotoURL || null
+        photoURL: finalPhotoURL || null
       });
       
       // Update Firestore Profile
@@ -131,7 +150,7 @@ function ProfileContent() {
         phone: editPhone,
         address: editAddress,
         gender: editGender,
-        photoURL: editPhotoURL
+        photoURL: finalPhotoURL
       });
 
       toast({
@@ -139,6 +158,7 @@ function ProfileContent() {
         description: "Your personal information has been saved successfully.",
       });
       setIsEditing(false);
+      setTempPhotoPreview(null);
     } catch (error) {
       toast({
         variant: "destructive",
@@ -242,7 +262,7 @@ function ProfileContent() {
     return role.charAt(0).toUpperCase() + role.slice(1);
   };
 
-  const avatarSrc = profileData.photoURL || `https://picsum.photos/seed/${profileData.id}/200/200`;
+  const avatarSrc = tempPhotoPreview || profileData.photoURL || `https://picsum.photos/seed/${profileData.id}/200/200`;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">
@@ -272,7 +292,10 @@ function ProfileContent() {
             <Button 
               variant="ghost" 
               size="sm" 
-              onClick={() => setIsEditing(!isEditing)}
+              onClick={() => {
+                setIsEditing(!isEditing);
+                setTempPhotoPreview(null);
+              }}
               className="text-accent font-bold h-7 px-2"
             >
               {isEditing ? 'Cancel' : 'Edit'}
@@ -282,18 +305,39 @@ function ProfileContent() {
             {isEditing ? (
               <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
                 <div className="space-y-2">
-                  <Label htmlFor="edit-photo">Profile Picture URL</Label>
-                  <div className="relative">
-                    <Input 
-                      id="edit-photo" 
-                      placeholder="https://example.com/photo.jpg"
-                      value={editPhotoURL} 
-                      onChange={(e) => setEditPhotoURL(e.target.value)}
-                      className="h-12 rounded-xl pl-10"
-                    />
-                    <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Label>Profile Picture</Label>
+                  <div className="flex flex-col gap-3">
+                    <div className="flex gap-2">
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        className="w-full h-12 rounded-xl gap-2 border-dashed"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        <Upload className="h-4 w-4" />
+                        Upload from Device
+                      </Button>
+                      <input 
+                        type="file" 
+                        ref={fileInputRef} 
+                        className="hidden" 
+                        accept="image/*" 
+                        onChange={handleFileChange}
+                      />
+                    </div>
+                    <div className="relative">
+                      <Input 
+                        placeholder="Or paste an image link here"
+                        value={editPhotoURL.startsWith('data:') ? '' : editPhotoURL} 
+                        onChange={(e) => {
+                          setEditPhotoURL(e.target.value);
+                          setTempPhotoPreview(null);
+                        }}
+                        className="h-12 rounded-xl pl-10 text-xs"
+                      />
+                      <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    </div>
                   </div>
-                  <p className="text-[10px] text-muted-foreground px-1 italic">Paste an image link to change your profile picture.</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-name">Full Name</Label>
@@ -337,7 +381,7 @@ function ProfileContent() {
                 <Button 
                   onClick={handleSaveProfile} 
                   disabled={isSaving}
-                  className="w-full h-12 rounded-xl bg-accent hover:bg-accent/90 gap-2"
+                  className="w-full h-12 rounded-xl bg-accent hover:bg-accent/90 gap-2 shadow-lg shadow-accent/20"
                 >
                   {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                   Save Changes
