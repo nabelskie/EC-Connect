@@ -69,11 +69,12 @@ function AdminUsersContent() {
   const filteredUsers = useMemo(() => {
     if (!usersData) return [];
     return usersData.filter(u => {
+      // Robust filtering logic
       const matchesSearch = 
         u.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
         u.email?.toLowerCase().includes(searchTerm.toLowerCase());
       
-      const matchesRole = roleFilter === 'All' || u.role === roleFilter;
+      const matchesRole = roleFilter === 'All' || u.role?.toLowerCase() === roleFilter.toLowerCase();
       
       return matchesSearch && matchesRole;
     });
@@ -94,8 +95,6 @@ function AdminUsersContent() {
     }
 
     const docRef = doc(db, 'users', userToDelete.id);
-    
-    // Non-blocking delete to prevent UI lockup
     deleteDocumentNonBlocking(docRef);
     
     toast({
@@ -107,10 +106,12 @@ function AdminUsersContent() {
   };
 
   const getDisplayRole = (role: string) => {
-    if (role === 'elderly') return 'Elderly';
-    if (role === 'volunteer') return 'Volunteer';
-    if (role === 'admin') return 'Admin';
-    return role || 'User';
+    if (!role) return 'User';
+    const r = role.toLowerCase();
+    if (r === 'elderly') return 'Elderly';
+    if (r === 'volunteer') return 'Volunteer';
+    if (r === 'admin') return 'Admin';
+    return role.charAt(0).toUpperCase() + role.slice(1);
   };
 
   if (!mounted || isProfileLoading) {
@@ -126,7 +127,7 @@ function AdminUsersContent() {
       <div className="flex flex-col items-center justify-center py-20 gap-4 text-center px-6">
         <AlertCircle className="h-12 w-12 text-destructive" />
         <h2 className="text-xl font-bold text-primary">Access Denied</h2>
-        <p className="text-sm text-muted-foreground">Only system administrators can view or manage the community directory.</p>
+        <p className="text-sm text-muted-foreground">Only system administrators can manage the community directory.</p>
         <Button asChild variant="outline" className="rounded-xl">
            <Link href="/dashboard/admin?role=admin">Back to Console</Link>
         </Button>
@@ -161,11 +162,11 @@ function AdminUsersContent() {
           {['All', 'elderly', 'volunteer', 'admin'].map((r) => (
             <Button
               key={r}
-              variant={roleFilter === r ? "default" : "outline"}
+              variant={roleFilter.toLowerCase() === r.toLowerCase() ? "default" : "outline"}
               size="sm"
               onClick={() => setRoleFilter(r)}
               className={`rounded-full px-4 h-8 text-[10px] font-bold uppercase shrink-0 transition-all ${
-                roleFilter === r ? 'bg-primary text-white border-primary shadow-md' : 'bg-white text-muted-foreground border-slate-200'
+                roleFilter.toLowerCase() === r.toLowerCase() ? 'bg-primary text-white border-primary shadow-md' : 'bg-white text-muted-foreground border-slate-200'
               }`}
             >
               {getDisplayRole(r)}
@@ -216,15 +217,16 @@ function AdminUsersContent() {
                 </div>
               </div>
 
-              <div className="shrink-0 flex items-center">
+              <div className="shrink-0">
                 {u.id !== currentUser?.uid && (
                   <Button 
                     variant="ghost" 
-                    size="icon" 
-                    className="text-destructive hover:bg-destructive/10 rounded-full h-10 w-10 transition-colors"
+                    size="sm" 
+                    className="text-destructive hover:bg-destructive/10 rounded-xl h-9 px-2 flex items-center gap-1 transition-colors"
                     onClick={() => setUserToDelete(u)}
                   >
-                    <Trash2 className="h-5 w-5" />
+                    <Trash2 className="h-4 w-4" />
+                    <span className="text-[10px] font-bold uppercase hidden sm:inline">Delete</span>
                   </Button>
                 )}
               </div>
@@ -234,21 +236,20 @@ function AdminUsersContent() {
           {filteredUsers.length === 0 && !isUsersLoading && (
             <div className="text-center py-20 bg-white rounded-[2.5rem] border-2 border-dashed border-slate-100 flex flex-col items-center justify-center gap-4 mx-1">
               <div className="p-4 bg-slate-50 rounded-full">
-                <Search className="h-10 w-10 text-slate-200" />
+                <AlertCircle className="h-10 w-10 text-slate-200" />
               </div>
-              <p className="text-sm font-bold text-primary">No members found</p>
+              <p className="text-sm font-bold text-primary">No members found in this category</p>
             </div>
           )}
         </div>
       </ScrollArea>
 
-      {/* Centralized User Deletion Dialog */}
       <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
         <AlertDialogContent className="rounded-3xl max-w-[90vw] mx-auto">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-xl font-bold">Remove User?</AlertDialogTitle>
             <AlertDialogDescription className="text-sm">
-              This will permanently delete <strong>{userToDelete?.name}</strong> from the community directory. This action cannot be undone and they will lose all system access immediately.
+              This will permanently delete <strong>{userToDelete?.name}</strong> from the community directory. They will lose all system access immediately.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex flex-col gap-2 mt-4">

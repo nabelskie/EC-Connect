@@ -5,7 +5,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Users, FileText, CheckCircle, Clock, Search, Filter, ShieldCheck, Sparkles, ChevronRight, Loader2, AlertCircle } from 'lucide-react';
+import { Users, FileText, CheckCircle, Clock, Search, Filter, ShieldCheck, Sparkles, ChevronRight, Loader2, AlertCircle, Heart } from 'lucide-react';
 import { generateAdminDashboardSummary } from '@/ai/flows/generate-admin-dashboard-summary-flow';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
@@ -28,13 +28,12 @@ export default function AdminDashboard() {
   const { data: profile, isLoading: isProfileLoading } = useDoc(userProfileRef);
   
   // Confirmed admin if role matches or email matches
-  // We prioritize the email check for instant access
   const isAdminConfirmed = useMemo(() => {
     if (!user) return false;
     return user.email?.toLowerCase() === ADMIN_EMAIL || profile?.role === 'admin';
   }, [user, profile]);
 
-  // Fetch real-time data from Firestore collections ONLY if confirmed admin and profile is loaded or we are the master email
+  // Fetch real-time data from Firestore collections ONLY if confirmed admin
   const usersQuery = useMemoFirebase(() => (isAdminConfirmed && user) ? collection(db, 'users') : null, [db, isAdminConfirmed, user]);
   const pendingQuery = useMemoFirebase(() => (isAdminConfirmed && user) ? collection(db, 'assistance_requests_pending') : null, [db, isAdminConfirmed, user]);
   const activeQuery = useMemoFirebase(() => (isAdminConfirmed && user) ? collection(db, 'assistance_requests_active') : null, [db, isAdminConfirmed, user]);
@@ -48,11 +47,11 @@ export default function AdminDashboard() {
   // Derived metrics from real-time data
   const metrics = useMemo(() => {
     const totalUsers = usersData?.length || 0;
+    const elderlyUsers = usersData?.filter(u => u.role === 'elderly').length || 0;
     const activeVolunteers = usersData?.filter(u => u.role === 'volunteer').length || 0;
     const completedTasks = completedData?.length || 0;
     const totalRequests = (pendingData?.length || 0) + (activeData?.length || 0) + completedTasks;
 
-    // Calculate task type counts for AI analysis
     const counts: Record<string, number> = {};
     const allReqs = [...(pendingData || []), ...(activeData || []), ...(completedData || [])];
     allReqs.forEach(req => {
@@ -62,6 +61,7 @@ export default function AdminDashboard() {
 
     return {
       totalUsers,
+      elderlyUsers,
       totalRequests,
       activeVolunteers,
       completedTasks,
@@ -82,14 +82,12 @@ export default function AdminDashboard() {
     }
   };
 
-  // Automatically generate summary when data is first loaded
   useEffect(() => {
     if (!isUsersLoading && !isPendingLoading && !isActiveLoading && !isCompletedLoading && usersData && usersData.length > 0 && isAdminConfirmed) {
       handleGenerateSummary();
     }
   }, [isUsersLoading, isPendingLoading, isActiveLoading, isCompletedLoading, usersData, isAdminConfirmed]);
 
-  // Combine data for a unified recent activity feed
   const recentActivity = useMemo(() => {
     const allReqs = [
       ...(pendingData || []).map(r => ({ ...r, status: 'Pending' })),
@@ -105,7 +103,6 @@ export default function AdminDashboard() {
       .slice(0, 5);
   }, [pendingData, activeData, completedData]);
 
-  // We are "loading" if we have a user but haven't confirmed admin status or fetched first results
   const isInitialLoading = isProfileLoading || (isAdminConfirmed && !usersData && !usersError);
 
   if (isInitialLoading) {
@@ -144,7 +141,7 @@ export default function AdminDashboard() {
 
       <div className="grid grid-cols-2 gap-3">
         <Link href="/dashboard/admin/users?role=admin" className="block">
-          <Card className="border-none shadow-sm bg-white p-4 hover:bg-slate-50 transition-colors cursor-pointer">
+          <Card className="border-none shadow-sm bg-white p-4 hover:bg-slate-50 transition-colors cursor-pointer h-full">
             <div className="p-2 w-fit rounded-lg bg-blue-100 text-blue-600 mb-2">
               <Users className="h-5 w-5" />
             </div>
@@ -154,7 +151,7 @@ export default function AdminDashboard() {
         </Link>
         
         <Link href="/dashboard/admin/requests?role=admin" className="block">
-          <Card className="border-none shadow-sm bg-white p-4 hover:bg-slate-50 transition-colors cursor-pointer">
+          <Card className="border-none shadow-sm bg-white p-4 hover:bg-slate-50 transition-colors cursor-pointer h-full">
             <div className="p-2 w-fit rounded-lg bg-orange-100 text-orange-600 mb-2">
               <FileText className="h-5 w-5" />
             </div>
@@ -163,23 +160,23 @@ export default function AdminDashboard() {
           </Card>
         </Link>
 
+        <Link href="/dashboard/admin/users?role=admin&filter=elderly" className="block">
+          <Card className="border-none shadow-sm bg-white p-4 hover:bg-slate-50 transition-colors cursor-pointer h-full">
+            <div className="p-2 w-fit rounded-lg bg-pink-100 text-pink-600 mb-2">
+              <Heart className="h-5 w-5" />
+            </div>
+            <div className="text-xl font-bold text-primary">{metrics.elderlyUsers}</div>
+            <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-tight">Elderly Users</div>
+          </Card>
+        </Link>
+
         <Link href="/dashboard/admin/users?role=admin&filter=volunteer" className="block">
-          <Card className="border-none shadow-sm bg-white p-4 hover:bg-slate-50 transition-colors cursor-pointer">
+          <Card className="border-none shadow-sm bg-white p-4 hover:bg-slate-50 transition-colors cursor-pointer h-full">
             <div className="p-2 w-fit rounded-lg bg-accent/10 text-accent mb-2">
               <ShieldCheck className="h-5 w-5" />
             </div>
             <div className="text-xl font-bold text-primary">{metrics.activeVolunteers}</div>
             <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-tight">Volunteers</div>
-          </Card>
-        </Link>
-
-        <Link href="/dashboard/admin/requests?role=admin&filter=Completed" className="block">
-          <Card className="border-none shadow-sm bg-white p-4 hover:bg-slate-50 transition-colors cursor-pointer">
-            <div className="p-2 w-fit rounded-lg bg-emerald-100 text-emerald-600 mb-2">
-              <CheckCircle className="h-5 w-5" />
-            </div>
-            <div className="text-xl font-bold text-primary">{metrics.completedTasks}</div>
-            <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-tight">Completed</div>
           </Card>
         </Link>
       </div>
@@ -244,7 +241,7 @@ export default function AdminDashboard() {
           ))}
           {(!isUsersLoading && recentActivity.length === 0) && (
             <div className="text-center py-10 opacity-30 italic text-sm">
-              No recent requests found in the system.
+              No recent requests found.
             </div>
           )}
         </div>
