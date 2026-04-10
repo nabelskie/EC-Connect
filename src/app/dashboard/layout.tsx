@@ -17,14 +17,16 @@ import {
   Clock,
   AlertCircle,
   UserPlus,
-  BarChart3
+  BarChart3,
+  ChevronRight
 } from 'lucide-react';
 import { 
   Sheet, 
   SheetContent, 
   SheetHeader, 
   SheetTitle, 
-  SheetTrigger 
+  SheetTrigger,
+  SheetClose 
 } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Suspense, useMemo, useState, useEffect } from 'react';
@@ -120,7 +122,8 @@ function NotificationContent() {
         time: 'Just now', 
         unread: true,
         icon: CheckCircle2,
-        color: 'text-emerald-500'
+        color: 'text-emerald-500',
+        href: '/dashboard/elderly?role=elderly'
       },
       { 
         id: 2, 
@@ -129,7 +132,8 @@ function NotificationContent() {
         time: '1 hour ago', 
         unread: true,
         icon: MessageCircle,
-        color: 'text-sky-500'
+        color: 'text-sky-500',
+        href: '/dashboard/chat?role=elderly'
       },
     ],
     volunteer: [
@@ -140,7 +144,8 @@ function NotificationContent() {
         time: '5 mins ago', 
         unread: true,
         icon: AlertCircle,
-        color: 'text-orange-500'
+        color: 'text-orange-500',
+        href: '/dashboard/volunteer?role=volunteer'
       },
       { 
         id: 2, 
@@ -149,7 +154,8 @@ function NotificationContent() {
         time: 'Yesterday', 
         unread: false,
         icon: CheckCircle2,
-        color: 'text-emerald-500'
+        color: 'text-emerald-500',
+        href: '/dashboard/volunteer?role=volunteer'
       },
     ],
     admin: [
@@ -160,7 +166,8 @@ function NotificationContent() {
         time: '10 mins ago', 
         unread: true,
         icon: UserPlus,
-        color: 'text-primary'
+        color: 'text-primary',
+        href: '/dashboard/admin/users?role=admin'
       },
       { 
         id: 2, 
@@ -169,7 +176,8 @@ function NotificationContent() {
         time: 'Yesterday', 
         unread: false,
         icon: BarChart3,
-        color: 'text-accent'
+        color: 'text-accent',
+        href: '/dashboard/admin?role=admin'
       },
     ]
   };
@@ -182,28 +190,36 @@ function NotificationContent() {
         notifications.map((n) => {
           const Icon = n.icon;
           return (
-            <div key={n.id} className="p-5 hover:bg-white transition-colors relative group">
-              <div className="flex items-start gap-4">
-                <div className={`p-2 rounded-xl bg-white shadow-sm ${n.color}`}>
-                  <Icon className="h-5 w-5" />
-                </div>
-                <div className="flex-1 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <p className={`text-sm font-bold ${n.unread ? 'text-primary' : 'text-slate-500'}`}>
-                      {n.title}
+            <SheetClose asChild key={n.id}>
+              <Link 
+                href={n.href}
+                className="block p-5 hover:bg-white transition-colors relative group active:bg-slate-50"
+              >
+                <div className="flex items-start gap-4">
+                  <div className={`p-2 rounded-xl bg-white shadow-sm shrink-0 ${n.color}`}>
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1 space-y-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <p className={`text-sm font-bold truncate ${n.unread ? 'text-primary' : 'text-slate-500'}`}>
+                        {n.title}
+                      </p>
+                      {n.unread && <div className="h-2 w-2 rounded-full bg-accent shrink-0 ml-2" />}
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
+                      {n.message}
                     </p>
-                    {n.unread && <div className="h-2 w-2 rounded-full bg-accent" />}
-                  </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    {n.message}
-                  </p>
-                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground/60 font-bold uppercase pt-1">
-                    <Clock className="h-3 w-3" />
-                    {n.time}
+                    <div className="flex items-center justify-between pt-1">
+                      <div className="flex items-center gap-1 text-[10px] text-muted-foreground/60 font-bold uppercase">
+                        <Clock className="h-3 w-3" />
+                        {n.time}
+                      </div>
+                      <ChevronRight className="h-3 w-3 text-muted-foreground/30 group-hover:text-accent transition-colors" />
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
+              </Link>
+            </SheetClose>
           );
         })
       ) : (
