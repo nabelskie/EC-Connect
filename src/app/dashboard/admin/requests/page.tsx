@@ -79,6 +79,7 @@ function AdminRequestsContent() {
       const matchesSearch = 
         req.taskType?.toLowerCase().includes(searchTerm.toLowerCase()) || 
         req.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        req.createdByName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         req.id?.toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesStatus = statusFilter === 'All' || req.status === statusFilter;
@@ -140,7 +141,7 @@ function AdminRequestsContent() {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input 
-            placeholder="Search by ID, type, or desc..." 
+            placeholder="Search by name, ID, type..." 
             className="pl-10 h-12 rounded-2xl bg-white border-none shadow-sm"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -183,8 +184,8 @@ function AdminRequestsContent() {
                     <Clock className="h-5 w-5" />
                   </div>
                   <div>
-                    <div className="font-bold text-sm text-primary">{req.taskType}</div>
-                    <div className="text-[10px] text-muted-foreground font-mono">ID: {req.id.slice(0, 8)}</div>
+                    <div className="font-bold text-sm text-primary">{req.createdByName || 'Unknown User'}</div>
+                    <div className="text-[10px] text-muted-foreground font-semibold uppercase">{req.taskType}</div>
                   </div>
                 </div>
                 {getStatusBadge(req.status)}
@@ -197,7 +198,7 @@ function AdminRequestsContent() {
               <div className="flex items-center justify-between text-[10px] text-muted-foreground font-bold uppercase tracking-tight">
                 <div className="flex items-center gap-3">
                   <span className="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-lg group-hover:bg-white"><MapPin className="h-3 w-3" /> {req.location?.slice(0, 15)}</span>
-                  <span className="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-lg group-hover:bg-white"><User className="h-3 w-3" /> {req.createdByUserId?.slice(0, 5)}</span>
+                  <span className="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-lg group-hover:bg-white"><Clock className="h-3 w-3" /> {req.id.slice(0, 5)}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Button 
@@ -283,8 +284,9 @@ function AdminRequestsContent() {
                     <User className="h-5 w-5" />
                   </div>
                   <div>
-                    <p className="text-[10px] text-muted-foreground uppercase font-bold">Requester ID</p>
-                    <p className="text-sm font-mono text-primary font-medium">{selectedRequest.createdByUserId}</p>
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold">Requester Name</p>
+                    <p className="text-sm text-primary font-bold">{selectedRequest.createdByName || 'Unknown'}</p>
+                    <p className="text-[10px] font-mono text-muted-foreground">{selectedRequest.createdByUserId}</p>
                   </div>
                 </div>
 

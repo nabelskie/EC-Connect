@@ -220,7 +220,7 @@ export default function AdminDashboard() {
                   {req.id.slice(0, 4).toUpperCase()}
                 </div>
                 <div>
-                  <div className="font-bold text-sm text-primary">Request {req.id.slice(0, 4).toUpperCase()}</div>
+                  <div className="font-bold text-sm text-primary">{req.createdByName || 'Unknown User'}</div>
                   <div className="text-[10px] text-muted-foreground flex items-center gap-1">
                     <Badge variant="outline" className="text-[8px] h-4 px-1 leading-none">{req.taskType}</Badge>
                     <span>•</span>

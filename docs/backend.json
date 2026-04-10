@@ -64,6 +64,10 @@
           "type": "string",
           "description": "Reference to the UserProfile who created this request. (Relationship: UserProfile 1:N AssistanceRequest)"
         },
+        "createdByName": {
+          "type": "string",
+          "description": "The full name of the requester at the time of creation."
+        },
         "taskType": {
           "type": "string",
           "description": "The type of task requested (e.g., 'Grocery', 'Transport', 'Tech Support', 'Other')."
