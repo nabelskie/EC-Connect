@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -30,7 +31,7 @@ import {
 } from "@/components/ui/dialog";
 import { 
   LogOut, 
-  User, 
+  User as UserIcon, 
   Phone, 
   Mail, 
   MapPin, 
@@ -43,7 +44,8 @@ import {
   Lock,
   Save,
   Eye,
-  EyeOff
+  EyeOff,
+  UserCircle
 } from 'lucide-react';
 import { Suspense, useMemo, useState, useEffect } from 'react';
 import { useAuth, useUser, useDoc, useMemoFirebase, useFirestore, updateDocumentNonBlocking } from '@/firebase';
@@ -68,6 +70,7 @@ function ProfileContent() {
   const [editName, setEditName] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [editAddress, setEditAddress] = useState('');
+  const [editGender, setEditGender] = useState('');
   
   // Password state
   const [newPassword, setNewPassword] = useState('');
@@ -93,6 +96,7 @@ function ProfileContent() {
       setEditName(profileData.name || '');
       setEditPhone(profileData.phone || '');
       setEditAddress(profileData.address || '');
+      setEditGender(profileData.gender || '');
     }
   }, [profileData]);
 
@@ -119,7 +123,8 @@ function ProfileContent() {
       updateDocumentNonBlocking(userRef, {
         name: editName,
         phone: editPhone,
-        address: editAddress
+        address: editAddress,
+        gender: editGender
       });
 
       toast({
@@ -178,14 +183,11 @@ function ProfileContent() {
   const toggleNotifications = (enabled: boolean) => {
     if (!userRef) return;
     
-    // In a real app, this would involve unregistering the service worker/token
-    // Here we just toggle the presence of the token in Firestore to control backend logic
     if (enabled) {
       toast({
         title: "Notifications Enabled",
         description: "You will receive real-time updates for your requests.",
       });
-      // Logic for re-registering would be in useFcm
     } else {
       updateDocumentNonBlocking(userRef, { fcmToken: null });
       toast({
@@ -199,7 +201,7 @@ function ProfileContent() {
     const role = profileData?.role || 'elderly';
     if (role === 'admin') return ShieldCheck;
     if (role === 'volunteer') return GraduationCap;
-    return User;
+    return UserIcon;
   }, [profileData?.role]);
 
   const RoleIcon = roleIcon;
@@ -280,6 +282,18 @@ function ProfileContent() {
                   />
                 </div>
                 <div className="space-y-2">
+                  <Label htmlFor="edit-gender">Gender</Label>
+                  <Select value={editGender} onValueChange={setEditGender}>
+                    <SelectTrigger id="edit-gender" className="h-12 rounded-xl">
+                      <SelectValue placeholder="Select Gender" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Male">Male</SelectItem>
+                      <SelectItem value="Female">Female</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="edit-phone">Phone Number</Label>
                   <Input 
                     id="edit-phone" 
@@ -315,6 +329,16 @@ function ProfileContent() {
                   <div className="flex-1">
                     <Label className="text-[10px] text-muted-foreground uppercase font-bold">Email Address</Label>
                     <p className="text-primary font-medium">{profileData.email}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <div className="p-3 rounded-2xl bg-slate-50 text-slate-400">
+                    <UserCircle className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1">
+                    <Label className="text-[10px] text-muted-foreground uppercase font-bold">Gender</Label>
+                    <p className="text-primary font-medium">{profileData.gender || 'Not provided'}</p>
                   </div>
                 </div>
 

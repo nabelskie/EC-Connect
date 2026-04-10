@@ -24,6 +24,11 @@
           "type": "string",
           "description": "The role of the user within the system (e.g., 'elderly', 'volunteer', 'admin')."
         },
+        "gender": {
+          "type": "string",
+          "description": "The gender of the user (e.g., 'Male', 'Female').",
+          "enum": ["Male", "Female"]
+        },
         "phone": {
           "type": "string",
           "description": "The phone number of the user. (Optional)"

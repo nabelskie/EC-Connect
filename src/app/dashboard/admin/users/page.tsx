@@ -26,7 +26,8 @@ import {
   Loader2,
   Trash2,
   AlertCircle,
-  MapPin
+  MapPin,
+  UserCircle
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -69,7 +70,6 @@ function AdminUsersContent() {
   const filteredUsers = useMemo(() => {
     if (!usersData) return [];
     return usersData.filter(u => {
-      // Robust filtering logic
       const matchesSearch = 
         u.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
         u.email?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -83,7 +83,6 @@ function AdminUsersContent() {
   const confirmDeleteUser = () => {
     if (!userToDelete) return;
     
-    // Prevent admin from deleting themselves
     if (userToDelete.id === currentUser?.uid) {
       toast({
         variant: "destructive",
@@ -203,6 +202,11 @@ function AdminUsersContent() {
                     <div className="flex items-center gap-1 text-[10px] text-muted-foreground truncate">
                       <Mail className="h-2.5 w-2.5" /> {u.email}
                     </div>
+                    {u.gender && (
+                      <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                        <UserCircle className="h-2.5 w-2.5" /> {u.gender}
+                      </div>
+                    )}
                     {u.phone && u.phone !== "N/A" && (
                       <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                         <Phone className="h-2.5 w-2.5" /> {u.phone}

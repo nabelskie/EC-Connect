@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Heart, User, GraduationCap, Loader2, ShieldCheck, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
@@ -18,6 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 export default function RegisterPage() {
   const [mounted, setMounted] = useState(false);
   const [role, setRole] = useState('elderly');
+  const [gender, setGender] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -45,7 +47,15 @@ export default function RegisterPage() {
     e.preventDefault();
     if (isLoading) return;
 
-    // 1. Password Matching Validation
+    if (!isAdminEmail && !gender) {
+      toast({
+        variant: "destructive",
+        title: "Registration Failed",
+        description: "Please select your gender.",
+      });
+      return;
+    }
+
     if (password !== confirmPassword) {
       toast({
         variant: "destructive",
@@ -55,7 +65,6 @@ export default function RegisterPage() {
       return;
     }
 
-    // 2. Password Complexity Validation (Letter and Number)
     const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d).+$/;
     if (!passwordRegex.test(password)) {
       toast({
@@ -66,7 +75,6 @@ export default function RegisterPage() {
       return;
     }
 
-    // 3. Phone Number Validation (10-11 digits)
     if (!isAdminEmail) {
       const numericPhone = phone.replace(/\D/g, '');
       if (numericPhone.length < 10 || numericPhone.length > 11) {
@@ -95,6 +103,7 @@ export default function RegisterPage() {
           name: isAdminEmail ? "System Administrator" : name,
           email: targetEmail,
           role: finalRole,
+          gender: isAdminEmail ? "N/A" : gender,
           phone: isAdminEmail ? "N/A" : phone,
           address: isAdminEmail ? "System Console" : address,
           createdAt: new Date().toISOString()
@@ -205,6 +214,18 @@ export default function RegisterPage() {
                   <div className="space-y-2">
                     <Label htmlFor="full-name">Full Name</Label>
                     <Input id="full-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="John Doe" required className="h-12" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="gender">Gender</Label>
+                    <Select value={gender} onValueChange={setGender} required>
+                      <SelectTrigger id="gender" className="h-12">
+                        <SelectValue placeholder="Select Gender" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Male">Male</SelectItem>
+                        <SelectItem value="Female">Female</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="phone">Phone Number</Label>
