@@ -2,12 +2,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useFirebase, useUser, useFirestore, setDocumentNonBlocking } from '@/firebase';
+import { useFirebase, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { getToken, onMessage } from 'firebase/messaging';
-import { doc } from 'firebase/firestore';
+import { doc, updateDoc } from 'firebase/firestore';
 
 /**
  * Hook to initialize Firebase Cloud Messaging and handle token registration.
+ * It respects the user's notification settings in their Firestore profile.
  */
 export function useFcm() {
   const { messaging } = useFirebase();
@@ -15,29 +16,44 @@ export function useFcm() {
   const db = useFirestore();
   const [fcmToken, setFcmToken] = useState<string | null>(null);
 
+  const userProfileRef = useMemoFirebase(() => {
+    if (!user || !db) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user]);
+
+  const { data: profile } = useDoc(userProfileRef);
+
   useEffect(() => {
-    // Only run on client and if all services are available
-    if (typeof window === 'undefined' || !messaging || !user || !db) return;
+    // Only run on client and if messaging, user, and profile are available
+    if (typeof window === 'undefined' || !messaging || !user || !db || !profile) return;
+
+    // Only proceed if notifications are explicitly enabled in the profile
+    if (profile.notificationsEnabled === false) {
+      setFcmToken(null);
+      return;
+    }
 
     const requestPermission = async () => {
       try {
         const permission = await Notification.requestPermission();
         if (permission === 'granted') {
-          // VAPID Key provided for the project
           const token = await getToken(messaging, {
             vapidKey: 'BHh38CGgZpJ89x0p6OUhva-ODJu37Gw9EY-2P3uwkDuuo_K5AOVlD51PmV6dwqEAZDJlR7zdDyZIPZzqSXsUb1k' 
           });
 
           if (token) {
             setFcmToken(token);
-            // Update the user profile with the token using non-blocking set with merge
-            // This is safer than updateDoc as it won't fail if the doc is still being provisioned
-            const userRef = doc(db, 'users', user.uid);
-            setDocumentNonBlocking(userRef, { fcmToken: token }, { merge: true });
+            // Only update if it's different to save writes
+            if (profile.fcmToken !== token) {
+              await updateDoc(doc(db, 'users', user.uid), { 
+                fcmToken: token,
+                notificationsEnabled: true 
+              });
+            }
           }
         }
       } catch (err) {
-        // Silently handle errors for FCM to prevent UI disruption
+        console.warn('FCM registration failed:', err);
       }
     };
 
@@ -49,7 +65,7 @@ export function useFcm() {
     });
 
     return () => unsubscribe();
-  }, [messaging, user, db]);
+  }, [messaging, user, db, profile]);
 
   return { fcmToken };
 }

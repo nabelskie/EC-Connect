@@ -120,7 +120,6 @@ function ProfileContent() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Basic size check (5MB limit for processing)
       if (file.size > 5 * 1024 * 1024) {
         toast({
           variant: "destructive",
@@ -134,7 +133,6 @@ function ProfileContent() {
       reader.onload = (event) => {
         const img = new Image();
         img.onload = () => {
-          // Use a canvas to resize and compress the image
           const canvas = document.createElement('canvas');
           const MAX_WIDTH = 400;
           const MAX_HEIGHT = 400;
@@ -157,8 +155,6 @@ function ProfileContent() {
           canvas.height = height;
           const ctx = canvas.getContext('2d');
           ctx?.drawImage(img, 0, 0, width, height);
-          
-          // Convert to JPEG with reasonable quality to keep size small
           const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
           setTempPhotoPreview(compressedBase64);
           setEditPhotoURL(compressedBase64);
@@ -174,13 +170,10 @@ function ProfileContent() {
     setIsSaving(true);
     
     try {
-      // Update Firebase Auth Profile info (only Display Name)
-      // Note: Auth photoURL has a 2048 char limit, so we don't store Base64 there.
       await updateProfile(authUser, { 
         displayName: editName
       });
       
-      // Update Firestore Profile (stores the compressed Base64)
       updateDocumentNonBlocking(userRef, {
         name: editName,
         phone: editPhone,
@@ -246,13 +239,20 @@ function ProfileContent() {
   const toggleNotifications = (enabled: boolean) => {
     if (!userRef) return;
     
+    // Persist the preference to Firestore
+    updateDocumentNonBlocking(userRef, { 
+      notificationsEnabled: enabled,
+      fcmToken: enabled ? profileData?.fcmToken : null 
+    });
+
     if (enabled) {
       toast({
         title: "Notifications Enabled",
-        description: "You will receive real-time updates for your requests.",
+        description: "Your browser will now prompt for permission if it hasn't already.",
       });
+      // The useFcm hook in Layout will react to profileData.notificationsEnabled 
+      // and trigger getToken if needed.
     } else {
-      updateDocumentNonBlocking(userRef, { fcmToken: null });
       toast({
         title: "Notifications Disabled",
         description: "You will no longer receive push alerts.",
@@ -319,7 +319,6 @@ function ProfileContent() {
       </div>
 
       <div className="space-y-4">
-        {/* Profile Info Card */}
         <Card className="border-none shadow-sm rounded-[2rem] overflow-hidden">
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
@@ -331,7 +330,6 @@ function ProfileContent() {
               onClick={() => {
                 setIsEditing(!isEditing);
                 setTempPhotoPreview(null);
-                // Reset edit photo URL to current profile data
                 if (!isEditing) setEditPhotoURL(profileData.photoURL || '');
               }}
               className="text-accent font-bold h-7 px-2"
@@ -379,12 +377,7 @@ function ProfileContent() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-name">Full Name</Label>
-                  <Input 
-                    id="edit-name" 
-                    value={editName} 
-                    onChange={(e) => setEditName(e.target.value)}
-                    className="h-12 rounded-xl"
-                  />
+                  <Input id="edit-name" value={editName} onChange={(e) => setEditName(e.target.value)} className="h-12 rounded-xl" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-gender">Gender</Label>
@@ -400,27 +393,13 @@ function ProfileContent() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-phone">Phone Number</Label>
-                  <Input 
-                    id="edit-phone" 
-                    value={editPhone} 
-                    onChange={(e) => setEditPhone(e.target.value)}
-                    className="h-12 rounded-xl"
-                  />
+                  <Input id="edit-phone" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} className="h-12 rounded-xl" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-address">Address / Room No</Label>
-                  <Input 
-                    id="edit-address" 
-                    value={editAddress} 
-                    onChange={(e) => setEditAddress(e.target.value)}
-                    className="h-12 rounded-xl"
-                  />
+                  <Input id="edit-address" value={editAddress} onChange={(e) => setEditAddress(e.target.value)} className="h-12 rounded-xl" />
                 </div>
-                <Button 
-                  onClick={handleSaveProfile} 
-                  disabled={isSaving}
-                  className="w-full h-12 rounded-xl bg-accent hover:bg-accent/90 gap-2 shadow-lg shadow-accent/20"
-                >
+                <Button onClick={handleSaveProfile} disabled={isSaving} className="w-full h-12 rounded-xl bg-accent hover:bg-accent/90 gap-2 shadow-lg shadow-accent/20">
                   {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                   Save Changes
                 </Button>
@@ -436,7 +415,6 @@ function ProfileContent() {
                     <p className="text-primary font-medium">{profileData.email}</p>
                   </div>
                 </div>
-
                 <div className="flex items-start gap-4">
                   <div className="p-3 rounded-2xl bg-slate-50 text-slate-400">
                     <UserCircle className="h-5 w-5" />
@@ -446,7 +424,6 @@ function ProfileContent() {
                     <p className="text-primary font-medium">{profileData.gender || 'Not provided'}</p>
                   </div>
                 </div>
-
                 <div className="flex items-start gap-4">
                   <div className="p-3 rounded-2xl bg-slate-50 text-slate-400">
                     <Phone className="h-5 w-5" />
@@ -456,7 +433,6 @@ function ProfileContent() {
                     <p className="text-primary font-medium">{profileData.phone || 'Not provided'}</p>
                   </div>
                 </div>
-
                 <div className="flex items-start gap-4">
                   <div className="p-3 rounded-2xl bg-slate-50 text-slate-400">
                     <MapPin className="h-5 w-5" />
@@ -471,7 +447,6 @@ function ProfileContent() {
           </CardContent>
         </Card>
 
-        {/* Preferences Card */}
         <Card className="border-none shadow-sm rounded-[2rem] overflow-hidden">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
@@ -485,14 +460,13 @@ function ProfileContent() {
                 <p className="text-[10px] text-muted-foreground">Get alerted for new messages</p>
               </div>
               <Switch 
-                defaultChecked={!!profileData.fcmToken}
+                checked={profileData.notificationsEnabled !== false}
                 onCheckedChange={toggleNotifications}
               />
             </div>
           </CardContent>
         </Card>
 
-        {/* Security & Support */}
         <Card className="border-none shadow-sm rounded-[2rem] overflow-hidden">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
@@ -510,26 +484,14 @@ function ProfileContent() {
               <DialogContent className="rounded-3xl max-w-[90vw] mx-auto">
                 <DialogHeader>
                   <DialogTitle>Update Password</DialogTitle>
-                  <DialogDescription>
-                    Enter your new password below. Ensure it contains letters and numbers.
-                  </DialogDescription>
+                  <DialogDescription>Enter your new password below.</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
                     <Label htmlFor="new-pass">New Password</Label>
                     <div className="relative">
-                      <Input 
-                        id="new-pass" 
-                        type={showNewPassword ? "text" : "password"} 
-                        value={newPassword} 
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        className="h-12 rounded-xl pr-10"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowNewPassword(!showNewPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
-                      >
+                      <Input id="new-pass" type={showNewPassword ? "text" : "password"} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="h-12 rounded-xl pr-10" />
+                      <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors">
                         {showNewPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                       </button>
                     </div>
@@ -537,72 +499,42 @@ function ProfileContent() {
                   <div className="space-y-2">
                     <Label htmlFor="confirm-pass">Confirm Password</Label>
                     <div className="relative">
-                      <Input 
-                        id="confirm-pass" 
-                        type={showConfirmPassword ? "text" : "password"} 
-                        value={confirmPassword} 
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="h-12 rounded-xl pr-10"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
-                      >
+                      <Input id="confirm-pass" type={showConfirmPassword ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="h-12 rounded-xl pr-10" />
+                      <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors">
                         {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                       </button>
                     </div>
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button 
-                    onClick={handleChangePassword} 
-                    disabled={isChangingPassword || !newPassword}
-                    className="w-full h-12 rounded-xl bg-primary font-bold"
-                  >
+                  <Button onClick={handleChangePassword} disabled={isChangingPassword || !newPassword} className="w-full h-12 rounded-xl bg-primary font-bold">
                     {isChangingPassword ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Update Password'}
                   </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-
             <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium px-4">
-              <Calendar className="h-3 w-3 text-accent" />
-              Member since {formattedDate}
+              <Calendar className="h-3 w-3 text-accent" /> Member since {formattedDate}
             </div>
           </CardContent>
         </Card>
 
-        {/* Logout Button */}
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button 
-              variant="destructive" 
-              className="w-full h-16 rounded-[2rem] font-bold gap-3 text-lg shadow-xl shadow-destructive/10 mt-6"
-              disabled={isLoggingOut}
-            >
-              <LogOut className="h-6 w-6" />
-              Sign Out
+            <Button variant="destructive" className="w-full h-16 rounded-[2rem] font-bold gap-3 text-lg shadow-xl shadow-destructive/10 mt-6" disabled={isLoggingOut}>
+              <LogOut className="h-6 w-6" /> Sign Out
             </Button>
           </AlertDialogTrigger>
           <AlertDialogContent className="rounded-[2.5rem] max-w-[90vw] mx-auto">
             <AlertDialogHeader>
               <AlertDialogTitle className="text-2xl font-bold">Sign Out?</AlertDialogTitle>
-              <AlertDialogDescription className="text-base">
-                Are you sure you want to log out of your ElderCare Connect account?
-              </AlertDialogDescription>
+              <AlertDialogDescription className="text-base">Are you sure you want to log out?</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter className="flex flex-col gap-3 mt-6">
-              <AlertDialogAction 
-                onClick={handleLogout}
-                className="bg-destructive hover:bg-destructive/90 h-14 rounded-2xl font-bold text-lg shadow-lg shadow-destructive/20"
-              >
-                {isLoggingOut ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
-                Yes, Sign Out
+              <AlertDialogAction onClick={handleLogout} className="bg-destructive hover:bg-destructive/90 h-14 rounded-2xl font-bold text-lg shadow-lg shadow-destructive/20">
+                {isLoggingOut ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null} Yes, Sign Out
               </AlertDialogAction>
-              <AlertDialogCancel className="h-14 rounded-2xl font-bold border-none bg-slate-100 hover:bg-slate-200 transition-colors text-lg">
-                Stay Signed In
-              </AlertDialogCancel>
+              <AlertDialogCancel className="h-14 rounded-2xl font-bold border-none bg-slate-100 hover:bg-slate-200 transition-colors text-lg">Stay Signed In</AlertDialogCancel>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
@@ -613,12 +545,7 @@ function ProfileContent() {
 
 export default function ProfilePage() {
   return (
-    <Suspense fallback={
-      <div className="flex flex-col items-center justify-center py-20 gap-3">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-xs font-bold uppercase text-muted-foreground tracking-widest">Loading Profile...</p>
-      </div>
-    }>
+    <Suspense fallback={<div className="flex flex-col items-center justify-center py-20 gap-3"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="text-xs font-bold uppercase text-muted-foreground tracking-widest">Loading Profile...</p></div>}>
       <ProfileContent />
     </Suspense>
   );

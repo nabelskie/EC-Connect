@@ -45,6 +45,10 @@
           "type": "string",
           "description": "Token for Firebase Cloud Messaging notifications. (Optional)"
         },
+        "notificationsEnabled": {
+          "type": "boolean",
+          "description": "Whether the user has enabled push notifications."
+        },
         "createdAt": {
           "type": "string",
           "description": "Timestamp when the user profile was created.",

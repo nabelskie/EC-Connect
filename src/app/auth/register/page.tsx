@@ -106,6 +106,7 @@ export default function RegisterPage() {
           gender: isAdminEmail ? "N/A" : gender,
           phone: isAdminEmail ? "N/A" : phone,
           address: isAdminEmail ? "System Console" : address,
+          notificationsEnabled: true,
           createdAt: new Date().toISOString()
         };
 
