@@ -181,49 +181,53 @@ function AdminUsersContent() {
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : filteredUsers.map((u) => (
-            <Card key={u.id} className="border-none shadow-sm rounded-2xl p-4 flex items-center gap-4 active:bg-slate-50 transition-colors">
-              <Avatar className="h-12 w-12 border-2 border-slate-50 shrink-0">
-                <AvatarImage src={`https://picsum.photos/seed/${u.id}/100/100`} />
-                <AvatarFallback>{u.name?.[0] || 'U'}</AvatarFallback>
-              </Avatar>
-              
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-primary truncate">{u.name}</span>
-                  <Badge variant="outline" className={`text-[8px] h-4 px-1 leading-none uppercase shrink-0 ${
-                    u.role === 'admin' ? 'border-primary text-primary' : 
-                    u.role === 'volunteer' ? 'border-accent text-accent' : 'border-slate-400 text-slate-500'
-                  }`}>
-                    {getDisplayRole(u.role)}
-                  </Badge>
-                </div>
-                <div className="flex flex-col gap-0.5 mt-1">
-                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground truncate">
-                    <Mail className="h-2.5 w-2.5" /> {u.email}
+            <Card key={u.id} className="border-none shadow-sm rounded-2xl p-4 flex items-center justify-between gap-4 active:bg-slate-50 transition-colors">
+              <div className="flex items-center gap-4 flex-1 min-w-0">
+                <Avatar className="h-12 w-12 border-2 border-slate-50 shrink-0">
+                  <AvatarImage src={`https://picsum.photos/seed/${u.id}/100/100`} />
+                  <AvatarFallback>{u.name?.[0] || 'U'}</AvatarFallback>
+                </Avatar>
+                
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-primary truncate">{u.name}</span>
+                    <Badge variant="outline" className={`text-[8px] h-4 px-1 leading-none uppercase shrink-0 ${
+                      u.role === 'admin' ? 'border-primary text-primary' : 
+                      u.role === 'volunteer' ? 'border-accent text-accent' : 'border-slate-400 text-slate-500'
+                    }`}>
+                      {getDisplayRole(u.role)}
+                    </Badge>
                   </div>
-                  {u.phone && u.phone !== "N/A" && (
-                    <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                      <Phone className="h-2.5 w-2.5" /> {u.phone}
-                    </div>
-                  )}
-                  {u.address && u.address !== "System Console" && (
+                  <div className="flex flex-col gap-0.5 mt-1">
                     <div className="flex items-center gap-1 text-[10px] text-muted-foreground truncate">
-                      <MapPin className="h-2.5 w-2.5" /> {u.address}
+                      <Mail className="h-2.5 w-2.5" /> {u.email}
                     </div>
-                  )}
+                    {u.phone && u.phone !== "N/A" && (
+                      <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                        <Phone className="h-2.5 w-2.5" /> {u.phone}
+                      </div>
+                    )}
+                    {u.address && u.address !== "System Console" && (
+                      <div className="flex items-center gap-1 text-[10px] text-muted-foreground truncate">
+                        <MapPin className="h-2.5 w-2.5" /> {u.address}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {u.id !== currentUser?.uid && (
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="text-destructive hover:bg-destructive/10 rounded-full h-9 w-9 shrink-0 transition-colors"
-                  onClick={() => setUserToDelete(u)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              )}
+              <div className="shrink-0 flex items-center">
+                {u.id !== currentUser?.uid && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="text-destructive hover:bg-destructive/10 rounded-full h-10 w-10 transition-colors"
+                    onClick={() => setUserToDelete(u)}
+                  >
+                    <Trash2 className="h-5 w-5" />
+                  </Button>
+                )}
+              </div>
             </Card>
           ))}
           
