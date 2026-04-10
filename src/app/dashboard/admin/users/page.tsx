@@ -184,7 +184,7 @@ function AdminUsersContent() {
             <Card key={u.id} className="border-none shadow-sm rounded-2xl p-4 flex items-center justify-between gap-4 active:bg-slate-50 transition-colors">
               <div className="flex items-center gap-4 flex-1 min-w-0">
                 <Avatar className="h-12 w-12 border-2 border-slate-50 shrink-0">
-                  <AvatarImage src={`https://picsum.photos/seed/${u.id}/100/100`} />
+                  <AvatarImage src={u.photoURL || `https://picsum.photos/seed/${u.id}/100/100`} className="object-cover" />
                   <AvatarFallback>{u.name?.[0] || 'U'}</AvatarFallback>
                 </Avatar>
                 

@@ -37,6 +37,10 @@
           "type": "string",
           "description": "The physical address of the user. (Optional)"
         },
+        "photoURL": {
+          "type": "string",
+          "description": "URL to the user's profile picture. (Optional)"
+        },
         "fcmToken": {
           "type": "string",
           "description": "Token for Firebase Cloud Messaging notifications. (Optional)"

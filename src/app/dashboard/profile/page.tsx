@@ -45,7 +45,8 @@ import {
   Save,
   Eye,
   EyeOff,
-  UserCircle
+  UserCircle,
+  Image as ImageIcon
 } from 'lucide-react';
 import { Suspense, useMemo, useState, useEffect } from 'react';
 import { useAuth, useUser, useDoc, useMemoFirebase, useFirestore, updateDocumentNonBlocking } from '@/firebase';
@@ -71,6 +72,7 @@ function ProfileContent() {
   const [editPhone, setEditPhone] = useState('');
   const [editAddress, setEditAddress] = useState('');
   const [editGender, setEditGender] = useState('');
+  const [editPhotoURL, setEditPhotoURL] = useState('');
   
   // Password state
   const [newPassword, setNewPassword] = useState('');
@@ -97,6 +99,7 @@ function ProfileContent() {
       setEditPhone(profileData.phone || '');
       setEditAddress(profileData.address || '');
       setEditGender(profileData.gender || '');
+      setEditPhotoURL(profileData.photoURL || '');
     }
   }, [profileData]);
 
@@ -116,15 +119,19 @@ function ProfileContent() {
     setIsSaving(true);
     
     try {
-      // Update Firebase Auth Display Name
-      await updateProfile(authUser, { displayName: editName });
+      // Update Firebase Auth Profile info
+      await updateProfile(authUser, { 
+        displayName: editName,
+        photoURL: editPhotoURL || null
+      });
       
       // Update Firestore Profile
       updateDocumentNonBlocking(userRef, {
         name: editName,
         phone: editPhone,
         address: editAddress,
-        gender: editGender
+        gender: editGender,
+        photoURL: editPhotoURL
       });
 
       toast({
@@ -235,12 +242,14 @@ function ProfileContent() {
     return role.charAt(0).toUpperCase() + role.slice(1);
   };
 
+  const avatarSrc = profileData.photoURL || `https://picsum.photos/seed/${profileData.id}/200/200`;
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">
       <div className="flex flex-col items-center gap-4 py-6">
         <div className="relative">
           <Avatar className="h-24 w-24 border-4 border-white shadow-xl">
-            <AvatarImage src={`https://picsum.photos/seed/${profileData.id}/200/200`} />
+            <AvatarImage src={avatarSrc} className="object-cover" />
             <AvatarFallback>{profileData.name?.[0] || 'U'}</AvatarFallback>
           </Avatar>
         </div>
@@ -272,6 +281,20 @@ function ProfileContent() {
           <CardContent className="space-y-5">
             {isEditing ? (
               <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-photo">Profile Picture URL</Label>
+                  <div className="relative">
+                    <Input 
+                      id="edit-photo" 
+                      placeholder="https://example.com/photo.jpg"
+                      value={editPhotoURL} 
+                      onChange={(e) => setEditPhotoURL(e.target.value)}
+                      className="h-12 rounded-xl pl-10"
+                    />
+                    <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground px-1 italic">Paste an image link to change your profile picture.</p>
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-name">Full Name</Label>
                   <Input 
