@@ -27,7 +27,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
+} from "@/Dialog";
 import { 
   LogOut, 
   User, 
@@ -41,7 +41,9 @@ import {
   Bell, 
   Settings2, 
   Lock,
-  Save
+  Save,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { Suspense, useMemo, useState, useEffect } from 'react';
 import { useAuth, useUser, useDoc, useMemoFirebase, useFirestore, updateDocumentNonBlocking } from '@/firebase';
@@ -70,6 +72,8 @@ function ProfileContent() {
   // Password state
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   useEffect(() => {
@@ -154,6 +158,8 @@ function ProfileContent() {
       });
       setNewPassword('');
       setConfirmPassword('');
+      setShowNewPassword(false);
+      setShowConfirmPassword(false);
     } catch (error: any) {
       let msg = "Failed to update password. You may need to re-login first.";
       if (error.code === 'auth/requires-recent-login') {
@@ -382,23 +388,41 @@ function ProfileContent() {
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
                     <Label htmlFor="new-pass">New Password</Label>
-                    <Input 
-                      id="new-pass" 
-                      type="password" 
-                      value={newPassword} 
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      className="h-12 rounded-xl"
-                    />
+                    <div className="relative">
+                      <Input 
+                        id="new-pass" 
+                        type={showNewPassword ? "text" : "password"} 
+                        value={newPassword} 
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className="h-12 rounded-xl pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                      >
+                        {showNewPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="confirm-pass">Confirm Password</Label>
-                    <Input 
-                      id="confirm-pass" 
-                      type="password" 
-                      value={confirmPassword} 
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="h-12 rounded-xl"
-                    />
+                    <div className="relative">
+                      <Input 
+                        id="confirm-pass" 
+                        type={showConfirmPassword ? "text" : "password"} 
+                        value={confirmPassword} 
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className="h-12 rounded-xl pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                      >
+                        {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
+                    </div>
                   </div>
                 </div>
                 <DialogFooter>
