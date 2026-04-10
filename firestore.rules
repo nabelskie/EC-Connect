@@ -40,6 +40,7 @@ service cloud.firestore {
       allow get: if isSignedIn();
       // Allow admins to list the whole directory
       allow list: if isAdmin();
+      // Users can create/update their own profile
       allow create: if isSignedIn() && request.auth.uid == userId;
       allow update: if isOwner(userId) || isAdmin();
       allow delete: if isAdmin();
@@ -59,7 +60,9 @@ service cloud.firestore {
     match /assistance_requests_active/{requestId} {
       // Allow participants or admins to see and list active requests
       allow get, list: if isSignedIn();
+      // Allow volunteers to "create" an active request by accepting it
       allow create: if isSignedIn();
+      // Allow participants or admins to update
       allow update: if isSignedIn() && (
         request.auth.uid == resource.data.createdByUserId || 
         request.auth.uid == resource.data.assignedVolunteerId ||
@@ -73,6 +76,7 @@ service cloud.firestore {
 
     match /assistance_requests_completed/{requestId} {
       allow get, list: if isSignedIn();
+      // Move from active to completed
       allow create: if isSignedIn();
       allow update, delete: if isAdmin();
     }
@@ -102,7 +106,10 @@ service cloud.firestore {
     match /chat_rooms/{chatRoomId}/messages/{messageId} {
       // Allow participants or admins to read messages
       allow get, list: if isSignedIn() && (
-        request.auth.uid in resource.data.participantUserIds || isAdmin()
+        request.auth.uid in request.resource.data.participantUserIds || 
+        isAdmin() || 
+        (exists(/databases/$(database)/documents/chat_rooms/$(chatRoomId)) && 
+         request.auth.uid in get(/databases/$(database)/documents/chat_rooms/$(chatRoomId)).data.participantUserIds)
       );
       
       // Allow participants to send messages

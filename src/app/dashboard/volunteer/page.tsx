@@ -32,7 +32,7 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { setDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
@@ -47,6 +47,13 @@ export default function VolunteerDashboard() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const userProfileRef = useMemoFirebase(() => {
+    if (!user || !db) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user]);
+
+  const { data: profile } = useDoc(userProfileRef);
 
   useEffect(() => {
     if (!isUserLoading && !user && mounted) {
@@ -82,10 +89,19 @@ export default function VolunteerDashboard() {
   }, [pendingTasks, filter]);
 
   const handleAcceptTask = async (task: any) => {
-    if (!user || !db) return;
+    if (!user || !db || !profile) return;
+
+    if (profile.role !== 'volunteer') {
+      toast({
+        variant: "destructive",
+        title: "Permission Denied",
+        description: "Only registered volunteers can accept tasks.",
+      });
+      return;
+    }
 
     const volunteerId = user.uid;
-    const volunteerName = user.displayName || 'Volunteer';
+    const volunteerName = profile.name || user.displayName || 'Volunteer';
     const residentId = task.createdByUserId;
 
     if (!residentId) {
@@ -97,22 +113,13 @@ export default function VolunteerDashboard() {
       return;
     }
 
-    // Explicitly fetch the resident's name from their profile for the chat room
     let residentName = task.createdByName || 'Resident';
-    try {
-      const residentDoc = await getDoc(doc(db, 'users', residentId));
-      if (residentDoc.exists() && residentDoc.data().name) {
-        residentName = residentDoc.data().name;
-      }
-    } catch (e) {
-      // Fallback to task value
-    }
-
     const chatRoomId = [residentId, volunteerId].sort().join('_');
 
     const activeRef = doc(db, 'assistance_requests_active', task.id);
     const pendingRef = doc(db, 'assistance_requests_pending', task.id);
 
+    // Use non-blocking updates for a smoother UI experience
     setDocumentNonBlocking(activeRef, {
       ...task,
       status: 'Accepted',
@@ -135,7 +142,7 @@ export default function VolunteerDashboard() {
       residentName: residentName,
       volunteerName: volunteerName,
       createdAt: serverTimestamp(),
-      lastMessageSnippet: `Volunteer ${volunteerName} has accepted your request: ${task.taskType}`,
+      lastMessageSnippet: `Volunteer ${volunteerName} has accepted your request.`,
       lastMessageAt: serverTimestamp(),
     }, { merge: true });
 
