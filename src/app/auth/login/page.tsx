@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Heart, Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { useAuth, useFirestore, useUser } from '@/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
@@ -43,6 +43,19 @@ export default function LoginPage() {
           
           let role = 'elderly';
 
+          // CRITICAL: Check if the profile document exists. 
+          // If it doesn't exist and it's not the master admin, the account has been deleted by an admin.
+          if (!userDoc.exists() && userEmail !== ADMIN_EMAIL) {
+            await signOut(auth);
+            toast({
+              variant: "destructive",
+              title: "Account Disabled",
+              description: "This account has been removed by an administrator and can no longer access the system.",
+            });
+            setIsSubmitting(false);
+            return;
+          }
+
           if (userDoc.exists()) {
             role = userDoc.data().role;
             
@@ -65,12 +78,12 @@ export default function LoginPage() {
 
           router.push(`/dashboard/${role}?role=${role}`);
         } catch (error) {
-          // Errors handled centrally
+          // Errors handled centrally via FirebaseErrorListener
         }
       };
       checkRoleAndRedirect();
     }
-  }, [user, isUserLoading, db, router, mounted]);
+  }, [user, isUserLoading, db, router, mounted, auth, toast]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,7 +96,7 @@ export default function LoginPage() {
       .then(() => {
         toast({
           title: "Sign-in successful",
-          description: "Preparing your dashboard...",
+          description: "Verifying account status...",
         });
       })
       .catch((err: any) => {
