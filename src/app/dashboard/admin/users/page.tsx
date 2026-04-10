@@ -25,7 +25,8 @@ import {
   Phone,
   Loader2,
   Trash2,
-  AlertCircle
+  AlertCircle,
+  MapPin
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -41,7 +42,7 @@ function AdminUsersContent() {
   const initialFilter = searchParams.get('filter') || 'All';
   const [roleFilter, setRoleFilter] = useState(initialFilter);
   const db = useFirestore();
-  const { user } = useUser();
+  const { user: currentUser } = useUser();
   const { toast } = useToast();
 
   const ADMIN_EMAIL = 'adminkn@gmail.com';
@@ -51,18 +52,18 @@ function AdminUsersContent() {
   }, []);
 
   const userProfileRef = useMemoFirebase(() => {
-    if (!user) return null;
-    return doc(db, 'users', user.uid);
-  }, [db, user]);
+    if (!currentUser) return null;
+    return doc(db, 'users', currentUser.uid);
+  }, [db, currentUser]);
 
   const { data: profile, isLoading: isProfileLoading } = useDoc(userProfileRef);
   
   const isAdminConfirmed = useMemo(() => {
-    if (!user) return false;
-    return user.email?.toLowerCase() === ADMIN_EMAIL || profile?.role === 'admin';
-  }, [user, profile]);
+    if (!currentUser) return false;
+    return currentUser.email?.toLowerCase() === ADMIN_EMAIL || profile?.role === 'admin';
+  }, [currentUser, profile]);
 
-  const usersQuery = useMemoFirebase(() => (isAdminConfirmed && user) ? collection(db, 'users') : null, [db, isAdminConfirmed, user]);
+  const usersQuery = useMemoFirebase(() => (isAdminConfirmed && currentUser) ? collection(db, 'users') : null, [db, isAdminConfirmed, currentUser]);
   const { data: usersData, isLoading: isUsersLoading, error: usersError } = useCollection(usersQuery);
 
   const filteredUsers = useMemo(() => {
@@ -80,6 +81,18 @@ function AdminUsersContent() {
 
   const confirmDeleteUser = () => {
     if (!userToDelete) return;
+    
+    // Prevent admin from deleting themselves
+    if (userToDelete.id === currentUser?.uid) {
+      toast({
+        variant: "destructive",
+        title: "Action Blocked",
+        description: "You cannot delete your own administrative account.",
+      });
+      setUserToDelete(null);
+      return;
+    }
+
     const docRef = doc(db, 'users', userToDelete.id);
     
     // Non-blocking delete to prevent UI lockup
@@ -87,7 +100,7 @@ function AdminUsersContent() {
     
     toast({
       title: "User Removed",
-      description: `${userToDelete.name}'s profile is being deleted.`,
+      description: `${userToDelete.name}'s profile is being removed from the system.`,
     });
     
     setUserToDelete(null);
@@ -97,7 +110,7 @@ function AdminUsersContent() {
     if (role === 'elderly') return 'Elderly';
     if (role === 'volunteer') return 'Volunteer';
     if (role === 'admin') return 'Admin';
-    return role;
+    return role || 'User';
   };
 
   if (!mounted || isProfileLoading) {
@@ -113,7 +126,7 @@ function AdminUsersContent() {
       <div className="flex flex-col items-center justify-center py-20 gap-4 text-center px-6">
         <AlertCircle className="h-12 w-12 text-destructive" />
         <h2 className="text-xl font-bold text-primary">Access Denied</h2>
-        <p className="text-sm text-muted-foreground">Only system administrators can view the directory.</p>
+        <p className="text-sm text-muted-foreground">Only system administrators can view or manage the community directory.</p>
         <Button asChild variant="outline" className="rounded-xl">
            <Link href="/dashboard/admin?role=admin">Back to Console</Link>
         </Button>
@@ -151,7 +164,7 @@ function AdminUsersContent() {
               variant={roleFilter === r ? "default" : "outline"}
               size="sm"
               onClick={() => setRoleFilter(r)}
-              className={`rounded-full px-4 h-8 text-[10px] font-bold uppercase shrink-0 ${
+              className={`rounded-full px-4 h-8 text-[10px] font-bold uppercase shrink-0 transition-all ${
                 roleFilter === r ? 'bg-primary text-white border-primary shadow-md' : 'bg-white text-muted-foreground border-slate-200'
               }`}
             >
@@ -177,7 +190,10 @@ function AdminUsersContent() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-primary truncate">{u.name}</span>
-                  <Badge variant="outline" className="text-[8px] h-4 px-1 leading-none uppercase shrink-0">
+                  <Badge variant="outline" className={`text-[8px] h-4 px-1 leading-none uppercase shrink-0 ${
+                    u.role === 'admin' ? 'border-primary text-primary' : 
+                    u.role === 'volunteer' ? 'border-accent text-accent' : 'border-slate-400 text-slate-500'
+                  }`}>
                     {getDisplayRole(u.role)}
                   </Badge>
                 </div>
@@ -185,28 +201,38 @@ function AdminUsersContent() {
                   <div className="flex items-center gap-1 text-[10px] text-muted-foreground truncate">
                     <Mail className="h-2.5 w-2.5" /> {u.email}
                   </div>
-                  {u.phone && (
+                  {u.phone && u.phone !== "N/A" && (
                     <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                       <Phone className="h-2.5 w-2.5" /> {u.phone}
+                    </div>
+                  )}
+                  {u.address && u.address !== "System Console" && (
+                    <div className="flex items-center gap-1 text-[10px] text-muted-foreground truncate">
+                      <MapPin className="h-2.5 w-2.5" /> {u.address}
                     </div>
                   )}
                 </div>
               </div>
 
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="text-destructive hover:bg-destructive/10 rounded-full h-9 w-9 shrink-0"
-                onClick={() => setUserToDelete(u)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              {u.id !== currentUser?.uid && (
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="text-destructive hover:bg-destructive/10 rounded-full h-9 w-9 shrink-0 transition-colors"
+                  onClick={() => setUserToDelete(u)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
             </Card>
           ))}
           
           {filteredUsers.length === 0 && !isUsersLoading && (
-            <div className="text-center py-20 opacity-30 italic text-sm">
-              No users found matching your filters.
+            <div className="text-center py-20 bg-white rounded-[2.5rem] border-2 border-dashed border-slate-100 flex flex-col items-center justify-center gap-4 mx-1">
+              <div className="p-4 bg-slate-50 rounded-full">
+                <Search className="h-10 w-10 text-slate-200" />
+              </div>
+              <p className="text-sm font-bold text-primary">No members found</p>
             </div>
           )}
         </div>
@@ -216,19 +242,19 @@ function AdminUsersContent() {
       <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
         <AlertDialogContent className="rounded-3xl max-w-[90vw] mx-auto">
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove User?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will delete <strong>{userToDelete?.name}</strong> from the community directory. They will immediately lose access to the system.
+            <AlertDialogTitle className="text-xl font-bold">Remove User?</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm">
+              This will permanently delete <strong>{userToDelete?.name}</strong> from the community directory. This action cannot be undone and they will lose all system access immediately.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="flex flex-col gap-2">
+          <AlertDialogFooter className="flex flex-col gap-2 mt-4">
             <AlertDialogAction 
               onClick={confirmDeleteUser}
-              className="bg-destructive hover:bg-destructive/90 h-12 rounded-xl font-bold"
+              className="bg-destructive hover:bg-destructive/90 h-12 rounded-xl font-bold shadow-lg shadow-destructive/20"
             >
-              Yes, Remove User
+              Yes, Remove Permanently
             </AlertDialogAction>
-            <AlertDialogCancel className="h-12 rounded-xl font-bold border-none bg-slate-100">
+            <AlertDialogCancel className="h-12 rounded-xl font-bold border-none bg-slate-100 hover:bg-slate-200 transition-colors">
               Cancel
             </AlertDialogCancel>
           </AlertDialogFooter>
