@@ -113,7 +113,6 @@ function ProfileContent() {
       await signOut(auth);
       router.push('/auth/login');
     } catch (err) {
-      console.error("Logout failed", err);
       setIsLoggingOut(false);
     }
   };
@@ -121,11 +120,50 @@ function ProfileContent() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Basic size check (5MB limit for processing)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          variant: "destructive",
+          title: "File Too Large",
+          description: "Please select an image smaller than 5MB.",
+        });
+        return;
+      }
+
       const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        setTempPhotoPreview(base64String);
-        setEditPhotoURL(base64String);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          // Use a canvas to resize and compress the image
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 400;
+          const MAX_HEIGHT = 400;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          // Convert to JPEG with reasonable quality to keep size small
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+          setTempPhotoPreview(compressedBase64);
+          setEditPhotoURL(compressedBase64);
+        };
+        img.src = event.target?.result as string;
       };
       reader.readAsDataURL(file);
     }
@@ -136,21 +174,19 @@ function ProfileContent() {
     setIsSaving(true);
     
     try {
-      const finalPhotoURL = editPhotoURL;
-
-      // Update Firebase Auth Profile info
+      // Update Firebase Auth Profile info (only Display Name)
+      // Note: Auth photoURL has a 2048 char limit, so we don't store Base64 there.
       await updateProfile(authUser, { 
-        displayName: editName,
-        photoURL: finalPhotoURL || null
+        displayName: editName
       });
       
-      // Update Firestore Profile
+      // Update Firestore Profile (stores the compressed Base64)
       updateDocumentNonBlocking(userRef, {
         name: editName,
         phone: editPhone,
         address: editAddress,
         gender: editGender,
-        photoURL: finalPhotoURL
+        photoURL: editPhotoURL
       });
 
       toast({
@@ -163,7 +199,7 @@ function ProfileContent() {
       toast({
         variant: "destructive",
         title: "Update Failed",
-        description: "Could not update profile information.",
+        description: "Could not update profile information. Please try again.",
       });
     } finally {
       setIsSaving(false);
@@ -295,6 +331,8 @@ function ProfileContent() {
               onClick={() => {
                 setIsEditing(!isEditing);
                 setTempPhotoPreview(null);
+                // Reset edit photo URL to current profile data
+                if (!isEditing) setEditPhotoURL(profileData.photoURL || '');
               }}
               className="text-accent font-bold h-7 px-2"
             >
