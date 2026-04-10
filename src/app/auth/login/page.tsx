@@ -47,12 +47,12 @@ export default function LoginPage() {
           // If it doesn't exist and it's not the master admin, the account has been deleted by an admin.
           if (!userDoc.exists() && userEmail !== ADMIN_EMAIL) {
             await signOut(auth);
+            setIsSubmitting(false);
             toast({
               variant: "destructive",
               title: "Account Disabled",
               description: "This account has been removed by an administrator and can no longer access the system.",
             });
-            setIsSubmitting(false);
             return;
           }
 
@@ -78,7 +78,7 @@ export default function LoginPage() {
 
           router.push(`/dashboard/${role}?role=${role}`);
         } catch (error) {
-          // Errors handled centrally via FirebaseErrorListener
+          setIsSubmitting(false);
         }
       };
       checkRoleAndRedirect();
@@ -93,12 +93,6 @@ export default function LoginPage() {
     const targetEmail = email.toLowerCase().trim();
 
     signInWithEmailAndPassword(auth, targetEmail, password)
-      .then(() => {
-        toast({
-          title: "Sign-in successful",
-          description: "Verifying account status...",
-        });
-      })
       .catch((err: any) => {
         setIsSubmitting(false);
         
