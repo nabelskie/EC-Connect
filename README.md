@@ -2,40 +2,79 @@
 
 ElderCare Connect is a modern, real-time application built with Next.js and Firebase, designed to bridge the gap between elderly residents and student volunteers at Politeknik Kuching Sarawak.
 
-## 🔄 How to Move to your Local Machine (Initial Setup)
+---
 
-To move this project from Firebase Studio to your local **VS Code** for the first time:
+## 🚀 COMPLETE GUIDE: Converting to Android App (APK)
 
-### 1. Push from Firebase Studio (here)
-Open the terminal at the bottom of Firebase Studio and run:
-```bash
-git add .
-git commit -m "Ready for local build"
-git push
-```
+Follow these steps **on your local computer** (Windows/macOS) to generate your mobile app.
 
-### 2. Clone in VS Code
-1. Open **VS Code** on your computer.
-2. Click **Clone Git Repository** on the welcome screen.
-3. Paste your GitHub URL.
-4. Select a folder on your computer to save it.
+### Phase 1: Initial Setup (The "First Time" Only)
+1. **Push from Firebase Studio**: In this window (Firebase Studio), run:
+   ```bash
+   git add .
+   git commit -m "Finalizing mobile build config"
+   git push
+   ```
+2. **Clone in VS Code**:
+   - Open **VS Code** on your computer.
+   - Click **Clone Git Repository** on the welcome screen.
+   - Paste your GitHub URL and select a folder.
+3. **Install Dependencies**: Open the VS Code terminal (Ctrl+`) and run:
+   ```bash
+   npm install
+   ```
 
-### 3. Install & Run
-Open the **Terminal** in VS Code (Ctrl+`) and run:
-```bash
-npm install
-npm run build
-npx cap init ElderCare com.pks.eldercare --web-dir out
-npx cap add android
-npx cap sync android
-```
+### Phase 2: Building the Web Assets
+This turns your code into a "static site" that Android can run locally.
+1. **Build the project**:
+   ```bash
+   npm run build
+   ```
+   *Note: This creates a folder named `out`. If this fails, see the "Fixing Build Errors" section below.*
+
+### Phase 3: Creating the Android Project
+1. **Initialize Capacitor**:
+   ```bash
+   npx cap init ElderCare com.pks.eldercare --web-dir out
+   ```
+2. **Add Android Platform**:
+   ```bash
+   npx cap add android
+   ```
+3. **Sync your assets**:
+   ```bash
+   npx cap sync android
+   ```
+
+### Phase 4: Generating the APK (Android Studio)
+1. **Open Android Studio**:
+   ```bash
+   npx cap open android
+   ```
+2. **Wait for indexing**: Let Android Studio finish "Indexing" (the progress bar at the bottom).
+3. **Build APK**:
+   - In the top menu, go to: **Build > Build Bundle(s) / APK(s) > Build APK(s)**.
+   - Once finished, a notification will appear. Click **locate** to find your `app-debug.apk` file.
 
 ---
 
-## 🛠️ CRITICAL: How to Fix "Build Errors" or "Git Pull" Errors
-If you see errors about `[requestId]` or `generateStaticParams`, or if you cannot pull updates, run these commands in your **VS Code terminal**:
+## 🔄 How to Update your App
+If you make changes here in Firebase Studio and want to update the app on your phone:
+1. **Push from Firebase Studio** (git add/commit/push).
+2. **On your PC (VS Code)**, run:
+   ```bash
+   git pull
+   npm run build
+   npx cap sync android
+   ```
+3. Open Android Studio and **Build APK** again.
 
-1. **Force Sync (Resets local to match GitHub):**
+---
+
+## ⚠️ CRITICAL: Fixing Build or Git Errors
+If you see errors like `generateStaticParams` or "git pull failed", run these commands in your **VS Code terminal**:
+
+1. **Force Sync (Resets your PC to match GitHub exactly):**
    ```bash
    git reset --hard origin/main
    git pull
@@ -46,33 +85,11 @@ If you see errors about `[requestId]` or `generateStaticParams`, or if you canno
    npm run build
    npx cap sync android
    ```
-*This clears local conflicts and brings in the latest fixes from Firebase Studio.*
 
 ---
 
-## 📱 How to Convert to Android App (APK)
-
-1. **Prepare the Build**:
-   ```bash
-   npm run build
-   ```
-2. **Sync the Project**:
-   ```bash
-   npx cap sync android
-   ```
-3. **Build APK in Android Studio**:
-   1. Run `npx cap open android`.
-   2. Wait for the indexing to finish.
-   3. Go to: **Build > Build Bundle(s) / APK(s) > Build APK(s)**.
-
----
-
-## 🚀 How to Update your Local Code
-If you made changes here in Firebase Studio and want them on your computer:
-1. **Push from Firebase Studio**.
-2. **In VS Code**, run:
-   ```bash
-   git pull
-   npm run build
-   npx cap sync android
-   ```
+## 📱 Features
+- **Real-time Chat**: Connect with volunteers instantly.
+- **AI Assistance**: Gemini-powered task descriptions for clarity.
+- **Admin Dashboard**: Full system oversight for PKS administrators.
+- **Push Notifications**: Stay updated with Firebase Cloud Messaging.
