@@ -28,6 +28,7 @@ When you open VS Code, ensure you have opened the **project folder directly** (e
    ```bash
    npm install
    ```
+   *Note: If you see "vulnerabilities" or "funding" messages, this is NORMAL. The installation was successful if it says "added packages" or "up to date".*
 
 ### Phase 2: Building the Web Assets
 This turns your code into a "static site" that Android can run locally.
