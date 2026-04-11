@@ -31,15 +31,35 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Suspense, useMemo, useState, useEffect } from 'react';
 import { useFcm } from '@/firebase/messaging/use-fcm';
+import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
 
 function DashboardNav() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [mounted, setMounted] = useState(false);
+  const db = useFirestore();
+  const { user } = useUser();
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Real-time check for unread messages across all chat rooms
+  const chatRoomsQuery = useMemoFirebase(() => {
+    if (!user || !mounted) return null;
+    return query(
+      collection(db, 'chat_rooms'),
+      where('participantUserIds', 'array-contains', user.uid)
+    );
+  }, [db, user, mounted]);
+
+  const { data: chatRooms } = useCollection(chatRoomsQuery);
+
+  const hasUnreadMessages = useMemo(() => {
+    if (!chatRooms || !user) return false;
+    return chatRooms.some(room => room.lastMessageSenderId && room.lastMessageSenderId !== user.uid);
+  }, [chatRooms, user]);
 
   const roleQuery = searchParams.get('role');
 
@@ -54,12 +74,12 @@ function DashboardNav() {
   const navItems = {
     elderly: [
       { label: 'Home', icon: Home, href: `/dashboard/elderly?role=elderly` },
-      { label: 'Chat', icon: MessageSquare, href: `/dashboard/chat?role=elderly` },
+      { label: 'Chat', icon: MessageSquare, href: `/dashboard/chat?role=elderly`, hasBadge: hasUnreadMessages },
       { label: 'Profile', icon: User, href: `/dashboard/profile?role=elderly` },
     ],
     volunteer: [
       { label: 'Browse', icon: LayoutDashboard, href: `/dashboard/volunteer?role=volunteer` },
-      { label: 'Chat', icon: MessageSquare, href: `/dashboard/chat?role=volunteer` },
+      { label: 'Chat', icon: MessageSquare, href: `/dashboard/chat?role=volunteer`, hasBadge: hasUnreadMessages },
       { label: 'Profile', icon: User, href: `/dashboard/profile?role=volunteer` },
     ],
     admin: [
@@ -87,8 +107,11 @@ function DashboardNav() {
               isActive ? 'text-accent' : 'text-muted-foreground'
             }`}
           >
-            <div className={`p-1.5 rounded-xl transition-colors ${isActive ? 'bg-accent/10' : ''}`}>
+            <div className={`p-1.5 rounded-xl transition-colors relative ${isActive ? 'bg-accent/10' : ''}`}>
               <Icon className={`h-6 w-6 ${isActive ? 'stroke-[2.5px]' : 'stroke-[2px]'}`} />
+              {item.hasBadge && (
+                <div className="absolute -top-0.5 -right-0.5 h-3 w-3 bg-destructive rounded-full border-2 border-white animate-pulse" />
+              )}
             </div>
             <span className={`text-[10px] font-bold uppercase tracking-wider ${isActive ? 'opacity-100' : 'opacity-70'}`}>
               {item.label}

@@ -92,9 +92,11 @@ function ChatContent() {
 
     addDocumentNonBlocking(messagesRef, messageData);
     
+    // Update the room with the last message info and sender
     updateDocumentNonBlocking(doc(db, 'chat_rooms', requestId), {
       lastMessageSnippet: messageText,
-      lastMessageAt: serverTimestamp()
+      lastMessageAt: serverTimestamp(),
+      lastMessageSenderId: user.uid
     });
     
     setIsSending(false);
