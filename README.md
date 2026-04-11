@@ -26,13 +26,11 @@ To move this project from Firebase Studio to your local **VS Code**, follow thes
 ### 1. Push from Firebase Studio to GitHub
 In the terminal here in Firebase Studio:
 ```bash
-git init
 git add .
-git commit -m "Initial commit of ElderCare Connect"
-# Create a new repository on GitHub.com first, then link it:
-git remote add origin <YOUR_GITHUB_REPO_URL>
-git branch -M main
-git push -u origin main
+git commit -m "Updated features in ElderCare Connect"
+# Ensure your remote is set (only needed once)
+# git remote add origin <YOUR_GITHUB_REPO_URL>
+git push
 ```
 
 ### 2. Clone to your Local Machine (PC/Laptop)
@@ -48,54 +46,45 @@ cd ElderCare-Connect
 npm install
 ```
 
-### 3. Updating GitHub with New Changes
-Whenever you make changes in Firebase Studio and want them to appear on GitHub, run these commands in the Firebase Studio terminal:
-```bash
-git add .
-git commit -m "Updated features in ElderCare Connect"
-git push
-```
-Then on your local machine, run `git pull` to get those changes.
-
 ---
 
 ## 📱 How to Convert to Android App (APK)
 
-To convert this project into an Android APK, you must use your local computer (VS Code) and **Capacitor**.
+To convert this project into an Android APK, follow these steps exactly in your local VS Code terminal.
 
 ### Prerequisites
-1. **Node.js** installed on your computer.
-2. **Android Studio** installed on your computer.
-3. The code must be cloned to your local machine from GitHub (see step 2 above).
+1. **Node.js** and **Android Studio** installed on your computer.
+2. The code must be cloned locally.
 
-### Step 1: Prepare Next.js for Mobile
-Open `next.config.ts` and ensure it has `output: 'export'`.
-
-### Step 2: Install Capacitor
-In your local terminal (VS Code), run:
-```bash
-npm install @capacitor/core @capacitor/cli @capacitor/android
-npx cap init ElderCare com.pks.eldercare web
-```
-
-### Step 3: Build the Project
-Create a static build of your website:
+### Step 1: Prepare the Build
+Run these commands to create the static files for the app:
 ```bash
 npm run build
 ```
 
-### Step 4: Add Android Platform
-Link your code to the Android system:
+### Step 2: Initialize Capacitor (Only once)
+If you haven't initialized it yet:
 ```bash
+npm install @capacitor/core @capacitor/cli @capacitor/android
+npx cap init ElderCare com.pks.eldercare --web-dir out
 npx cap add android
-npx cap copy
 ```
 
-### Step 5: Generate APK in Android Studio
-1. Run `npx cap open android`. This will open **Android Studio**.
-2. Wait for the project to load (indexing).
-3. In Android Studio, go to: **Build > Build Bundle(s) / APK(s) > Build APK(s)**.
-4. Once finished, a popup will appear. Click **Locate** to find your `app-debug.apk` file.
+### Step 3: Sync the Project (FIXES GRADLE ERROR)
+This is the most important step. It generates the missing Gradle files:
+```bash
+npx cap sync android
+```
 
----
-*Built for Politeknik Kuching Sarawak - Connecting Generations.*
+### Step 4: Build APK in Android Studio
+1. Run `npx cap open android`. This opens **Android Studio**.
+2. **Wait** for the loading bar at the bottom to finish (indexing/Gradle sync).
+3. Go to: **Build > Build Bundle(s) / APK(s) > Build APK(s)**.
+4. Once finished, click **Locate** in the popup to find your `app-debug.apk`.
+
+### 💡 Troubleshooting "Missing capacitor.settings.gradle"
+If you see the error about "capacitor.settings.gradle" missing in Android Studio:
+1. Close Android Studio.
+2. Go back to VS Code.
+3. Run `npx cap sync android`.
+4. Re-open Android Studio using `npx cap open android`.

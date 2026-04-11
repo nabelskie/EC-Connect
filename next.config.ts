@@ -1,7 +1,7 @@
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  output: 'export', // Required for static exports used in mobile apps (Capacitor)
   typescript: {
     ignoreBuildErrors: true,
   },
