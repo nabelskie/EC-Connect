@@ -65,8 +65,11 @@ function RequestsHistoryContent() {
       ...(completedData || []).map(r => ({ ...r, status: 'Completed' }))
     ];
     
+    // Deduplicate by ID to prevent React key errors during transitions
+    const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
+
     // Sort by creation date descending
-    return combined.sort((a, b) => {
+    return unique.sort((a, b) => {
       const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
       return dateB - dateA;

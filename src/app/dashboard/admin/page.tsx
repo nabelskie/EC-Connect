@@ -54,7 +54,11 @@ export default function AdminDashboard() {
 
     const counts: Record<string, number> = {};
     const allReqs = [...(pendingData || []), ...(activeData || []), ...(completedData || [])];
-    allReqs.forEach(req => {
+    
+    // Deduplicate for counting
+    const uniqueReqs = Array.from(new Map(allReqs.map(r => [r.id, r])).values());
+    
+    uniqueReqs.forEach(req => {
       const type = req.taskType || 'Other';
       counts[type] = (counts[type] || 0) + 1;
     });
@@ -94,7 +98,11 @@ export default function AdminDashboard() {
       ...(activeData || []).map(r => ({ ...r, status: 'Active' })),
       ...(completedData || []).map(r => ({ ...r, status: 'Completed' }))
     ];
-    return allReqs
+    
+    // Deduplicate by ID to prevent React key errors during transitions
+    const unique = Array.from(new Map(allReqs.map(item => [item.id, item])).values());
+
+    return unique
       .sort((a, b) => {
         const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
         const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
