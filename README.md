@@ -8,6 +8,9 @@ ElderCare Connect is a modern, real-time application built with Next.js and Fire
 
 Follow these steps **on your local computer** (Windows/macOS) to generate your mobile app.
 
+### ⚠️ CRITICAL: Check your folder first!
+When you open VS Code, ensure you have opened the **project folder directly** (e.g., `EC-Connect`). Your sidebar should show the `src` and `app` folders immediately. If you see another folder with your project name inside VS Code, you are "one level too high." Go to **File > Open Folder** and select that inner folder.
+
 ### Phase 1: Initial Setup (The "First Time" Only)
 1. **Push from Firebase Studio**: In this window (Firebase Studio), run:
    ```bash
@@ -19,6 +22,8 @@ Follow these steps **on your local computer** (Windows/macOS) to generate your m
    - Open **VS Code** on your computer.
    - Click **Clone Git Repository** on the welcome screen.
    - Paste your GitHub URL and select a folder.
+   - **Important**: When it finishes, VS Code will ask to "Open" the repository. Click **Open**.
+
 3. **Install Dependencies**: Open the VS Code terminal (Ctrl+`) and run:
    ```bash
    npm install
@@ -63,7 +68,9 @@ If you make changes here in Firebase Studio and want to update the app on your p
 1. **Push from Firebase Studio** (git add/commit/push).
 2. **On your PC (VS Code)**, run:
    ```bash
+   git reset --hard origin/main
    git pull
+   npm install
    npm run build
    npx cap sync android
    ```
@@ -71,25 +78,21 @@ If you make changes here in Firebase Studio and want to update the app on your p
 
 ---
 
-## ⚠️ CRITICAL: Fixing Build or Git Errors
-If you see errors like `generateStaticParams` or "git pull failed", run these commands in your **VS Code terminal**:
+## ⚠️ Troubleshooting Git & Build Errors
+If you see errors like `generateStaticParams` or "git pull failed":
 
 1. **Force Sync (Resets your PC to match GitHub exactly):**
    ```bash
    git reset --hard origin/main
    git pull
    ```
-2. **Re-build:**
-   ```bash
-   npm install
-   npm run build
-   npx cap sync android
-   ```
+2. **Missing Script Error:**
+   Ensure you are inside the correct folder. The terminal should show the folder name where your `package.json` is located. If not, use `cd your-folder-name`.
 
 ---
 
 ## 📱 Features
-- **Real-time Chat**: Connect with volunteers instantly.
+- **Real-time Chat**: Connect with volunteers instantly with unread message indicators.
 - **AI Assistance**: Gemini-powered task descriptions for clarity.
 - **Admin Dashboard**: Full system oversight for PKS administrators.
 - **Push Notifications**: Stay updated with Firebase Cloud Messaging.
