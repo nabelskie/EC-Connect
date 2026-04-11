@@ -19,22 +19,6 @@ The app transforms the campus into a proactive care network, enhancing the quali
 ## Objective
 To provide a secure, user-friendly, and efficient digital solution that automates the matching of elderly needs with student availability, ensuring timely assistance and fostering intergenerational connections.
 
-## Key Features
-- **Role-Based Dashboards**: Tailored experiences for Residents (Elderly), Volunteers (Students), and Administrators.
-- **Persistent 1-on-1 Chat**: Message history is preserved between users across different assistance requests.
-- **Real-Time Assistance Tracking**: Monitor requests as they move from Pending to Active to Completed in the Firebase Console.
-- **AI-Powered Assistance**: 
-  - **Residents**: Get help writing clear task descriptions with Gemini.
-  - **Admins**: Receive automated system performance summaries.
-- **Push Notifications**: Integrated Firebase Cloud Messaging (FCM) to alert users of new requests and messages.
-
-## Tech Stack
-- **Framework**: Next.js 15 (App Router)
-- **Database**: Firebase Firestore
-- **Authentication**: Firebase Auth
-- **AI**: Google Genkit with Gemini 2.5 Flash
-- **Styling**: Tailwind CSS & ShadCN UI
-
 ## How to Sync with GitHub (Move to VS Code)
 
 To move this project from Firebase Studio to your local **VS Code**, follow these steps:
@@ -59,13 +43,45 @@ git commit -m "Updated features in ElderCare Connect"
 git push
 ```
 
-### 3. Setup on your local machine (VS Code)
-Once the code is on GitHub:
-1. **Clone**: Open your local terminal and run `git clone <YOUR_GITHUB_REPO_URL>`.
-2. **Open**: Open the folder in VS Code.
-3. **Install**: Run `npm install` to install all dependencies.
-4. **Environment**: Ensure your `src/firebase/config.ts` matches your project settings.
-5. **Run**: Run `npm run dev` to start the local preview at `http://localhost:3000`.
+---
+
+## 📱 How to Convert to Android App (APK)
+
+To convert this project into an Android APK, you must use your local computer (VS Code) and **Capacitor**.
+
+### Prerequisites
+1. **Node.js** installed on your computer.
+2. **Android Studio** installed on your computer.
+3. The code must be cloned to your local machine from GitHub.
+
+### Step 1: Prepare Next.js for Mobile
+Open `next.config.ts` and ensure it has `output: 'export'` (Note: You may need to temporarily remove server-side features like `generateMetadata` or `generateStaticParams` for a pure static export).
+
+### Step 2: Install Capacitor
+In your local terminal (VS Code), run:
+```bash
+npm install @capacitor/core @capacitor/cli @capacitor/android
+npx cap init ElderCare com.pks.eldercare web
+```
+
+### Step 3: Build the Project
+Create a static build of your website:
+```bash
+npm run build
+```
+
+### Step 4: Add Android Platform
+Link your code to the Android system:
+```bash
+npx cap add android
+npx cap copy
+```
+
+### Step 5: Generate APK in Android Studio
+1. Run `npx cap open android`. This will open **Android Studio**.
+2. Wait for the project to load (indexing).
+3. In Android Studio, go to: **Build > Build Bundle(s) / APK(s) > Build APK(s)**.
+4. Once finished, a popup will appear. Click **Locate** to find your `app-debug.apk` file.
 
 ---
 *Built for Politeknik Kuching Sarawak - Connecting Generations.*
