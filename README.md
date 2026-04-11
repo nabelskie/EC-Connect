@@ -19,24 +19,41 @@ The app transforms the campus into a proactive care network, enhancing the quali
 ## Objective
 To provide a secure, user-friendly, and efficient digital solution that automates the matching of elderly needs with student availability, ensuring timely assistance and fostering intergenerational connections.
 
-## 🚀 How to Move to your Local Machine (VS Code)
+---
 
-To move this project from Firebase Studio to your local **VS Code**, follow these steps in order:
+## 🔄 How to Update your Local Code (VS Code)
+If you made changes here in Firebase Studio and want them on your computer, you **don't** need to start over. Just follow these steps:
 
-### 1. Push from Firebase Studio to GitHub
-In the terminal here in Firebase Studio:
+### 1. Push from Firebase Studio (here)
 ```bash
 git add .
-git commit -m "Updated features in ElderCare Connect"
-# Ensure your remote is set (only needed once)
-# git remote add origin <YOUR_GITHUB_REPO_URL>
+git commit -m "Latest updates"
 git push
 ```
 
-### 2. Clone to your Local Machine (PC/Laptop)
-On your own computer, open your terminal (Command Prompt, PowerShell, or Terminal) and run:
+### 2. Pull on your Computer (PC/Laptop)
+Open your VS Code terminal and run:
 ```bash
-# Go to the folder where you want to save the project
+git pull
+npm install
+```
+
+---
+
+## 🚀 How to Move to your Local Machine (Initial Setup)
+
+To move this project from Firebase Studio to your local **VS Code** for the first time:
+
+### 1. Push from Firebase Studio to GitHub
+```bash
+git add .
+git commit -m "Initial setup"
+git push
+```
+
+### 2. Clone to your Local Machine
+```bash
+# Go to your desired folder
 cd Documents
 # Clone the repository
 git clone <YOUR_GITHUB_REPO_URL>
@@ -52,12 +69,8 @@ npm install
 
 To convert this project into an Android APK, follow these steps exactly in your local VS Code terminal.
 
-### Prerequisites
-1. **Node.js** and **Android Studio** installed on your computer.
-2. The code must be cloned locally.
-
 ### Step 1: Prepare the Build (IMPORTANT)
-Run this command to create the static files for the app. This generates the `out` folder:
+Run this command to create the static files. This generates the `out` folder:
 ```bash
 npm run build
 ```
