@@ -56,14 +56,14 @@ To convert this project into an Android APK, follow these steps exactly in your 
 1. **Node.js** and **Android Studio** installed on your computer.
 2. The code must be cloned locally.
 
-### Step 1: Prepare the Build
-Run these commands to create the static files for the app:
+### Step 1: Prepare the Build (IMPORTANT)
+Run this command to create the static files for the app. This generates the `out` folder:
 ```bash
 npm run build
 ```
 
-### Step 2: Initialize Capacitor (Only once)
-If you haven't initialized it yet:
+### Step 2: Initialize Capacitor (Fixes "missing www" error)
+Run this command to initialize Capacitor and point it to the correct `out` directory:
 ```bash
 npm install @capacitor/core @capacitor/cli @capacitor/android
 npx cap init ElderCare com.pks.eldercare --web-dir out
@@ -71,7 +71,7 @@ npx cap add android
 ```
 
 ### Step 3: Sync the Project (FIXES GRADLE ERROR)
-This is the most important step. It generates the missing Gradle files:
+This generates the missing Gradle files for Android Studio:
 ```bash
 npx cap sync android
 ```
@@ -82,9 +82,7 @@ npx cap sync android
 3. Go to: **Build > Build Bundle(s) / APK(s) > Build APK(s)**.
 4. Once finished, click **Locate** in the popup to find your `app-debug.apk`.
 
-### 💡 Troubleshooting "Missing capacitor.settings.gradle"
-If you see the error about "capacitor.settings.gradle" missing in Android Studio:
-1. Close Android Studio.
-2. Go back to VS Code.
-3. Run `npx cap sync android`.
-4. Re-open Android Studio using `npx cap open android`.
+### 💡 Troubleshooting "Missing capacitor.settings.gradle" or "missing www"
+1. **Always run `npm run build`** before syncing.
+2. If it still says `missing www`, ensure your `capacitor.config.json` has `"webDir": "out"`.
+3. If Android Studio is already open, run `npx cap sync android` and then click **File > Sync Project with Gradle Files** inside Android Studio.
