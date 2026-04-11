@@ -32,12 +32,20 @@ npx cap sync android
 
 ---
 
-## 🛠️ How to Fix "Git Pull" or Overwrite Errors
-If you see an error saying "Your local changes would be overwritten", run this in your VS Code terminal:
-```bash
-git reset --hard origin/main
-git pull
-```
+## 🛠️ CRITICAL: How to Fix "Build Errors" or "Git Pull" Errors
+If you see errors about `[requestId]` or `generateStaticParams`, or if you cannot pull updates, run these commands in your **VS Code terminal**:
+
+1. **Force Sync (Resets local to match GitHub):**
+   ```bash
+   git reset --hard origin/main
+   git pull
+   ```
+2. **Re-build:**
+   ```bash
+   npm install
+   npm run build
+   npx cap sync android
+   ```
 *This clears local conflicts and brings in the latest fixes from Firebase Studio.*
 
 ---
