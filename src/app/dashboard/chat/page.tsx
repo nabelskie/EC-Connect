@@ -24,7 +24,6 @@ function ChatInboxContent() {
     setMounted(true);
   }, []);
 
-  // Fetch real-time chat rooms for the current user
   const chatRoomsQuery = useMemoFirebase(() => {
     if (!user || !mounted) return null;
     return query(
@@ -35,7 +34,6 @@ function ChatInboxContent() {
 
   const { data: chatRooms, isLoading, error } = useCollection(chatRoomsQuery);
 
-  // Sort chat rooms in memory by lastMessageAt descending
   const sortedChatRooms = useMemo(() => {
     if (!chatRooms) return [];
     return [...chatRooms].sort((a, b) => {
@@ -86,15 +84,12 @@ function ChatInboxContent() {
               <p className="text-xs font-bold uppercase">Loading conversations...</p>
             </div>
           ) : sortedChatRooms.map((chat) => {
-            // Determine partner name and role based on current user's role
             const partnerName = role === 'volunteer' ? chat.residentName : chat.volunteerName;
             const partnerRole = role === 'volunteer' ? 'Elderly' : 'Volunteer';
-            
-            // Check if there is an "unread" message (last sender was NOT the current user)
             const isUnread = chat.lastMessageSenderId && chat.lastMessageSenderId !== user?.uid;
             
             return (
-              <Link key={chat.id} href={`/dashboard/chat/${chat.id}?role=${role}`}>
+              <Link key={chat.id} href={`/dashboard/chat/room?requestId=${chat.id}&role=${role}`}>
                 <Card className={`border-none shadow-sm rounded-3xl overflow-hidden active:bg-slate-50 transition-colors mb-3 ${isUnread ? 'bg-accent/5 ring-1 ring-accent/10' : 'bg-white'}`}>
                   <CardContent className="p-4 flex items-center gap-4">
                     <div className="relative">

@@ -70,7 +70,6 @@ export default function ElderlyDashboard() {
     setMounted(true);
   }, []);
 
-  // Real-time data fetching for user's requests
   const pendingQuery = useMemoFirebase(() => {
     if (!user || !mounted) return null;
     return query(collection(db, 'assistance_requests_pending'), where('createdByUserId', '==', user.uid));
@@ -86,7 +85,6 @@ export default function ElderlyDashboard() {
 
   const allActiveRequests = useMemo(() => {
     const combined = [...(pendingData || []), ...(activeData || [])];
-    // Deduplicate by ID to prevent React key errors during transitions
     const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
     return unique.sort((a, b) => {
       const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
@@ -114,7 +112,6 @@ export default function ElderlyDashboard() {
       });
       setFormData({ ...formData, initialDesc: result.generatedDescription });
     } catch (error) {
-      // AI errors handled by Genkit flow
     } finally {
       setIsAiLoading(false);
     }
@@ -122,25 +119,17 @@ export default function ElderlyDashboard() {
 
   const handleSubmit = async () => {
     if (!formData.type || !formData.initialDesc || !user) return;
-    
     setIsSubmitting(true);
-
     let nameToUse = user.displayName;
     try {
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       if (userDoc.exists()) {
         nameToUse = userDoc.data().name;
       }
-    } catch (e) {
-      // Fallback
-    }
-
+    } catch (e) {}
     const requestId = Math.random().toString(36).substring(7);
-    
-    // Construct final location and description
     let finalLocation = 'Not specified';
     let finalDescription = formData.initialDesc;
-
     if (formData.type === 'Transportation') {
       finalLocation = `From: ${formData.fromLocation || 'N/A'} To: ${formData.toLocation || 'N/A'}`;
     } else if (formData.type === 'Groceries') {
@@ -151,7 +140,6 @@ export default function ElderlyDashboard() {
         finalDescription = `[Device: ${formData.device}] ${formData.initialDesc}`;
       }
     }
-
     const requestData = {
       id: requestId,
       createdByUserId: user.uid,
@@ -163,27 +151,12 @@ export default function ElderlyDashboard() {
       status: 'Pending',
       createdAt: new Date().toISOString()
     };
-
     const docRef = doc(db, 'assistance_requests_pending', requestId);
     setDocumentNonBlocking(docRef, requestData, { merge: true });
-
     setIsSubmitting(false);
     setShowForm(false);
-    
-    toast({
-      title: "Request Submitted",
-      description: "Volunteers have been notified of your request.",
-    });
-
-    setFormData({
-      type: '',
-      initialDesc: '',
-      fromLocation: '',
-      toLocation: '',
-      address: '',
-      device: '',
-      urgency: 'Low'
-    });
+    toast({ title: "Request Submitted", description: "Volunteers have been notified of your request." });
+    setFormData({ type: '', initialDesc: '', fromLocation: '', toLocation: '', address: '', device: '', urgency: 'Low' });
   };
 
   const handleCancelRequest = (request: any) => {
@@ -191,32 +164,19 @@ export default function ElderlyDashboard() {
     const docRef = doc(db, collectionName, request.id);
     deleteDocumentNonBlocking(docRef);
     setSelectedRequest(null);
-    toast({
-      title: "Request Cancelled",
-      description: "Your assistance request has been removed.",
-    });
+    toast({ title: "Request Cancelled", description: "Your assistance request has been removed." });
   };
 
   const handleCompleteRequest = (request: any) => {
     if (!user) return;
     const requestId = request.id;
-    const completedData = {
-      ...request,
-      status: 'Completed',
-      completedAt: new Date().toISOString()
-    };
-
+    const completedData = { ...request, status: 'Completed', completedAt: new Date().toISOString() };
     const completedRef = doc(db, 'assistance_requests_completed', requestId);
     const activeRef = doc(db, 'assistance_requests_active', requestId);
-
     setDocumentNonBlocking(completedRef, completedData, { merge: true });
     deleteDocumentNonBlocking(activeRef);
-    
     setSelectedRequest(null);
-    toast({
-      title: "Task Completed",
-      description: "Thank you! The status has been updated.",
-    });
+    toast({ title: "Task Completed", description: "Thank you! The status has been updated." });
   };
 
   const getStatusBadge = (status: string) => {
@@ -287,7 +247,6 @@ export default function ElderlyDashboard() {
               <X className="h-5 w-5" />
             </Button>
           </div>
-
           <div className="space-y-6">
             <div className="space-y-2">
               <Label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Help Category</Label>
@@ -302,7 +261,6 @@ export default function ElderlyDashboard() {
                 </SelectContent>
               </Select>
             </div>
-
             {formData.type === 'Tech Support' && (
               <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
                 <div className="space-y-2">
@@ -322,38 +280,21 @@ export default function ElderlyDashboard() {
                 </div>
                 <div className="space-y-2">
                   <Label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Address</Label>
-                  <Input 
-                    placeholder="Where should the volunteer go?" 
-                    className="h-14 rounded-2xl text-lg"
-                    value={formData.address}
-                    onChange={(e) => setFormData({...formData, address: e.target.value})}
-                  />
+                  <Input placeholder="Where should the volunteer go?" className="h-14 rounded-2xl text-lg" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} />
                 </div>
               </div>
             )}
-
             {formData.type === 'Groceries' && (
               <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
                 <Label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Delivery Address</Label>
-                <Input 
-                  placeholder="e.g. Block A, Room 102" 
-                  className="h-14 rounded-2xl text-lg"
-                  value={formData.address}
-                  onChange={(e) => setFormData({...formData, address: e.target.value})}
-                />
+                <Input placeholder="e.g. Block A, Room 102" className="h-14 rounded-2xl text-lg" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} />
               </div>
             )}
-
             {formData.type === 'Transportation' && (
               <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
                 <div className="space-y-2">
                   <Label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">From (Pick-up)</Label>
-                  <Input 
-                    placeholder="e.g. My Home / Block A" 
-                    className="h-14 rounded-2xl text-lg"
-                    value={formData.fromLocation}
-                    onChange={(e) => setFormData({...formData, fromLocation: e.target.value})}
-                  />
+                  <Input placeholder="e.g. My Home / Block A" className="h-14 rounded-2xl text-lg" value={formData.fromLocation} onChange={(e) => setFormData({...formData, fromLocation: e.target.value})} />
                 </div>
                 <div className="flex justify-center py-0">
                   <div className="h-8 w-8 rounded-full bg-slate-50 flex items-center justify-center border border-slate-100">
@@ -362,22 +303,13 @@ export default function ElderlyDashboard() {
                 </div>
                 <div className="space-y-2">
                   <Label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">To (Destination)</Label>
-                  <Input 
-                    placeholder="e.g. General Hospital / Market" 
-                    className="h-14 rounded-2xl text-lg"
-                    value={formData.toLocation}
-                    onChange={(e) => setFormData({...formData, toLocation: e.target.value})}
-                  />
+                  <Input placeholder="e.g. General Hospital / Market" className="h-14 rounded-2xl text-lg" value={formData.toLocation} onChange={(e) => setFormData({...formData, toLocation: e.target.value})} />
                 </div>
               </div>
             )}
-
             <div className="space-y-2">
               <Label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Urgency Level</Label>
-              <Select 
-                value={formData.urgency} 
-                onValueChange={(val) => setFormData({...formData, urgency: val as 'Low' | 'Medium' | 'High'})}
-              >
+              <Select value={formData.urgency} onValueChange={(val) => setFormData({...formData, urgency: val as 'Low' | 'Medium' | 'High'})}>
                 <SelectTrigger className="h-14 rounded-2xl text-lg">
                   <SelectValue placeholder="Select Urgency" />
                 </SelectTrigger>
@@ -388,44 +320,19 @@ export default function ElderlyDashboard() {
                 </SelectContent>
               </Select>
             </div>
-
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Details</Label>
-                <Button 
-                  variant="link" 
-                  size="sm" 
-                  onClick={handleAiHelp} 
-                  disabled={isAiLoading || !formData.type || !formData.initialDesc} 
-                  className="text-accent font-bold gap-1 p-0"
-                >
+                <Button variant="link" size="sm" onClick={handleAiHelp} disabled={isAiLoading || !formData.type || !formData.initialDesc} className="text-accent font-bold gap-1 p-0">
                   {isAiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                   AI Refine
                 </Button>
               </div>
-              <Textarea 
-                placeholder="What specifically do you need help with?" 
-                className="min-h-[120px] rounded-2xl text-lg p-4"
-                value={formData.initialDesc}
-                onChange={(e) => setFormData({...formData, initialDesc: e.target.value})}
-              />
+              <Textarea placeholder="What specifically do you need help with?" className="min-h-[120px] rounded-2xl text-lg p-4" value={formData.initialDesc} onChange={(e) => setFormData({...formData, initialDesc: e.target.value})} />
             </div>
-
             <div className="pt-4">
-              <Button 
-                size="lg" 
-                className="w-full h-16 text-xl rounded-2xl bg-primary font-bold shadow-xl"
-                onClick={handleSubmit}
-                disabled={!formData.type || !formData.initialDesc || isSubmitting}
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-6 w-6 animate-spin" />
-                    Submitting...
-                  </>
-                ) : (
-                  'Submit Request'
-                )}
+              <Button size="lg" className="w-full h-16 text-xl rounded-2xl bg-primary font-bold shadow-xl" onClick={handleSubmit} disabled={!formData.type || !formData.initialDesc || isSubmitting}>
+                {isSubmitting ? (<><Loader2 className="mr-2 h-6 w-6 animate-spin" />Submitting...</>) : 'Submit Request'}
               </Button>
             </div>
           </div>
@@ -434,7 +341,6 @@ export default function ElderlyDashboard() {
 
       <div className="space-y-4">
         <h2 className="text-xl font-bold text-primary">Active Status</h2>
-        
         <div className="space-y-3">
           {(isPendingLoading || isActiveLoading) ? (
             <div className="flex flex-col items-center justify-center py-10 gap-2 opacity-40">
@@ -442,15 +348,9 @@ export default function ElderlyDashboard() {
               <p className="text-xs font-bold uppercase">Loading requests...</p>
             </div>
           ) : allActiveRequests.map((req) => (
-            <Card 
-              key={req.id} 
-              className="border-none shadow-sm rounded-3xl overflow-hidden active:bg-slate-50 transition-colors cursor-pointer"
-              onClick={() => setSelectedRequest(req)}
-            >
+            <Card key={req.id} className="border-none shadow-sm rounded-3xl overflow-hidden active:bg-slate-50 transition-colors cursor-pointer" onClick={() => setSelectedRequest(req)}>
               <CardContent className="p-5 flex items-center gap-4">
-                <div className="p-3 rounded-2xl bg-accent/10 text-accent">
-                  {getTypeIcon(req.taskType)}
-                </div>
+                <div className="p-3 rounded-2xl bg-accent/10 text-accent">{getTypeIcon(req.taskType)}</div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">
                     <span className="font-bold text-primary truncate">{req.taskType}</span>
@@ -466,7 +366,6 @@ export default function ElderlyDashboard() {
               </CardContent>
             </Card>
           ))}
-          
           {(!isPendingLoading && !isActiveLoading) && allActiveRequests.length === 0 && (
             <div className="text-center py-10 opacity-40 bg-white rounded-3xl border-2 border-dashed">
               <p className="text-sm font-bold">No active requests</p>
@@ -482,53 +381,37 @@ export default function ElderlyDashboard() {
             <div className="space-y-6 h-full overflow-y-auto pb-10">
               <SheetHeader className="text-left space-y-4">
                 <div className="flex items-center justify-between">
-                  <div className="p-4 rounded-2xl bg-accent/10 text-accent w-fit">
-                    {getTypeIcon(selectedRequest.taskType)}
-                  </div>
+                  <div className="p-4 rounded-2xl bg-accent/10 text-accent w-fit">{getTypeIcon(selectedRequest.taskType)}</div>
                   {getStatusBadge(selectedRequest.status)}
                 </div>
                 <SheetTitle className="text-2xl font-bold text-primary">{selectedRequest.taskType} Help</SheetTitle>
-                <SheetDescription className="text-base leading-relaxed text-slate-600 italic">
-                  "{selectedRequest.description}"
-                </SheetDescription>
+                <SheetDescription className="text-base leading-relaxed text-slate-600 italic">"{selectedRequest.description}"</SheetDescription>
               </SheetHeader>
-
               <div className="space-y-4 pt-4 border-t">
                 <div className="flex items-start gap-4">
-                  <div className="p-2 rounded-lg bg-slate-50 text-slate-400">
-                    <MapPin className="h-5 w-5" />
-                  </div>
+                  <div className="p-2 rounded-lg bg-slate-50 text-slate-400"><MapPin className="h-5 w-5" /></div>
                   <div>
                     <Label className="text-[10px] text-muted-foreground uppercase font-bold">Location Details</Label>
                     <p className="text-primary font-medium">{selectedRequest.location}</p>
                   </div>
                 </div>
-
                 <div className="flex items-start gap-4">
-                  <div className="p-2 rounded-lg bg-slate-50 text-slate-400">
-                    <Clock className="h-5 w-5" />
-                  </div>
+                  <div className="p-2 rounded-lg bg-slate-50 text-slate-400"><Clock className="h-5 w-5" /></div>
                   <div>
                     <Label className="text-[10px] text-muted-foreground uppercase font-bold">Urgency</Label>
                     <p className={`font-bold ${selectedRequest.urgencyLevel === 'High' ? 'text-destructive' : 'text-primary'}`}>{selectedRequest.urgencyLevel}</p>
                   </div>
                 </div>
-
                 <div className="flex items-start gap-4">
-                  <div className="p-2 rounded-lg bg-slate-50 text-slate-400">
-                    <Calendar className="h-5 w-5" />
-                  </div>
+                  <div className="p-2 rounded-lg bg-slate-50 text-slate-400"><Calendar className="h-5 w-5" /></div>
                   <div>
                     <Label className="text-[10px] text-muted-foreground uppercase font-bold">Requested On</Label>
                     <p className="text-primary font-medium">{selectedRequest.createdAt ? new Date(selectedRequest.createdAt).toLocaleDateString() : 'Recent'}</p>
                   </div>
                 </div>
-
                 {selectedRequest.volunteerName && (
                   <div className="flex items-start gap-4">
-                    <div className="p-2 rounded-lg bg-emerald-50 text-emerald-500">
-                      <User className="h-5 w-5" />
-                    </div>
+                    <div className="p-2 rounded-lg bg-emerald-50 text-emerald-500"><User className="h-5 w-5" /></div>
                     <div>
                       <Label className="text-[10px] text-muted-foreground uppercase font-bold">Volunteer Assigned</Label>
                       <p className="text-primary font-medium">{selectedRequest.volunteerName}</p>
@@ -536,16 +419,14 @@ export default function ElderlyDashboard() {
                   </div>
                 )}
               </div>
-
               <div className="flex flex-col gap-3 mt-8">
                 {selectedRequest.status === 'Accepted' && (
                   <div className="flex flex-col gap-3">
                     <Button asChild className="w-full h-14 rounded-2xl bg-accent hover:bg-accent/90 font-bold">
-                      <Link href={`/dashboard/chat/${selectedRequest.chatRoomId || selectedRequest.id}?role=elderly`}>
+                      <Link href={`/dashboard/chat/room?requestId=${selectedRequest.chatRoomId || selectedRequest.id}&role=elderly`}>
                         Chat with Volunteer
                       </Link>
                     </Button>
-                    
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button className="w-full h-14 rounded-2xl bg-emerald-500 hover:bg-emerald-600 font-bold gap-2">
@@ -556,26 +437,16 @@ export default function ElderlyDashboard() {
                       <AlertDialogContent className="rounded-3xl max-w-[90vw] mx-auto">
                         <AlertDialogHeader>
                           <AlertDialogTitle>Is this task finished?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Confirming this will let the volunteer and admin know the task is successfully completed.
-                          </AlertDialogDescription>
+                          <AlertDialogDescription>Confirming this will let the volunteer and admin know the task is successfully completed.</AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter className="flex flex-col gap-2">
-                          <AlertDialogAction 
-                            onClick={() => handleCompleteRequest(selectedRequest)}
-                            className="bg-emerald-500 hover:bg-emerald-600 h-12 rounded-xl font-bold"
-                          >
-                            Yes, Mark Completed
-                          </AlertDialogAction>
-                          <AlertDialogCancel className="h-12 rounded-xl font-bold border-none bg-slate-100">
-                            Not Yet
-                          </AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleCompleteRequest(selectedRequest)} className="bg-emerald-500 hover:bg-emerald-600 h-12 rounded-xl font-bold">Yes, Mark Completed</AlertDialogAction>
+                          <AlertDialogCancel className="h-12 rounded-xl font-bold border-none bg-slate-100">Not Yet</AlertDialogCancel>
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
                   </div>
                 )}
-                
                 {selectedRequest.status === 'Pending' && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
@@ -587,20 +458,11 @@ export default function ElderlyDashboard() {
                     <AlertDialogContent className="rounded-3xl max-w-[90vw] mx-auto">
                       <AlertDialogHeader>
                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This will remove your request from the system permanently.
-                        </AlertDialogDescription>
+                        <AlertDialogDescription>This will remove your request from the system permanently.</AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter className="flex flex-col gap-2">
-                        <AlertDialogAction 
-                          onClick={() => handleCancelRequest(selectedRequest)}
-                          className="bg-destructive hover:bg-destructive/90 h-12 rounded-xl font-bold"
-                        >
-                          Yes, Cancel Request
-                        </AlertDialogAction>
-                        <AlertDialogCancel className="h-12 rounded-xl font-bold border-none bg-slate-100">
-                          Keep Request
-                        </AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleCancelRequest(selectedRequest)} className="bg-destructive hover:bg-destructive/90 h-12 rounded-xl font-bold">Yes, Cancel Request</AlertDialogAction>
+                        <AlertDialogCancel className="h-12 rounded-xl font-bold border-none bg-slate-100">Keep Request</AlertDialogCancel>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>

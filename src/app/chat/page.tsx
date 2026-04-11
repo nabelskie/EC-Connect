@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Card, CardContent } from '@/components/ui/card';
@@ -63,7 +64,7 @@ export default function ChatInboxPage() {
       <ScrollArea className="h-[calc(100vh-280px)]">
         <div className="space-y-3 px-2">
           {conversations.map((chat) => (
-            <Link key={chat.id} href={`/chat/${chat.id}`}>
+            <Link key={chat.id} href={`/chat/detail?requestId=${chat.id}`}>
               <Card className="border-none shadow-sm rounded-3xl overflow-hidden active:bg-slate-50 transition-colors mb-3">
                 <CardContent className="p-4 flex items-center gap-4">
                   <div className="relative">
