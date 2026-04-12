@@ -3,19 +3,20 @@
  * for the admin dashboard based on provided system metrics.
  */
 
-import {z} from 'genkit';
+import { z } from 'zod';
 
+// Use Zod directly for schema definitions to remain browser-compatible
 const GenerateAdminDashboardSummaryInputSchema = z.object({
-  totalUsers: z.number().describe('Total number of registered users.'),
-  totalRequests: z.number().describe('Total number of requests.'),
-  activeVolunteers: z.number().describe('Number of active volunteers.'),
-  completedTasks: z.number().describe('Total number of completed tasks.'),
-  taskTypeCounts: z.record(z.string(), z.number()).describe('Counts for each task type.'),
+  totalUsers: z.number(),
+  totalRequests: z.number(),
+  activeVolunteers: z.number(),
+  completedTasks: z.number(),
+  taskTypeCounts: z.record(z.string(), z.number()),
 });
 export type GenerateAdminDashboardSummaryInput = z.infer<typeof GenerateAdminDashboardSummaryInputSchema>;
 
 const GenerateAdminDashboardSummaryOutputSchema = z.object({
-  summary: z.string().describe('Operational summary for the admin dashboard.'),
+  summary: z.string(),
 });
 export type GenerateAdminDashboardSummaryOutput = z.infer<typeof GenerateAdminDashboardSummaryOutputSchema>;
 
@@ -34,15 +35,15 @@ export async function generateAdminDashboardSummary(
     };
   }
 
-  // We use a dynamic import here to prevent Webpack from trying to bundle 
-  // the Genkit engine into the mobile app's client-side code.
+  // Server-only block
   try {
+    // Dynamic import inside the function to ensure the client bundle never sees Genkit
     const { ai } = await import('@/ai/genkit');
 
     const prompt = ai.definePrompt({
       name: 'generateAdminDashboardSummaryPrompt',
-      input: {schema: GenerateAdminDashboardSummaryInputSchema},
-      output: {schema: GenerateAdminDashboardSummaryOutputSchema},
+      input: { schema: GenerateAdminDashboardSummaryInputSchema },
+      output: { schema: GenerateAdminDashboardSummaryOutputSchema },
       prompt: `Provide a concise operational summary for an admin dashboard based on these metrics: 
       Total Users: {{{totalUsers}}}, Total Requests: {{{totalRequests}}}, Completed: {{{completedTasks}}}.`,
     });

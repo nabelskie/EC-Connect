@@ -31,8 +31,8 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // This section tells Webpack to ignore Node.js specific modules 
-  // that Genkit uses, allowing the static build for Android to succeed.
+  // Aggressive Webpack configuration to prevent Node.js modules 
+  // from breaking the mobile app (static export) build.
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {
@@ -42,7 +42,21 @@ const nextConfig: NextConfig = {
         tls: false,
         child_process: false,
         perf_hooks: false,
+        dns: false,
+        os: false,
+        path: false,
+        crypto: false,
+        http: false,
+        https: false,
+        stream: false,
+        zlib: false,
       };
+      
+      // Exclude Genkit and its dependencies from the client-side bundle entirely
+      config.module.rules.push({
+        test: /node_modules\/(@genkit-ai|genkit|@grpc|@opentelemetry)/,
+        use: 'null-loader',
+      });
     }
     return config;
   },
