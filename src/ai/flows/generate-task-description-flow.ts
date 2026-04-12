@@ -1,3 +1,4 @@
+
 /**
  * @fileOverview A Genkit flow that helps elderly users or caregivers write clear and comprehensive descriptions for assistance requests.
  */
@@ -37,18 +38,16 @@ export async function generateTaskDescription(
 
   // Server-only block
   try {
-    // Dynamic import inside the function to ensure the client bundle never sees Genkit
+    // Dynamic import inside the function to ensure the client bundle never sees Genkit code
     const { ai } = await import('@/ai/genkit');
     
     const prompt = ai.definePrompt({
       name: 'generateTaskDescriptionPrompt',
       input: { schema: GenerateTaskDescriptionInputSchema },
       output: { schema: GenerateTaskDescriptionOutputSchema },
-      prompt: `You are an AI assistant designed to help elderly users or caregivers write clear and comprehensive descriptions for assistance requests.
-Expand on the initial description provided: {{{initialDescription}}}. 
-Task Type: {{{taskType}}}. 
-Location: {{{location}}}. 
-Urgency: {{{urgencyLevel}}}.`,
+      prompt: `You are an AI assistant helping elderly users. 
+Expand on this: {{{initialDescription}}}. 
+Type: {{{taskType}}}. Location: {{{location}}}. Urgency: {{{urgencyLevel}}}.`,
     });
 
     const { output } = await prompt(input);

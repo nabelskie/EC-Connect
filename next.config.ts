@@ -1,3 +1,4 @@
+
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
@@ -11,30 +12,14 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true, // Required for static exports used in mobile apps
     remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'placehold.co',
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'images.unsplash.com',
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'picsum.photos',
-        port: '',
-        pathname: '/**',
-      },
+      { protocol: 'https', hostname: 'placehold.co' },
+      { protocol: 'https', hostname: 'images.unsplash.com' },
+      { protocol: 'https', hostname: 'picsum.photos' },
     ],
   },
-  // Aggressive Webpack configuration to prevent Node.js modules 
-  // from breaking the mobile app (static export) build.
   webpack: (config, { isServer }) => {
     if (!isServer) {
+      // Stub out Node.js modules that don't exist in the browser
       config.resolve.fallback = {
         ...config.resolve.fallback,
         fs: false,
@@ -52,9 +37,9 @@ const nextConfig: NextConfig = {
         zlib: false,
       };
       
-      // Exclude Genkit and its dependencies from the client-side bundle entirely
+      // Aggressively exclude Genkit and its heavy server-only dependencies from the mobile bundle
       config.module.rules.push({
-        test: /node_modules\/(@genkit-ai|genkit|@grpc|@opentelemetry)/,
+        test: /node_modules\/(@genkit-ai|genkit|@grpc|@opentelemetry|google-auth-library)/,
         use: 'null-loader',
       });
     }

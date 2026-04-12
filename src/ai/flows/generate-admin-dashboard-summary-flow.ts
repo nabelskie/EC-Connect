@@ -1,3 +1,4 @@
+
 /**
  * @fileOverview This file implements a Genkit flow to generate a summary of key operational insights
  * for the admin dashboard based on provided system metrics.
@@ -31,13 +32,13 @@ export async function generateAdminDashboardSummary(
   // Check if we are in the browser (Mobile App / Static Export context)
   if (typeof window !== 'undefined') {
     return { 
-      summary: `System Overview: ${input.totalUsers} users registered, ${input.totalRequests} total requests, and ${input.completedTasks} tasks completed successfully.`
+      summary: `System Overview: ${input.totalUsers} users, ${input.totalRequests} requests, and ${input.completedTasks} completed tasks.`
     };
   }
 
   // Server-only block
   try {
-    // Dynamic import inside the function to ensure the client bundle never sees Genkit
+    // Dynamic import inside the function to ensure the client bundle never sees Genkit code
     const { ai } = await import('@/ai/genkit');
 
     const prompt = ai.definePrompt({
