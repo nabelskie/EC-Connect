@@ -2,7 +2,7 @@
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
-  output: 'export', // Required for static exports used in mobile apps (Capacitor)
+  output: 'export',
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   images: {
-    unoptimized: true, // Required for static exports used in mobile apps
+    unoptimized: true,
     remotePatterns: [
       { protocol: 'https', hostname: 'placehold.co' },
       { protocol: 'https', hostname: 'images.unsplash.com' },
@@ -19,7 +19,6 @@ const nextConfig: NextConfig = {
   },
   webpack: (config, { isServer }) => {
     if (!isServer) {
-      // Stub out Node.js modules that don't exist in the browser/mobile environment
       config.resolve.fallback = {
         ...config.resolve.fallback,
         fs: false,
@@ -33,7 +32,7 @@ const nextConfig: NextConfig = {
         crypto: false,
         http: false,
         https: false,
-        http2: false, // CRITICAL: Fixed the "Can't resolve http2" error
+        http2: false,
         stream: false,
         zlib: false,
         url: false,
@@ -41,8 +40,6 @@ const nextConfig: NextConfig = {
         async_hooks: false,
       };
       
-      // Aggressively exclude Genkit and its heavy server-only dependencies from the mobile bundle
-      // We use null-loader to effectively delete these modules from the client-side build
       config.module.rules.push({
         test: /node_modules\/(@genkit-ai|genkit|@grpc|@opentelemetry|google-auth-library|gaxios|gcp-metadata|google-p12-asn1|retry-request)/,
         use: 'null-loader',

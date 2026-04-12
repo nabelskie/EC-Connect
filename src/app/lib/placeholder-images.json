@@ -1,0 +1,23 @@
+
+{
+  "placeholderImages": [
+    {
+      "id": "hero-elderly",
+      "description": "Elderly person smiling with a volunteer",
+      "imageUrl": "https://images.unsplash.com/photo-1620128329124-0d65cfa83141?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxlbGRlcmx5JTIwY2FyZSUyMHZvbHVudGVlcnxlbnwwfHx8fDE3NzI0MTUyMTF8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "elderly care volunteer"
+    },
+    {
+      "id": "grocery-task",
+      "description": "Volunteers helping with groceries",
+      "imageUrl": "https://images.unsplash.com/photo-1761168254796-24613d562a44?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxncm9jZXJ5JTIwc2hvcHBpbmclMjBhc3Npc3RhbmNlfGVufDB8fHx8MTc3MjQxNTIxMXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "grocery shopping assistance"
+    },
+    {
+      "id": "tech-support",
+      "description": "Helping elderly with a tablet",
+      "imageUrl": "https://images.unsplash.com/photo-1758691462493-120a069304e6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxlbGRlcmx5JTIwdGVjaG5vbG9neSUyMHN1cHBvcnR8ZW58MHx8fHwxNzcyNDE1MjExfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "elderly technology support"
+    }
+  ]
+}
