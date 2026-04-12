@@ -99,8 +99,12 @@ export default function ElderlyDashboard() {
       return formData.fromLocation.trim() !== '' && formData.toLocation.trim() !== '';
     }
     
-    if (formData.type === 'Groceries' || formData.type === 'Tech Support') {
+    if (formData.type === 'Groceries') {
       return formData.address.trim() !== '';
+    }
+
+    if (formData.type === 'Tech Support') {
+      return formData.address.trim() !== '' && formData.device !== '';
     }
     
     return true;
@@ -135,7 +139,7 @@ export default function ElderlyDashboard() {
       toast({
         variant: "destructive",
         title: "Incomplete Form",
-        description: "Please fill in all required fields including the address/location."
+        description: "Please fill in all required fields marked with * to continue."
       });
       return;
     }
@@ -292,7 +296,9 @@ export default function ElderlyDashboard() {
             {formData.type === 'Tech Support' && (
               <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
                 <div className="space-y-2">
-                  <Label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Device Type</Label>
+                  <Label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">
+                    Device Type <span className="text-destructive">*</span>
+                  </Label>
                   <Select onValueChange={(val) => setFormData({...formData, device: val})}>
                     <SelectTrigger className="h-14 rounded-2xl text-lg">
                       <SelectValue placeholder="Select Device" />
