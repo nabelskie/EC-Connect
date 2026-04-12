@@ -1,30 +1,37 @@
 
-# ElderCare Connect - Mobile Build Guide
+# ElderCare Connect - Master Build Guide (Version 2.0)
 
-## ✅ Step 1: Success! Build Completed
-Your `out` folder has been generated and your Android Studio environment is now fully synced.
+## ✅ SUCCESS: Your code is ready for Android
+This version includes the latest updates: **Matrix Number validation**, **Large Text Accessibility**, and **Optimized Chat permissions**.
 
-## 🚀 Final Phase: Generate APK
+## 🚀 Step-by-Step APK Generation
 
-### 1. Build the APK in Android Studio
-Now that Gradle has finished syncing:
-1.  In Android Studio, go to the top menu: **Build > Build Bundle(s) / APK(s) > Build APK(s)**.
-2.  Wait for the process to finish (check the status bar at the bottom).
-3.  When the "Build APK(s): APK(s) generated successfully" popup appears in the bottom-right, click **Locate**.
-4.  Find your `app-debug.apk` and transfer it to your phone.
+### 1. Update your local machine
+On your computer (VS Code), run these commands to get the latest code from Firebase Studio:
+```bash
+git reset --hard origin/main
+npm install
+```
 
-## 📂 Future Updates
-If you change your code in Firebase Studio and want to update your app:
-1. **On your PC**:
-   ```bash
-   git pull origin main
-   npm run build
-   npx cap sync android
-   ```
-2. **In Android Studio**:
-   - Click the **Elephant Icon** (Sync) in the top right.
-   - Run the **Build APK** step again.
+### 2. Build the Static Web Files
+Next.js will generate the `out` folder containing your optimized app code:
+```bash
+npm run build
+```
 
-## 🔐 Credentials
+### 3. Sync with Android
+This pushes the new code into the Android project folder:
+```bash
+npx cap sync android
+```
+
+### 4. Generate the APK in Android Studio
+1. Run: `npx cap open android`
+2. Wait for the **Gradle Sync** bar at the bottom to finish.
+3. In the top menu: **Build > Build Bundle(s) / APK(s) > Build APK(s)**.
+4. When the popup appears in the bottom-right, click **Locate**.
+5. Find your `app-debug.apk` and transfer it to your phone!
+
+## 🔐 Admin Credentials
 - **Admin Email**: `adminkn@gmail.com`
 - **Initial Password**: `knadmin123`

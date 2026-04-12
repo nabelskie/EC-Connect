@@ -2,5 +2,8 @@
 {
   "appId": "com.pks.eldercare",
   "appName": "ElderCare",
-  "webDir": "out"
+  "webDir": "out",
+  "server": {
+    "androidScheme": "https"
+  }
 }
