@@ -6,22 +6,20 @@ Your `out` folder has been generated. Now we move to the final phase: **Android 
 
 ## 🚀 Final Phase: Generate APK
 
-### 1. Capacitor Initialization
-Run this in your VS Code terminal to set up the mobile configuration:
-```bash
-npx cap init ElderCare com.pks.eldercare --web-dir out
-```
+### 1. Skip Initialization (Already Fixed)
+I have already created the `capacitor.config.ts` for you. You do **not** need to run `npx cap init`.
 
 ### 2. Add Android Platform
+Run this in your VS Code terminal:
 ```bash
-npx cap add android
+npx @capacitor/cli add android
 ```
 
 ### 3. Sync & Open
 Sync your code to the Android project and open it in Android Studio:
 ```bash
-npx cap sync android
-npx cap open android
+npx @capacitor/cli sync android
+npx @capacitor/cli open android
 ```
 
 ### 4. In Android Studio
@@ -31,10 +29,9 @@ Once Android Studio opens:
 3.  **Locate**: When the popup appears in the bottom-right, click **Locate** to find your `app-debug.apk`.
 
 ## 📂 Troubleshooting Build Errors
-If `npm run build` fails again in the future:
+If `npm run build` fails again:
 1. **Delete Folders**: Manually delete `src/app/chat/[requestId]` and `src/app/dashboard/chat/[requestId]`.
-2. **Update Config**: Ensure `next.config.ts` has the Webpack "Ignore" aliases for Node.js modules.
-3. **Clean Start**:
+2. **Clean Start**:
    ```bash
    git reset --hard origin/main
    npm install
