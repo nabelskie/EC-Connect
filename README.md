@@ -6,10 +6,12 @@ ElderCare Connect is a modern, real-time application built with Next.js and Fire
 
 ## 🚀 COMPLETE GUIDE: Converting to Android App (APK)
 
-Follow these steps **on your local computer** (Windows/macOS) to generate your mobile app.
-
-### ⚠️ CRITICAL: Check your folder first!
-When you open VS Code, ensure you have opened the **project folder directly**. Your sidebar should show the `src` and `app` folders immediately. If you see another folder with your project name inside VS Code, you are "one level too high." Go to **File > Open Folder** and select that inner folder.
+### ⚠️ CRITICAL: Fix for "generateStaticParams" Error
+If your build fails with an error about `generateStaticParams`, follow these steps:
+1. **Delete Folders**: In your VS Code sidebar, find and **DELETE** these two folders:
+   - `src/app/chat/[requestId]`
+   - `src/app/dashboard/chat/[requestId]`
+2. **Why?**: Android apps require "Static Exports," which don't allow these dynamic folder names. The app has been updated to use a safer method that doesn't need them.
 
 ### Phase 1: Initial Setup (The "First Time" Only)
 1. **Push from Firebase Studio**: In this window (Firebase Studio), run:
@@ -28,15 +30,13 @@ When you open VS Code, ensure you have opened the **project folder directly**. Y
    ```bash
    npm install
    ```
-   *Note: If you see "npm warn deprecated" or "vulnerabilities," this is NORMAL. The installation was successful if it says "added packages" or "up to date".*
 
 ### Phase 2: Building the Web Assets
-This turns your code into a "static site" that Android can run locally.
 1. **Build the project**:
    ```bash
    npm run build
    ```
-   *Note: This creates a folder named `out`. If this fails, see the "Troubleshooting" section below.*
+   *Note: This creates the `out` folder. If it fails, make sure you deleted the [requestId] folders mentioned above.*
 
 ### Phase 3: Creating the Android Project
 1. **Initialize Capacitor**:
@@ -57,15 +57,13 @@ This turns your code into a "static site" that Android can run locally.
    ```bash
    npx cap open android
    ```
-2. **Wait for indexing**: Let Android Studio finish "Indexing" (the progress bar at the bottom).
-3. **Build APK**:
+2. **Build APK**:
    - In the top menu, go to: **Build > Build Bundle(s) / APK(s) > Build APK(s)**.
-   - Once finished, a notification will appear. Click **locate** to find your `app-debug.apk` file.
 
 ---
 
 ## 🔄 How to Update your App
-If you make changes here in Firebase Studio and want to update the app on your phone:
+If you make changes here in Firebase Studio:
 1. **Push from Firebase Studio** (git add/commit/push).
 2. **On your PC (VS Code)**, run:
    ```bash
@@ -75,31 +73,8 @@ If you make changes here in Firebase Studio and want to update the app on your p
    npm run build
    npx cap sync android
    ```
-3. Open Android Studio and **Build APK** again.
 
----
-
-## ⚠️ Troubleshooting & Common Errors
-
-### 1. "npm warn deprecated"
-**Meaning**: Some libraries are old. 
-**Fix**: Ignore it. It is not an error and does not stop your app from working.
-
-### 2. "generateStaticParams" or Dynamic Route Error
-**Meaning**: You are using an old version of the code that isn't mobile-ready.
-**Fix**: Run `git reset --hard origin/main` followed by `git pull` to get the latest routing fixes.
-
-### 3. "Could not find the web assets directory: .\out"
-**Meaning**: You tried to sync before building.
-**Fix**: Run `npm run build` first, then `npx cap sync android`.
-
-### 4. "git pull failed" or Merge Conflicts
-**Fix**: Run `git reset --hard origin/main`. This forces your computer to match the clean version on GitHub.
-
----
-
-## 📱 Features
-- **Real-time Chat**: Connect with volunteers instantly with unread message indicators.
-- **AI Assistance**: Gemini-powered task descriptions for clarity.
-- **Admin Dashboard**: Full system oversight for PKS administrators.
-- **Push Notifications**: Stay updated with Firebase Cloud Messaging.
+## ⚠️ Troubleshooting
+- **"npm warn deprecated"**: Ignore it. It is normal.
+- **"Could not find the web assets directory: .\out"**: Run `npm run build` first.
+- **"git pull failed"**: Run `git reset --hard origin/main`.

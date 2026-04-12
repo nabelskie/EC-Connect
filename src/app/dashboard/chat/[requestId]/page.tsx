@@ -1,7 +1,12 @@
 /**
- * This page is kept as a minimal stub to satisfy Next.js static export requirements.
- * The application now uses query parameters for routing (e.g., /chat/room?requestId=...).
+ * STUB FILE: This route is no longer used. 
+ * The app now uses /dashboard/chat/room?requestId=...
+ * 
+ * If you see this file causing build errors, please MANUALLY DELETE 
+ * the [requestId] folder in your local VS Code.
  */
+
+export const dynamicParams = false;
 
 export function generateStaticParams() {
   return [];
