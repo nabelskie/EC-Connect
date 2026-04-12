@@ -31,6 +31,21 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // This section tells Webpack to ignore Node.js specific modules 
+  // that Genkit uses, allowing the static build for Android to succeed.
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+        child_process: false,
+        perf_hooks: false,
+      };
+    }
+    return config;
+  },
 };
 
 export default nextConfig;

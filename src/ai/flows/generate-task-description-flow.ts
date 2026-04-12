@@ -6,7 +6,6 @@
  * - GenerateTaskDescriptionOutput - The return type for the generateTaskDescription function.
  */
 
-import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const GenerateTaskDescriptionInputSchema = z.object({
@@ -37,67 +36,39 @@ export type GenerateTaskDescriptionOutput = z.infer<
   typeof GenerateTaskDescriptionOutputSchema
 >;
 
+/**
+ * Wrapper function for the AI flow.
+ * Note: AI generation requires a server. In a static export (APK), 
+ * it returns the original description as a fallback.
+ */
 export async function generateTaskDescription(
   input: GenerateTaskDescriptionInput
 ): Promise<GenerateTaskDescriptionOutput> {
-  // Mobile/Static Export safety: AI flows require a server environment.
-  // If running in a static context (like an APK), we return the original text as a fallback.
+  // Check if we are in the browser (Mobile App / Static Export context)
   if (typeof window !== 'undefined') {
-     return { generatedDescription: input.initialDescription };
-  }
-  return generateTaskDescriptionFlow(input);
-}
-
-const prompt = ai.definePrompt({
-  name: 'generateTaskDescriptionPrompt',
-  input: {schema: GenerateTaskDescriptionInputSchema},
-  output: {schema: GenerateTaskDescriptionOutputSchema},
-  prompt: `You are an AI assistant designed to help elderly users or caregivers write clear and comprehensive descriptions for assistance requests to volunteers.
-
-Your goal is to expand on the provided initial description, ensuring all necessary details are captured so that a volunteer can fully understand what is needed.
-
-Consider the task type and common requirements for such tasks. 
-- For 'Groceries', include specific items if mentioned, or common essentials like milk, bread, or eggs if the description is vague.
-- For 'Transportation', include pick-up/drop-off points or common destinations like the clinic or market.
-- For 'Tech Support', detail the specific device or software issue like WhatsApp setup or phone settings.
-
-Format the output clearly and politely. Do not ask questions back to the user.
-
---- Input Details ---
-Task Type: {{{taskType}}}
-Initial Description: {{{initialDescription}}}
-{{#if location}}Location: {{{location}}}{{/if}}
-{{#if urgencyLevel}}Urgency: {{{urgencyLevel}}}{{/if}}
-
---- Generated Comprehensive Description ---`,
-});
-
-const generateTaskDescriptionFlow = ai.defineFlow(
-  {
-    name: 'generateTaskDescriptionFlow',
-    inputSchema: GenerateTaskDescriptionInputSchema,
-    outputSchema: GenerateTaskDescriptionOutputSchema,
-  },
-  async input => {
-    let attempts = 0;
-    const maxAttempts = 3;
-    
-    while (attempts < maxAttempts) {
-      try {
-        const {output} = await prompt(input);
-        if (output) return output;
-        throw new Error('Empty output from AI');
-      } catch (error: any) {
-        attempts++;
-        if (attempts >= maxAttempts) {
-           return { 
-             generatedDescription: input.initialDescription 
-           };
-        }
-        // Wait before retrying (exponentially): 1s, 2s...
-        await new Promise(resolve => setTimeout(resolve, attempts * 1000));
-      }
-    }
     return { generatedDescription: input.initialDescription };
   }
-);
+
+  // We use a dynamic import here to prevent Webpack from trying to bundle 
+  // the Genkit engine into the mobile app's client-side code.
+  try {
+    const { ai } = await import('@/ai/genkit');
+    
+    const prompt = ai.definePrompt({
+      name: 'generateTaskDescriptionPrompt',
+      input: {schema: GenerateTaskDescriptionInputSchema},
+      output: {schema: GenerateTaskDescriptionOutputSchema},
+      prompt: `You are an AI assistant designed to help elderly users or caregivers write clear and comprehensive descriptions for assistance requests to volunteers.
+Expand on the initial description provided: {{{initialDescription}}}. 
+Task Type: {{{taskType}}}. 
+Location: {{{location}}}. 
+Urgency: {{{urgencyLevel}}}.`,
+    });
+
+    const { output } = await prompt(input);
+    return output || { generatedDescription: input.initialDescription };
+  } catch (error) {
+    console.error("AI Generation Error:", error);
+    return { generatedDescription: input.initialDescription };
+  }
+}

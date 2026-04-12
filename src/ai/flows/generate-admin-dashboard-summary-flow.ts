@@ -1,94 +1,57 @@
 /**
  * @fileOverview This file implements a Genkit flow to generate a summary of key operational insights
  * for the admin dashboard based on provided system metrics.
- *
- * - generateAdminDashboardSummary - A function that handles the generation of the admin dashboard summary.
- * - GenerateAdminDashboardSummaryInput - The input type for the generateAdminDashboardSummary function.
- * - GenerateAdminDashboardSummaryOutput - The return type for the generateAdminDashboardSummary function.
  */
 
-import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const GenerateAdminDashboardSummaryInputSchema = z.object({
-  totalUsers: z.number().describe('Total number of registered users in the system.'),
-  totalRequests: z.number().describe('Total number of assistance requests created.'),
-  activeVolunteers: z.number().describe('Number of volunteers who have accepted at least one task recently.'),
-  completedTasks: z.number().describe('Total number of tasks that have been completed.'),
-  taskTypeCounts: z
-    .record(z.string(), z.number())
-    .describe('An object containing counts for each task type, e.g., { "Grocery": 15, "Transport": 10 }.'),
+  totalUsers: z.number().describe('Total number of registered users.'),
+  totalRequests: z.number().describe('Total number of requests.'),
+  activeVolunteers: z.number().describe('Number of active volunteers.'),
+  completedTasks: z.number().describe('Total number of completed tasks.'),
+  taskTypeCounts: z.record(z.string(), z.number()).describe('Counts for each task type.'),
 });
 export type GenerateAdminDashboardSummaryInput = z.infer<typeof GenerateAdminDashboardSummaryInputSchema>;
 
 const GenerateAdminDashboardSummaryOutputSchema = z.object({
-  summary: z.string().describe('A comprehensive summary of the system performance and key operational insights for the admin dashboard.'),
+  summary: z.string().describe('Operational summary for the admin dashboard.'),
 });
 export type GenerateAdminDashboardSummaryOutput = z.infer<typeof GenerateAdminDashboardSummaryOutputSchema>;
 
+/**
+ * Wrapper function for the AI flow.
+ * Note: AI generation requires a server. In a static export (APK), 
+ * it returns a basic data summary as a fallback.
+ */
 export async function generateAdminDashboardSummary(
   input: GenerateAdminDashboardSummaryInput
 ): Promise<GenerateAdminDashboardSummaryOutput> {
-  // Mobile/Static Export safety: AI flows require a server environment.
-  // If running in a static context (like an APK), we return a basic fallback summary.
+  // Check if we are in the browser (Mobile App / Static Export context)
   if (typeof window !== 'undefined') {
-     return { 
-       summary: `System Overview: ${input.totalUsers} users registered, ${input.totalRequests} total requests, and ${input.completedTasks} tasks completed successfully.`
-     };
+    return { 
+      summary: `System Overview: ${input.totalUsers} users registered, ${input.totalRequests} total requests, and ${input.completedTasks} tasks completed successfully.`
+    };
   }
-  return generateAdminDashboardSummaryFlow(input);
+
+  // We use a dynamic import here to prevent Webpack from trying to bundle 
+  // the Genkit engine into the mobile app's client-side code.
+  try {
+    const { ai } = await import('@/ai/genkit');
+
+    const prompt = ai.definePrompt({
+      name: 'generateAdminDashboardSummaryPrompt',
+      input: {schema: GenerateAdminDashboardSummaryInputSchema},
+      output: {schema: GenerateAdminDashboardSummaryOutputSchema},
+      prompt: `Provide a concise operational summary for an admin dashboard based on these metrics: 
+      Total Users: {{{totalUsers}}}, Total Requests: {{{totalRequests}}}, Completed: {{{completedTasks}}}.`,
+    });
+
+    const { output } = await prompt(input);
+    return output || { summary: "Dashboard data summary available." };
+  } catch (error) {
+    return { 
+      summary: `Quick Stats: ${input.totalUsers} Users, ${input.completedTasks} Tasks Completed.`
+    };
+  }
 }
-
-const prompt = ai.definePrompt({
-  name: 'generateAdminDashboardSummaryPrompt',
-  input: {schema: GenerateAdminDashboardSummaryInputSchema},
-  output: {schema: GenerateAdminDashboardSummaryOutputSchema},
-  prompt: `You are an intelligent assistant designed to provide operational insights for an admin dashboard. Analyze the following data to provide a concise and actionable summary of system performance, key trends, and potential areas for decision-making.
-
-Data provided:
-- Total Users: {{{totalUsers}}}
-- Total Requests: {{{totalRequests}}}
-- Active Volunteers: {{{activeVolunteers}}}
-- Completed Tasks: {{{completedTasks}}}
-- Task Type Counts: {{{json taskTypeCounts}}}
-
-Focus on identifying:
-1. Overall system health and activity.
-2. Trending task types.
-3. Volunteer engagement.
-4. Any other notable observations or recommendations.
-
-Your summary should be clear, comprehensive, and suitable for quick understanding by an administrator.`,
-});
-
-const generateAdminDashboardSummaryFlow = ai.defineFlow(
-  {
-    name: 'generateAdminDashboardSummaryFlow',
-    inputSchema: GenerateAdminDashboardSummaryInputSchema,
-    outputSchema: GenerateAdminDashboardSummaryOutputSchema,
-  },
-  async input => {
-    let attempts = 0;
-    const maxAttempts = 3;
-    
-    while (attempts < maxAttempts) {
-      try {
-        const {output} = await prompt(input);
-        if (output) return output;
-        throw new Error('Empty output from AI');
-      } catch (error: any) {
-        attempts++;
-        if (attempts >= maxAttempts) {
-           return { 
-             summary: "The AI summary is currently unavailable due to high demand. Current status: " + 
-                      `${input.totalUsers} users registered, ${input.totalRequests} total requests, ` +
-                      `${input.completedTasks} tasks completed. Please try refreshing again in a moment.`
-           };
-        }
-        // Wait before retrying (exponentially): 1s, 2s...
-        await new Promise(resolve => setTimeout(resolve, attempts * 1000));
-      }
-    }
-    return { summary: "Service temporarily unavailable." };
-  }
-);
