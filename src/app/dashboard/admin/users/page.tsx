@@ -70,9 +70,11 @@ function AdminUsersContent() {
   const filteredUsers = useMemo(() => {
     if (!usersData) return [];
     return usersData.filter(u => {
+      const name = u.name || '';
+      const email = u.email || '';
       const matchesSearch = 
-        u.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        u.email?.toLowerCase().includes(searchTerm.toLowerCase());
+        name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        email.toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesRole = roleFilter === 'All' || u.role?.toLowerCase() === roleFilter.toLowerCase();
       
@@ -181,16 +183,16 @@ function AdminUsersContent() {
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : filteredUsers.map((u) => (
-            <Card key={u.id} className="border-none shadow-sm rounded-2xl p-4 flex items-center justify-between gap-4 active:bg-slate-50 transition-colors">
-              <div className="flex items-center gap-4 flex-1 min-w-0">
+            <Card key={u.id} className="border-none shadow-sm rounded-2xl p-4 flex items-start justify-between gap-4 active:bg-slate-50 transition-colors">
+              <div className="flex items-start gap-4 flex-1 min-w-0">
                 <Avatar className="h-12 w-12 border-2 border-slate-50 shrink-0">
                   <AvatarImage src={u.photoURL || `https://picsum.photos/seed/${u.id}/100/100`} className="object-cover" />
                   <AvatarFallback>{u.name?.[0] || 'U'}</AvatarFallback>
                 </Avatar>
                 
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-primary truncate">{u.name}</span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-bold text-primary break-words whitespace-normal leading-tight flex-1 min-w-[120px]">{u.name}</span>
                     <Badge variant="outline" className={`text-[8px] h-4 px-1 leading-none uppercase shrink-0 ${
                       u.role === 'admin' ? 'border-primary text-primary' : 
                       u.role === 'volunteer' ? 'border-accent text-accent' : 'border-slate-400 text-slate-500'
@@ -198,23 +200,27 @@ function AdminUsersContent() {
                       {getDisplayRole(u.role)}
                     </Badge>
                   </div>
-                  <div className="flex flex-col gap-0.5 mt-1">
-                    <div className="flex items-center gap-1 text-[10px] text-muted-foreground truncate">
-                      <Mail className="h-2.5 w-2.5" /> {u.email}
+                  <div className="flex flex-col gap-1 mt-2">
+                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                      <Mail className="h-3 w-3 shrink-0" />
+                      <span className="break-all whitespace-normal">{u.email}</span>
                     </div>
                     {u.gender && (
-                      <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                        <UserCircle className="h-2.5 w-2.5" /> {u.gender}
+                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                        <UserCircle className="h-3 w-3 shrink-0" /> 
+                        <span>{u.gender}</span>
                       </div>
                     )}
                     {u.phone && u.phone !== "N/A" && (
-                      <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                        <Phone className="h-2.5 w-2.5" /> {u.phone}
+                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                        <Phone className="h-3 w-3 shrink-0" /> 
+                        <span className="break-words">{u.phone}</span>
                       </div>
                     )}
                     {u.address && u.address !== "System Console" && (
-                      <div className="flex items-center gap-1 text-[10px] text-muted-foreground truncate">
-                        <MapPin className="h-2.5 w-2.5" /> {u.address}
+                      <div className="flex items-start gap-2 text-[10px] text-muted-foreground">
+                        <MapPin className="h-3 w-3 shrink-0 mt-0.5" /> 
+                        <span className="break-words whitespace-normal">{u.address}</span>
                       </div>
                     )}
                   </div>

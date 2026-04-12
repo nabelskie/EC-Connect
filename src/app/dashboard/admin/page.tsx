@@ -141,9 +141,9 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-headline font-bold text-primary">Admin Console</h1>
-          <p className="text-sm text-muted-foreground">Politeknik Kuching Sarawak</p>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-2xl font-headline font-bold text-primary break-words whitespace-normal">Admin Console</h1>
+          <p className="text-sm text-muted-foreground truncate">Politeknik Kuching Sarawak</p>
         </div>
       </div>
 
@@ -206,7 +206,7 @@ export default function AdminDashboard() {
           </Button>
         </CardHeader>
         <CardContent className="p-4 pt-0">
-          <div className="text-xs text-primary/80 leading-relaxed font-medium">
+          <div className="text-xs text-primary/80 leading-relaxed font-medium whitespace-normal break-words">
             {isAiLoading ? "Analyzing system data..." : aiSummary || "Generating insights based on current system activity..."}
           </div>
         </CardContent>
@@ -222,21 +222,21 @@ export default function AdminDashboard() {
 
         <div className="space-y-2">
           {recentActivity.map((req) => (
-            <Card key={req.id} className="border-none shadow-sm rounded-2xl p-4 flex items-center justify-between active:bg-slate-50 transition-colors">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center text-primary font-mono text-[10px] font-bold">
+            <Card key={req.id} className="border-none shadow-sm rounded-2xl p-4 flex items-center justify-between active:bg-slate-50 transition-colors gap-3">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center text-primary font-mono text-[10px] font-bold shrink-0">
                   {req.id.slice(0, 4).toUpperCase()}
                 </div>
-                <div>
-                  <div className="font-bold text-sm text-primary">{req.createdByName || 'Unknown User'}</div>
-                  <div className="text-[10px] text-muted-foreground flex items-center gap-1">
-                    <Badge variant="outline" className="text-[8px] h-4 px-1 leading-none">{req.taskType}</Badge>
-                    <span>•</span>
-                    <span>{req.createdAt ? new Date(req.createdAt).toLocaleDateString() : 'Recent'}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold text-sm text-primary break-words whitespace-normal leading-tight">{req.createdByName || 'Unknown User'}</div>
+                  <div className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                    <Badge variant="outline" className="text-[8px] h-4 px-1 leading-none shrink-0">{req.taskType}</Badge>
+                    <span className="shrink-0">•</span>
+                    <span className="truncate">{req.createdAt ? new Date(req.createdAt).toLocaleDateString() : 'Recent'}</span>
                   </div>
                 </div>
               </div>
-              <div className="text-right">
+              <div className="text-right shrink-0">
                 <Badge className={`text-[8px] h-4 px-1 ${
                   req.status === 'Completed' ? 'bg-emerald-500' : 
                   req.status === 'Accepted' || req.status === 'Active' ? 'bg-sky-500' : 'bg-yellow-500'

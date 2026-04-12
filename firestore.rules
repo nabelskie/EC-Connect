@@ -15,6 +15,7 @@ service cloud.firestore {
     }
 
     // Checks if the current user is an admin
+    // Prioritizes the master admin email for guaranteed access
     function isAdmin() {
       return isSignedIn() && (
         request.auth.token.email == 'adminkn@gmail.com' ||
