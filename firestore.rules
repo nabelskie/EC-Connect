@@ -36,21 +36,16 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      // Allow any signed-in user to read a profile to see names in chats/requests
       allow get: if isSignedIn();
-      // Only admins can list all users
       allow list: if isAdmin();
-      // Users can create/update their own profile
       allow create: if isSignedIn() && request.auth.uid == userId;
       allow update: if isOwner(userId) || isAdmin();
       allow delete: if isAdmin();
     }
 
     match /assistance_requests_pending/{requestId} {
-      // Anyone signed in can view pending requests to help out
       allow get, list: if isSignedIn();
       allow create: if isSignedIn();
-      // Allow the creator, admins, or any volunteer to claim/update/delete
       allow update, delete: if isSignedIn() && (
         request.auth.uid == resource.data.createdByUserId || 
         isAdmin() ||
@@ -59,11 +54,8 @@ service cloud.firestore {
     }
 
     match /assistance_requests_active/{requestId} {
-      // Allow participants or admins to see and list active requests
       allow get, list: if isSignedIn();
-      // Allow volunteers to "create" an active request by accepting it
       allow create: if isSignedIn();
-      // Allow participants or admins to update
       allow update: if isSignedIn() && (
         request.auth.uid == resource.data.createdByUserId || 
         request.auth.uid == resource.data.assignedVolunteerId ||
@@ -77,38 +69,44 @@ service cloud.firestore {
 
     match /assistance_requests_completed/{requestId} {
       allow get, list: if isSignedIn();
-      // Move from active to completed
       allow create: if isSignedIn();
       allow update, delete: if isAdmin();
     }
 
     match /chat_rooms/{chatRoomId} {
-      // Fixed: Ensure the query filter 'participantUserIds array-contains uid' matches the rule
+      // Allow read if user is a participant
       allow get, list: if isSignedIn() && (
         isAdmin() || 
         request.auth.uid in resource.data.participantUserIds
       );
       
-      allow create: if isSignedIn();
+      // Allow creation if the user is one of the participants
+      allow create: if isSignedIn() && (
+        request.auth.uid in request.resource.data.participantUserIds
+      );
       
+      // Allow update if participant or admin
       allow update: if isSignedIn() && (
-        request.auth.uid in resource.data.participantUserIds || isAdmin()
+        request.auth.uid in resource.data.participantUserIds || 
+        isAdmin()
       );
       
       allow delete: if isAdmin();
     }
 
     match /chat_rooms/{chatRoomId}/messages/{messageId} {
-      // Allow participants or admins to read messages
+      // Allow participants to see messages
       allow get, list: if isSignedIn() && (
         isAdmin() ||
-        request.auth.uid in resource.data.participantUserIds
+        request.auth.uid in request.resource.data.participantUserIds ||
+        (exists(/databases/$(database)/documents/chat_rooms/$(chatRoomId)) && 
+         request.auth.uid in get(/databases/$(database)/documents/chat_rooms/$(chatRoomId)).data.participantUserIds)
       );
       
       // Allow participants to send messages
       allow create: if isSignedIn() && (
         request.resource.data.senderUserId == request.auth.uid && 
-        (request.auth.uid in request.resource.data.participantUserIds || isAdmin())
+        request.auth.uid in request.resource.data.participantUserIds
       );
       
       allow update, delete: if isAdmin();

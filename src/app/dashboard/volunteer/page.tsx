@@ -43,6 +43,7 @@ export default function VolunteerDashboard() {
   const { user, isUserLoading } = useUser();
   const [filter, setFilter] = useState('All');
   const [mounted, setMounted] = useState(false);
+  const [isAccepting, setIsAccepting] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -89,31 +90,73 @@ export default function VolunteerDashboard() {
   }, [pendingTasks, filter]);
 
   const handleAcceptTask = async (task: any) => {
-    if (!user || !db || !profile) return;
+    if (!user || !db || !profile || isAccepting) return;
+    
     if (profile.role !== 'volunteer') {
       toast({ variant: "destructive", title: "Permission Denied", description: "Only registered volunteers can accept tasks." });
       return;
     }
+
+    setIsAccepting(task.id);
     const volunteerId = user.uid;
     const volunteerName = profile.name || user.displayName || 'Volunteer';
     const residentId = task.createdByUserId;
+    
     if (!residentId) {
       toast({ variant: "destructive", title: "Error", description: "Could not identify the resident." });
+      setIsAccepting(null);
       return;
     }
+
     let residentName = task.createdByName || 'Resident';
     const chatRoomId = [residentId, volunteerId].sort().join('_');
+    const participantUserIds = [residentId, volunteerId];
+
+    // 1. Move to Active
     const activeRef = doc(db, 'assistance_requests_active', task.id);
     const pendingRef = doc(db, 'assistance_requests_pending', task.id);
-    setDocumentNonBlocking(activeRef, { ...task, status: 'Accepted', assignedVolunteerId: volunteerId, volunteerName: volunteerName, residentName: residentName, chatRoomId: chatRoomId, acceptedAt: serverTimestamp() }, { merge: true });
+    
+    setDocumentNonBlocking(activeRef, { 
+      ...task, 
+      status: 'Accepted', 
+      assignedVolunteerId: volunteerId, 
+      volunteerName: volunteerName, 
+      residentName: residentName, 
+      chatRoomId: chatRoomId, 
+      acceptedAt: serverTimestamp() 
+    }, { merge: true });
+
     deleteDocumentNonBlocking(pendingRef);
+
+    // 2. Initialize Chat Room
     const chatRoomRef = doc(db, 'chat_rooms', chatRoomId);
-    const participantUserIds = [residentId, volunteerId];
-    setDocumentNonBlocking(chatRoomRef, { id: chatRoomId, requestId: task.id, participantUserIds: participantUserIds, residentName: residentName, volunteerName: volunteerName, createdAt: serverTimestamp(), lastMessageSnippet: `Volunteer ${volunteerName} has accepted your request.`, lastMessageAt: serverTimestamp() }, { merge: true });
+    setDocumentNonBlocking(chatRoomRef, { 
+      id: chatRoomId, 
+      requestId: task.id, 
+      participantUserIds: participantUserIds, 
+      residentName: residentName, 
+      volunteerName: volunteerName, 
+      createdAt: serverTimestamp(), 
+      lastMessageSnippet: `Volunteer ${volunteerName} has joined the chat.`, 
+      lastMessageAt: serverTimestamp() 
+    }, { merge: true });
+
+    // 3. Send Initial Message
     const messagesRef = collection(db, 'chat_rooms', chatRoomId, 'messages');
-    addDocumentNonBlocking(messagesRef, { chatRoomId: chatRoomId, senderUserId: volunteerId, messageText: `I've accepted your request for ${task.taskType}. I'm here to help!`, timestamp: serverTimestamp(), participantUserIds: participantUserIds });
+    addDocumentNonBlocking(messagesRef, { 
+      chatRoomId: chatRoomId, 
+      senderUserId: volunteerId, 
+      messageText: `I've accepted your request for ${task.taskType}. How can I best help you?`, 
+      timestamp: serverTimestamp(), 
+      participantUserIds: participantUserIds 
+    });
+
     toast({ title: "Task Accepted", description: `You are now helping ${residentName}.` });
-    router.push(`/dashboard/chat/room?requestId=${chatRoomId}&role=volunteer`);
+    
+    // Slight delay to allow Firestore cache to settle before navigating
+    setTimeout(() => {
+      router.push(`/dashboard/chat/room?requestId=${chatRoomId}&role=volunteer`);
+    }, 500);
   };
 
   const getUrgencyColor = (urgency: string) => {
@@ -197,7 +240,13 @@ export default function VolunteerDashboard() {
                   <div className="p-4 space-y-3">
                     <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed italic">"{task.description}"</p>
                     <div className="flex items-center gap-4 text-[10px] text-muted-foreground font-bold uppercase"><span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {task.location}</span></div>
-                    <Button onClick={() => handleAcceptTask(task)} className="w-full h-12 bg-accent hover:bg-accent/90 text-white font-bold rounded-2xl gap-2 mt-2 shadow-lg shadow-accent/20">Accept & Chat<ArrowRight className="h-4 w-4" /></Button>
+                    <Button 
+                      onClick={() => handleAcceptTask(task)} 
+                      disabled={isAccepting === task.id}
+                      className="w-full h-12 bg-accent hover:bg-accent/90 text-white font-bold rounded-2xl gap-2 mt-2 shadow-lg shadow-accent/20"
+                    >
+                      {isAccepting === task.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Accept & Chat<ArrowRight className="h-4 w-4" /></>}
+                    </Button>
                   </div>
                 </CardContent>
               </Card>

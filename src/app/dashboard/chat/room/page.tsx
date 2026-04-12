@@ -8,7 +8,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/componen
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, ArrowLeft, ShieldCheck, Loader2 } from 'lucide-react';
+import { Send, ArrowLeft, ShieldCheck, Loader2, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useFirestore, useUser, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, serverTimestamp, where } from 'firebase/firestore';
@@ -23,6 +23,7 @@ function ChatContent() {
   const [mounted, setMounted] = useState(false);
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     setMounted(true);
@@ -34,6 +35,14 @@ function ChatContent() {
   }, [db, requestId]);
 
   const { data: chatRoom, isLoading: isRoomLoading, error: roomError } = useDoc(chatRoomRef);
+
+  // Auto-retry once if doc is null (to handle sync latency)
+  useEffect(() => {
+    if (mounted && !isRoomLoading && !chatRoom && retryCount < 1) {
+      const timer = setTimeout(() => setRetryCount(prev => prev + 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [mounted, isRoomLoading, chatRoom, retryCount]);
 
   const messagesQuery = useMemoFirebase(() => {
     if (!requestId || !db || !user) return null;
@@ -56,10 +65,10 @@ function ChatContent() {
 
   const chatPartner = useMemo(() => {
     if (!chatRoom) return { name: 'Chat', image: '', roleName: '...' };
-    const isVolunteer = role === 'volunteer';
-    const partnerName = isVolunteer ? chatRoom.residentName : chatRoom.volunteerName;
-    const partnerRole = isVolunteer ? 'Elderly' : 'Volunteer';
-    const partnerId = isVolunteer ? chatRoom.participantUserIds?.[0] : chatRoom.participantUserIds?.[1];
+    const isVolunteerRole = role === 'volunteer';
+    const partnerName = isVolunteerRole ? chatRoom.residentName : chatRoom.volunteerName;
+    const partnerRole = isVolunteerRole ? 'Elderly' : 'Volunteer';
+    const partnerId = isVolunteerRole ? chatRoom.participantUserIds?.[0] : chatRoom.participantUserIds?.[1];
 
     return { 
       name: partnerName || partnerRole, 
@@ -96,24 +105,24 @@ function ChatContent() {
 
   if (!mounted) return null;
 
-  if (isRoomLoading) {
+  if (isRoomLoading || (!chatRoom && retryCount < 1)) {
     return (
       <div className="h-full flex flex-col items-center justify-center py-20 gap-3">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-xs font-bold uppercase text-muted-foreground">Connecting to chat...</p>
+        <p className="text-xs font-bold uppercase text-muted-foreground tracking-widest">Connecting to chat...</p>
       </div>
     );
   }
 
-  if (roomError || (mounted && !isRoomLoading && !chatRoom)) {
+  if (roomError || (mounted && !isRoomLoading && !chatRoom && retryCount >= 1)) {
     return (
       <div className="h-full flex flex-col items-center justify-center py-20 gap-3 text-center px-6">
         <div className="p-4 bg-destructive/10 rounded-full">
            <ShieldCheck className="h-10 w-10 text-destructive" />
         </div>
-        <h2 className="text-lg font-bold text-primary">Access Denied</h2>
+        <h2 className="text-lg font-bold text-primary">Chat Not Found</h2>
         <p className="text-sm text-muted-foreground leading-relaxed">
-          You don't have permission to view this chat or the request has been closed.
+          We couldn't establish a connection to this chat. The request might have been cancelled or there's a sync issue.
         </p>
         <Button asChild variant="outline" className="mt-4 rounded-xl">
           <Link href={`/dashboard/chat?role=${role}`}>Back to Messages</Link>
@@ -150,7 +159,7 @@ function ChatContent() {
           <ScrollArea className="h-full p-4">
             <div className="space-y-4">
               <div className="text-center">
-                <span className="bg-white/50 backdrop-blur-sm text-muted-foreground text-[10px] px-3 py-1 rounded-full font-bold uppercase tracking-wider">Conversation Started</span>
+                <span className="bg-white/50 backdrop-blur-sm text-muted-foreground text-[10px] px-3 py-1 rounded-full font-bold uppercase tracking-wider">Secure Conversation</span>
               </div>
               
               {isMessagesLoading ? (
@@ -178,8 +187,9 @@ function ChatContent() {
                   );
                 })
               ) : (
-                <div className="text-center py-10">
-                  <p className="text-[10px] font-bold uppercase text-muted-foreground">No messages yet</p>
+                <div className="flex flex-col items-center justify-center py-20 text-center opacity-40">
+                  <Sparkles className="h-8 w-8 mb-2" />
+                  <p className="text-[10px] font-bold uppercase">Ready for your first message</p>
                 </div>
               )}
             </div>
