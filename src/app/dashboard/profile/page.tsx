@@ -75,7 +75,6 @@ function ProfileContent() {
   const [editPhone, setEditPhone] = useState('');
   const [editAddress, setEditAddress] = useState('');
   const [editGender, setEditGender] = useState('');
-  const [editMatrixNumber, setEditMatrixNumber] = useState('');
   const [editPhotoURL, setEditPhotoURL] = useState('');
   const [tempPhotoPreview, setTempPhotoPreview] = useState<string | null>(null);
   
@@ -106,7 +105,6 @@ function ProfileContent() {
       setEditPhone(profileData.phone || '');
       setEditAddress(profileData.address || '');
       setEditGender(profileData.gender || '');
-      setEditMatrixNumber(profileData.matrixNumber || '');
       setEditPhotoURL(profileData.photoURL || '');
     }
   }, [profileData]);
@@ -183,7 +181,7 @@ function ProfileContent() {
         phone: editPhone,
         address: editAddress,
         gender: editGender,
-        matrixNumber: profileData?.role === 'volunteer' ? editMatrixNumber.toUpperCase() : "N/A",
+        // Matrix Number is immutable and not included here
         photoURL: editPhotoURL
       });
 
@@ -388,9 +386,12 @@ function ProfileContent() {
                   <Input id="edit-name" value={editName} onChange={(e) => setEditName(e.target.value)} className="h-12 rounded-xl" />
                 </div>
                 {profileData.role === 'volunteer' && (
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-matrix">Matrix Number</Label>
-                    <Input id="edit-matrix" value={editMatrixNumber} onChange={(e) => setEditMatrixNumber(e.target.value)} className="h-12 rounded-xl" />
+                  <div className="space-y-2 opacity-60">
+                    <Label>Matrix Number (Permanent)</Label>
+                    <div className="h-12 rounded-xl bg-slate-100 flex items-center px-4 font-black text-accent border border-slate-200">
+                      {profileData.matrixNumber}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground italic">Official student ID cannot be changed after registration.</p>
                   </div>
                 )}
                 <div className="space-y-2">
