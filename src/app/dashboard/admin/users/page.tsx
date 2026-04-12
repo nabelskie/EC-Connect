@@ -27,7 +27,8 @@ import {
   Trash2,
   AlertCircle,
   MapPin,
-  UserCircle
+  UserCircle,
+  Hash
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -72,9 +73,11 @@ function AdminUsersContent() {
     return usersData.filter(u => {
       const name = u.name || '';
       const email = u.email || '';
+      const matrix = u.matrixNumber || '';
       const matchesSearch = 
         name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        email.toLowerCase().includes(searchTerm.toLowerCase());
+        email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        matrix.toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesRole = roleFilter === 'All' || u.role?.toLowerCase() === roleFilter.toLowerCase();
       
@@ -152,7 +155,7 @@ function AdminUsersContent() {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input 
-            placeholder="Search by name or email..." 
+            placeholder="Search by name, email or matrix..." 
             className="pl-10 h-12 rounded-2xl bg-white border-none shadow-sm"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -201,6 +204,12 @@ function AdminUsersContent() {
                     </Badge>
                   </div>
                   <div className="flex flex-col gap-1 mt-2">
+                    {u.matrixNumber && u.matrixNumber !== "N/A" && (
+                      <div className="flex items-center gap-2 text-[10px] text-accent font-black">
+                        <Hash className="h-3 w-3 shrink-0" />
+                        <span>Matrix: {u.matrixNumber}</span>
+                      </div>
+                    )}
                     <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                       <Mail className="h-3 w-3 shrink-0" />
                       <span className="break-all whitespace-normal">{u.email}</span>

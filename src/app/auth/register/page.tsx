@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { Heart, User, GraduationCap, Loader2, ShieldCheck, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { Heart, User, GraduationCap, Loader2, ShieldCheck, AlertCircle, Eye, EyeOff, Hash } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
@@ -29,6 +29,7 @@ export default function RegisterPage() {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
+  const [matrixNumber, setMatrixNumber] = useState('');
   
   const router = useRouter();
   const auth = useAuth();
@@ -52,6 +53,15 @@ export default function RegisterPage() {
         variant: "destructive",
         title: "Registration Failed",
         description: "Please select your gender.",
+      });
+      return;
+    }
+
+    if (role === 'volunteer' && !matrixNumber.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Registration Failed",
+        description: "Matrix number is required for student volunteers.",
       });
       return;
     }
@@ -103,6 +113,7 @@ export default function RegisterPage() {
           name: isAdminEmail ? "System Administrator" : name,
           email: targetEmail,
           role: finalRole,
+          matrixNumber: role === 'volunteer' ? matrixNumber.trim().toUpperCase() : "N/A",
           gender: isAdminEmail ? "N/A" : gender,
           phone: isAdminEmail ? "N/A" : phone,
           address: isAdminEmail ? "System Console" : address,
@@ -233,6 +244,20 @@ export default function RegisterPage() {
                     <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0123456789" required className="h-12" />
                     <p className="text-[10px] text-muted-foreground">Length must be 10-11 digits.</p>
                   </div>
+                  {role === 'volunteer' && (
+                    <div className="space-y-2">
+                      <Label htmlFor="matrix">Matrix Number</Label>
+                      <Input 
+                        id="matrix" 
+                        value={matrixNumber} 
+                        onChange={(e) => setMatrixNumber(e.target.value)} 
+                        placeholder="05DIT23F2000" 
+                        required 
+                        className="h-12" 
+                      />
+                      <p className="text-[10px] text-muted-foreground">Required for student verification.</p>
+                    </div>
+                  )}
                 </>
               )}
               <div className="space-y-2">

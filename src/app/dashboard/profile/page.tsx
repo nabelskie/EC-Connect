@@ -48,7 +48,8 @@ import {
   UserCircle,
   Image as ImageIcon,
   Upload,
-  Type
+  Type,
+  Hash
 } from 'lucide-react';
 import { Suspense, useMemo, useState, useEffect, useRef } from 'react';
 import { useAuth, useUser, useDoc, useMemoFirebase, useFirestore, updateDocumentNonBlocking } from '@/firebase';
@@ -74,6 +75,7 @@ function ProfileContent() {
   const [editPhone, setEditPhone] = useState('');
   const [editAddress, setEditAddress] = useState('');
   const [editGender, setEditGender] = useState('');
+  const [editMatrixNumber, setEditMatrixNumber] = useState('');
   const [editPhotoURL, setEditPhotoURL] = useState('');
   const [tempPhotoPreview, setTempPhotoPreview] = useState<string | null>(null);
   
@@ -104,6 +106,7 @@ function ProfileContent() {
       setEditPhone(profileData.phone || '');
       setEditAddress(profileData.address || '');
       setEditGender(profileData.gender || '');
+      setEditMatrixNumber(profileData.matrixNumber || '');
       setEditPhotoURL(profileData.photoURL || '');
     }
   }, [profileData]);
@@ -180,6 +183,7 @@ function ProfileContent() {
         phone: editPhone,
         address: editAddress,
         gender: editGender,
+        matrixNumber: profileData?.role === 'volunteer' ? editMatrixNumber.toUpperCase() : "N/A",
         photoURL: editPhotoURL
       });
 
@@ -383,6 +387,12 @@ function ProfileContent() {
                   <Label htmlFor="edit-name">Full Name</Label>
                   <Input id="edit-name" value={editName} onChange={(e) => setEditName(e.target.value)} className="h-12 rounded-xl" />
                 </div>
+                {profileData.role === 'volunteer' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-matrix">Matrix Number</Label>
+                    <Input id="edit-matrix" value={editMatrixNumber} onChange={(e) => setEditMatrixNumber(e.target.value)} className="h-12 rounded-xl" />
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="edit-gender">Gender</Label>
                   <Select value={editGender} onValueChange={setEditGender}>
@@ -419,6 +429,17 @@ function ProfileContent() {
                     <p className="text-primary font-medium">{profileData.email}</p>
                   </div>
                 </div>
+                {profileData.role === 'volunteer' && (
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 rounded-2xl bg-accent/10 text-accent font-black">
+                      <Hash className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1">
+                      <Label className="text-[10px] text-muted-foreground uppercase font-bold">Matrix Number</Label>
+                      <p className="text-accent font-black">{profileData.matrixNumber || 'Not provided'}</p>
+                    </div>
+                  </div>
+                )}
                 <div className="flex items-start gap-4">
                   <div className="p-3 rounded-2xl bg-slate-50 text-slate-400">
                     <UserCircle className="h-5 w-5" />
