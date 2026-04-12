@@ -47,7 +47,8 @@ import {
   EyeOff,
   UserCircle,
   Image as ImageIcon,
-  Upload
+  Upload,
+  Type
 } from 'lucide-react';
 import { Suspense, useMemo, useState, useEffect, useRef } from 'react';
 import { useAuth, useUser, useDoc, useMemoFirebase, useFirestore, updateDocumentNonBlocking } from '@/firebase';
@@ -239,25 +240,28 @@ function ProfileContent() {
   const toggleNotifications = (enabled: boolean) => {
     if (!userRef) return;
     
-    // Persist the preference to Firestore
     updateDocumentNonBlocking(userRef, { 
       notificationsEnabled: enabled,
       fcmToken: enabled ? profileData?.fcmToken : null 
     });
 
-    if (enabled) {
-      toast({
-        title: "Notifications Enabled",
-        description: "Your browser will now prompt for permission if it hasn't already.",
-      });
-      // The useFcm hook in Layout will react to profileData.notificationsEnabled 
-      // and trigger getToken if needed.
-    } else {
-      toast({
-        title: "Notifications Disabled",
-        description: "You will no longer receive push alerts.",
-      });
-    }
+    toast({
+      title: enabled ? "Notifications Enabled" : "Notifications Disabled",
+      description: enabled ? "You'll stay updated on your requests." : "Alerts have been silenced.",
+    });
+  };
+
+  const toggleLargeText = (enabled: boolean) => {
+    if (!userRef) return;
+    
+    updateDocumentNonBlocking(userRef, { 
+      largeTextEnabled: enabled 
+    });
+
+    toast({
+      title: enabled ? "Large Text Enabled" : "Text Size Reset",
+      description: enabled ? "The app font size has been increased for better readability." : "Font size returned to standard settings.",
+    });
   };
 
   const roleIcon = useMemo(() => {
@@ -444,6 +448,26 @@ function ProfileContent() {
                 </div>
               </>
             )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-sm rounded-[2rem] overflow-hidden">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+              <Type className="h-4 w-4" /> Accessibility
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
+              <div className="space-y-0.5">
+                <p className="text-sm font-bold text-primary">Large Text Mode</p>
+                <p className="text-[10px] text-muted-foreground">Increases font size for readability</p>
+              </div>
+              <Switch 
+                checked={profileData.largeTextEnabled === true}
+                onCheckedChange={toggleLargeText}
+              />
+            </div>
           </CardContent>
         </Card>
 

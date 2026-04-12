@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -50,6 +51,7 @@
   body {
     @apply bg-background text-foreground font-body;
     touch-action: manipulation;
+    transition: font-size 0.2s ease-in-out;
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-headline;
@@ -66,4 +68,17 @@
   .min-h-screen-dvh {
     min-height: 100dvh;
   }
+
+  /* Accessibility Scaling */
+  .large-font-mode {
+    font-size: 1.15rem;
+  }
+  .large-font-mode .text-xs { font-size: 0.875rem !important; }
+  .large-font-mode .text-sm { font-size: 1rem !important; }
+  .large-font-mode .text-base { font-size: 1.125rem !important; }
+  .large-font-mode .text-lg { font-size: 1.25rem !important; }
+  .large-font-mode .text-xl { font-size: 1.5rem !important; }
+  .large-font-mode .text-2xl { font-size: 1.75rem !important; }
+  .large-font-mode .text-3xl { font-size: 2rem !important; }
+  .large-font-mode .text-4xl { font-size: 2.5rem !important; }
 }

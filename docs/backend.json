@@ -49,6 +49,10 @@
           "type": "boolean",
           "description": "Whether the user has enabled push notifications."
         },
+        "largeTextEnabled": {
+          "type": "boolean",
+          "description": "Accessibility setting to increase font size across the app."
+        },
         "createdAt": {
           "type": "string",
           "description": "Timestamp when the user profile was created.",

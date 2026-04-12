@@ -31,8 +31,9 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Suspense, useMemo, useState, useEffect } from 'react';
 import { useFcm } from '@/firebase/messaging/use-fcm';
-import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, query, where, doc } from 'firebase/firestore';
+import { cn } from '@/lib/utils';
 
 function DashboardNav() {
   const pathname = usePathname();
@@ -257,6 +258,8 @@ function NotificationContent() {
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
+  const db = useFirestore();
+  const { user } = useUser();
   
   // Initialize Cloud Messaging
   useFcm();
@@ -265,8 +268,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setMounted(true);
   }, []);
 
+  const userRef = useMemoFirebase(() => {
+    if (!user || !db) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user]);
+
+  const { data: profile } = useDoc(userRef);
+  const isLargeText = profile?.largeTextEnabled === true;
+
   return (
-    <div className="flex flex-col h-screen-dvh bg-background overflow-hidden">
+    <div className={cn("flex flex-col h-screen-dvh bg-background overflow-hidden", isLargeText && "large-font-mode")}>
       <header className="h-16 bg-white border-b flex items-center justify-between px-6 sticky top-0 z-30 shadow-sm shrink-0">
         <div className="flex items-center gap-2">
           <Heart className="h-6 w-6 text-accent fill-accent" />
