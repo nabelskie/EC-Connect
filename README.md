@@ -18,9 +18,10 @@ npx cap open android
 ```
 
 ### 2. In Android Studio (IMPORTANT)
-1.  **Wait**: Look at the bottom status bar and wait for "Gradle Sync" to finish completely. If it asks to update anything, you can usually skip or "Remind me later".
-2.  **Build**: Go to **Build > Build Bundle(s) / APK(s) > Build APK(s)**.
-3.  **Locate**: When the build finishes, a popup appears in the bottom-right. Click **Locate** to find your `app-debug.apk`.
+1.  **Wait**: Look at the bottom status bar and wait for "Gradle Sync" to finish completely. 
+2.  **Troubleshooting Gradle Timeout**: If you see "Read timed out", click the **Elephant Icon** (Sync) in the top right to try again. Ensure you have a stable internet connection.
+3.  **Build**: Go to **Build > Build Bundle(s) / APK(s) > Build APK(s)**.
+4.  **Locate**: When the build finishes, a popup appears in the bottom-right. Click **Locate** to find your `app-debug.apk`.
 
 ## 📂 Troubleshooting Build Errors
 If you ever need to run `npm run build` again and it fails:
