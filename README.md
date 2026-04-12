@@ -28,7 +28,7 @@ When you open VS Code, ensure you have opened the **project folder directly**. Y
    ```bash
    npm install
    ```
-   *Note: If you see "vulnerabilities" or "funding" messages, this is NORMAL. The installation was successful if it says "added packages" or "up to date".*
+   *Note: If you see "npm warn deprecated" or "vulnerabilities," this is NORMAL. The installation was successful if it says "added packages" or "up to date".*
 
 ### Phase 2: Building the Web Assets
 This turns your code into a "static site" that Android can run locally.
@@ -79,18 +79,21 @@ If you make changes here in Firebase Studio and want to update the app on your p
 
 ---
 
-## ⚠️ Troubleshooting Git & Build Errors
+## ⚠️ Troubleshooting & Common Errors
 
-### 1. "generateStaticParams" or Dynamic Route Error
-If `npm run build` fails with an error about "dynamic routes," it means your local PC is missing the fix for static exports.
+### 1. "npm warn deprecated"
+**Meaning**: Some libraries are old. 
+**Fix**: Ignore it. It is not an error and does not stop your app from working.
+
+### 2. "generateStaticParams" or Dynamic Route Error
+**Meaning**: You are using an old version of the code that isn't mobile-ready.
 **Fix**: Run `git reset --hard origin/main` followed by `git pull` to get the latest routing fixes.
 
-### 2. "Could not find the web assets directory: .\out"
-This means you tried to sync before building.
+### 3. "Could not find the web assets directory: .\out"
+**Meaning**: You tried to sync before building.
 **Fix**: Run `npm run build` first, then `npx cap sync android`.
 
-### 3. "git pull failed" or Merge Conflicts
-If you can't pull because of local changes:
+### 4. "git pull failed" or Merge Conflicts
 **Fix**: Run `git reset --hard origin/main`. This forces your computer to match the clean version on GitHub.
 
 ---
