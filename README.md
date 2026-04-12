@@ -2,36 +2,28 @@
 # ElderCare Connect - Mobile Build Guide
 
 ## ✅ Step 1: Success! Build Completed
-Your `out` folder has been generated. Now we move to the final phase: **Android APK Generation**.
+Your `out` folder has been generated and your Android Studio environment is now fully synced.
 
 ## 🚀 Final Phase: Generate APK
 
-### 1. Sync and Open Android Studio
-If the Android platform already exists, you just need to sync your latest code and open the project. Run these in your VS Code terminal:
+### 1. Build the APK in Android Studio
+Now that Gradle has finished syncing:
+1.  In Android Studio, go to the top menu: **Build > Build Bundle(s) / APK(s) > Build APK(s)**.
+2.  Wait for the process to finish (check the status bar at the bottom).
+3.  When the "Build APK(s): APK(s) generated successfully" popup appears in the bottom-right, click **Locate**.
+4.  Find your `app-debug.apk` and transfer it to your phone.
 
-```bash
-# Sync your build code with the Android project
-npx cap sync android
-
-# Open the project in Android Studio
-npx cap open android
-```
-
-### 2. In Android Studio (IMPORTANT)
-1.  **Wait**: Look at the bottom status bar and wait for "Gradle Sync" to finish completely. 
-2.  **Troubleshooting Gradle Timeout**: If you see "Read timed out", click the **Elephant Icon** (Sync) in the top right to try again. Ensure you have a stable internet connection.
-3.  **Build**: Go to **Build > Build Bundle(s) / APK(s) > Build APK(s)**.
-4.  **Locate**: When the build finishes, a popup appears in the bottom-right. Click **Locate** to find your `app-debug.apk`.
-
-## 📂 Troubleshooting Build Errors
-If you ever need to run `npm run build` again and it fails:
-1. **Clean Start**:
+## 📂 Future Updates
+If you change your code in Firebase Studio and want to update your app:
+1. **On your PC**:
    ```bash
-   git reset --hard origin/main
-   npm install
+   git pull origin main
    npm run build
    npx cap sync android
    ```
+2. **In Android Studio**:
+   - Click the **Elephant Icon** (Sync) in the top right.
+   - Run the **Build APK** step again.
 
 ## 🔐 Credentials
 - **Admin Email**: `adminkn@gmail.com`
