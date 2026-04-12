@@ -9,7 +9,7 @@ ElderCare Connect is a modern, real-time application built with Next.js and Fire
 Follow these steps **on your local computer** (Windows/macOS) to generate your mobile app.
 
 ### ⚠️ CRITICAL: Check your folder first!
-When you open VS Code, ensure you have opened the **project folder directly** (e.g., `EC-Connect`). Your sidebar should show the `src` and `app` folders immediately. If you see another folder with your project name inside VS Code, you are "one level too high." Go to **File > Open Folder** and select that inner folder.
+When you open VS Code, ensure you have opened the **project folder directly**. Your sidebar should show the `src` and `app` folders immediately. If you see another folder with your project name inside VS Code, you are "one level too high." Go to **File > Open Folder** and select that inner folder.
 
 ### Phase 1: Initial Setup (The "First Time" Only)
 1. **Push from Firebase Studio**: In this window (Firebase Studio), run:
@@ -36,7 +36,7 @@ This turns your code into a "static site" that Android can run locally.
    ```bash
    npm run build
    ```
-   *Note: This creates a folder named `out`. If this fails, see the "Fixing Build Errors" section below.*
+   *Note: This creates a folder named `out`. If this fails, see the "Troubleshooting" section below.*
 
 ### Phase 3: Creating the Android Project
 1. **Initialize Capacitor**:
@@ -80,15 +80,18 @@ If you make changes here in Firebase Studio and want to update the app on your p
 ---
 
 ## ⚠️ Troubleshooting Git & Build Errors
-If you see errors like `generateStaticParams` or "git pull failed":
 
-1. **Force Sync (Resets your PC to match GitHub exactly):**
-   ```bash
-   git reset --hard origin/main
-   git pull
-   ```
-2. **Missing Script Error:**
-   Ensure you are inside the correct folder. The terminal should show the folder name where your `package.json` is located. If not, use `cd your-folder-name`.
+### 1. "generateStaticParams" or Dynamic Route Error
+If `npm run build` fails with an error about "dynamic routes," it means your local PC is missing the fix for static exports.
+**Fix**: Run `git reset --hard origin/main` followed by `git pull` to get the latest routing fixes.
+
+### 2. "Could not find the web assets directory: .\out"
+This means you tried to sync before building.
+**Fix**: Run `npm run build` first, then `npx cap sync android`.
+
+### 3. "git pull failed" or Merge Conflicts
+If you can't pull because of local changes:
+**Fix**: Run `git reset --hard origin/main`. This forces your computer to match the clean version on GitHub.
 
 ---
 
