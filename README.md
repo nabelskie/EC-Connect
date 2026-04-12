@@ -1,54 +1,42 @@
 
 # ElderCare Connect - Mobile Build Guide
 
-## 🚨 CRITICAL: Fix for Build Errors
-If your build fails with "Webpack Error" or "generateStaticParams Error", perform these steps:
+## ✅ Step 1: Success! Build Completed
+Your `out` folder has been generated. Now we move to the final phase: **Android APK Generation**.
 
-1. **Delete Folders**: In VS Code Sidebar, **DELETE** these folders:
-   - `src/app/chat/[requestId]`
-   - `src/app/dashboard/chat/[requestId]`
-   *(These folders conflict with Android builds. Use the detail page instead)*
+## 🚀 Final Phase: Generate APK
 
-2. **Sync the Fixes**: Run these in your VS Code terminal:
-   ```bash
-   git reset --hard origin/main
-   git pull
-   npm install
-   ```
-
-## 🚀 How to Build the APK (Step-by-Step)
-
-### Phase 1: Preparation
-Ensure you are inside the **EC-Connect** folder in VS Code.
-
-```bash
-npm install
-```
-
-### Phase 2: Create Web Assets
-```bash
-npm run build
-```
-*Note: This creates the `out` folder. If it fails, ensure the [requestId] folders mentioned above are deleted.*
-
-### Phase 3: Capacitor Setup (First time only)
+### 1. Capacitor Initialization
+Run this in your VS Code terminal to set up the mobile configuration:
 ```bash
 npx cap init ElderCare com.pks.eldercare --web-dir out
+```
+
+### 2. Add Android Platform
+```bash
 npx cap add android
 ```
 
-### Phase 4: Sync & Generate APK
-1. **Sync code to Android Studio**:
-   ```bash
-   npx cap sync android
-   ```
-2. **Open Android Studio**:
-   ```bash
-   npx cap open android
-   ```
-3. **In Android Studio**:
-   - Go to **Build > Build Bundle(s) / APK(s) > Build APK(s)**.
-   - Once finished, click "Locate" in the bottom right pop-up to find your `app-debug.apk`.
+### 3. Sync & Open
+Sync your code to the Android project and open it in Android Studio:
+```bash
+npx cap sync android
+npx cap open android
+```
 
-## 📂 Troubleshooting Folder Structure
-Make sure your VS Code shows `src`, `app`, and `public` directly in the sidebar. If you see another folder named `EC-Connect` inside VS Code, you are "one level too high". Go to **File > Open Folder** and select the inner `EC-Connect` folder.
+### 4. In Android Studio
+Once Android Studio opens:
+1.  **Wait**: Look at the bottom status bar and wait for "Gradle Sync" to finish.
+2.  **Build**: Go to **Build > Build Bundle(s) / APK(s) > Build APK(s)**.
+3.  **Locate**: When the popup appears in the bottom-right, click **Locate** to find your `app-debug.apk`.
+
+## 📂 Troubleshooting Build Errors
+If `npm run build` fails again in the future:
+1. **Delete Folders**: Manually delete `src/app/chat/[requestId]` and `src/app/dashboard/chat/[requestId]`.
+2. **Update Config**: Ensure `next.config.ts` has the Webpack "Ignore" aliases for Node.js modules.
+3. **Clean Start**:
+   ```bash
+   git reset --hard origin/main
+   npm install
+   npm run build
+   ```
