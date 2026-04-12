@@ -19,6 +19,20 @@ const nextConfig: NextConfig = {
   },
   webpack: (config, { isServer }) => {
     if (!isServer) {
+      // 1. Force Resolve Aliases to 'false' (Completely ignore these modules in the browser bundle)
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        'genkit': false,
+        '@genkit-ai/google-genai': false,
+        '@genkit-ai/ai': false,
+        '@genkit-ai/core': false,
+        'wav': false,
+        'grpc': false,
+        '@grpc/grpc-js': false,
+        'http2': false,
+      };
+
+      // 2. Fallbacks for standard Node.js modules
       config.resolve.fallback = {
         ...config.resolve.fallback,
         fs: false,
@@ -40,6 +54,7 @@ const nextConfig: NextConfig = {
         async_hooks: false,
       };
       
+      // 3. Use null-loader for any remaining heavy modules
       config.module.rules.push({
         test: /node_modules\/(@genkit-ai|genkit|@grpc|@opentelemetry|google-auth-library|gaxios|gcp-metadata|google-p12-asn1|retry-request)/,
         use: 'null-loader',
