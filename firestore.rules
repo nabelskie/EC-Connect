@@ -13,8 +13,7 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Optimized isAdmin check: Prioritizes the hardcoded admin email to avoid 
-    // latency or failures from document fetching during initial registration/login.
+    // Checks if the current user is an admin
     function isAdmin() {
       return isSignedIn() && (
         request.auth.token.email == 'adminkn@gmail.com' ||
@@ -23,11 +22,11 @@ service cloud.firestore {
       );
     }
 
-    // Safely checks if the current user is a volunteer.
+    // Checks if the current user is a volunteer
     function isVolunteer() {
       return isSignedIn() && (
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'volunteer')
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'volunteer'
       );
     }
 
@@ -47,6 +46,7 @@ service cloud.firestore {
     }
 
     match /assistance_requests_pending/{requestId} {
+      // Anyone signed in can view pending requests to help out
       allow get, list: if isSignedIn();
       allow create: if isSignedIn();
       // Allow the creator, admins, or any volunteer to claim/update/delete
@@ -82,16 +82,11 @@ service cloud.firestore {
     }
 
     match /chat_rooms/{chatRoomId} {
-      // Allow get if user is participant/admin
-      allow get: if isSignedIn() && (
-        resource == null || 
-        request.auth.uid in resource.data.participantUserIds || 
-        isAdmin()
-      );
-      
-      // Allow participants or admins to list chats
-      allow list: if isSignedIn() && (
-        request.auth.uid in resource.data.participantUserIds || isAdmin()
+      // Allow get/list if user is participant or admin
+      // Note: resource is null during creation
+      allow get, list: if isSignedIn() && (
+        isAdmin() || 
+        (resource != null && request.auth.uid in resource.data.participantUserIds)
       );
       
       allow create: if isSignedIn();
@@ -105,9 +100,10 @@ service cloud.firestore {
 
     match /chat_rooms/{chatRoomId}/messages/{messageId} {
       // Allow participants or admins to read messages
+      // Messages denormalize participantUserIds for query efficiency
       allow get, list: if isSignedIn() && (
-        request.auth.uid in request.resource.data.participantUserIds || 
-        isAdmin() || 
+        isAdmin() ||
+        (resource != null && request.auth.uid in resource.data.participantUserIds) ||
         (exists(/databases/$(database)/documents/chat_rooms/$(chatRoomId)) && 
          request.auth.uid in get(/databases/$(database)/documents/chat_rooms/$(chatRoomId)).data.participantUserIds)
       );
