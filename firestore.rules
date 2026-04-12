@@ -6,7 +6,8 @@ service cloud.firestore {
     /**
      * ELDERCARE CONNECT SECURITY RULES
      * 
-     * Enforces strict Authorization Independence and role-based access control.
+     * Enforces strict role-based access control and ensures users can only
+     * access data they are participants of.
      */
 
     function isSignedIn() {
@@ -37,7 +38,7 @@ service cloud.firestore {
     match /users/{userId} {
       // Allow any signed-in user to read a profile to see names in chats/requests
       allow get: if isSignedIn();
-      // Allow admins to list the whole directory
+      // Only admins can list all users
       allow list: if isAdmin();
       // Users can create/update their own profile
       allow create: if isSignedIn() && request.auth.uid == userId;
@@ -82,11 +83,10 @@ service cloud.firestore {
     }
 
     match /chat_rooms/{chatRoomId} {
-      // Allow get/list if user is participant or admin
-      // Note: resource is null during creation
+      // Fixed: Ensure the query filter 'participantUserIds array-contains uid' matches the rule
       allow get, list: if isSignedIn() && (
         isAdmin() || 
-        (resource != null && request.auth.uid in resource.data.participantUserIds)
+        request.auth.uid in resource.data.participantUserIds
       );
       
       allow create: if isSignedIn();
@@ -100,12 +100,9 @@ service cloud.firestore {
 
     match /chat_rooms/{chatRoomId}/messages/{messageId} {
       // Allow participants or admins to read messages
-      // Messages denormalize participantUserIds for query efficiency
       allow get, list: if isSignedIn() && (
         isAdmin() ||
-        (resource != null && request.auth.uid in resource.data.participantUserIds) ||
-        (exists(/databases/$(database)/documents/chat_rooms/$(chatRoomId)) && 
-         request.auth.uid in get(/databases/$(database)/documents/chat_rooms/$(chatRoomId)).data.participantUserIds)
+        request.auth.uid in resource.data.participantUserIds
       );
       
       // Allow participants to send messages
