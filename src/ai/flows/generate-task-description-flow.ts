@@ -1,4 +1,3 @@
-'use server';
 /**
  * @fileOverview A Genkit flow that helps elderly users or caregivers write clear and comprehensive descriptions for assistance requests.
  *
@@ -41,6 +40,11 @@ export type GenerateTaskDescriptionOutput = z.infer<
 export async function generateTaskDescription(
   input: GenerateTaskDescriptionInput
 ): Promise<GenerateTaskDescriptionOutput> {
+  // Mobile/Static Export safety: AI flows require a server environment.
+  // If running in a static context (like an APK), we return the original text as a fallback.
+  if (typeof window !== 'undefined') {
+     return { generatedDescription: input.initialDescription };
+  }
   return generateTaskDescriptionFlow(input);
 }
 

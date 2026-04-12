@@ -1,4 +1,3 @@
-'use server';
 /**
  * @fileOverview This file implements a Genkit flow to generate a summary of key operational insights
  * for the admin dashboard based on provided system metrics.
@@ -30,6 +29,13 @@ export type GenerateAdminDashboardSummaryOutput = z.infer<typeof GenerateAdminDa
 export async function generateAdminDashboardSummary(
   input: GenerateAdminDashboardSummaryInput
 ): Promise<GenerateAdminDashboardSummaryOutput> {
+  // Mobile/Static Export safety: AI flows require a server environment.
+  // If running in a static context (like an APK), we return a basic fallback summary.
+  if (typeof window !== 'undefined') {
+     return { 
+       summary: `System Overview: ${input.totalUsers} users registered, ${input.totalRequests} total requests, and ${input.completedTasks} tasks completed successfully.`
+     };
+  }
   return generateAdminDashboardSummaryFlow(input);
 }
 
