@@ -38,7 +38,10 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
-      <body className="font-body antialiased bg-background text-foreground selection:bg-accent/30 overflow-x-hidden min-h-[100dvh]">
+      <body 
+        className="font-body antialiased bg-background text-foreground selection:bg-accent/30 overflow-x-hidden min-h-[100dvh]"
+        suppressHydrationWarning
+      >
         <FirebaseClientProvider>
           {children}
           <Toaster />
