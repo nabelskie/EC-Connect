@@ -33,14 +33,15 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
+import { collection, doc, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 function AdminUsersContent() {
   const [mounted, setMounted] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [userToDelete, setUserToDelete] = useState<any>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const searchParams = useSearchParams();
   const initialFilter = searchParams.get('filter') || 'All';
   const [roleFilter, setRoleFilter] = useState(initialFilter);
@@ -86,8 +87,12 @@ function AdminUsersContent() {
     });
   }, [usersData, searchTerm, roleFilter]);
 
-  const confirmDeleteUser = () => {
-    if (!userToDelete) return;
+  /**
+   * Cascading Delete Handler
+   * Deletes the user profile and all requests created by this user.
+   */
+  const confirmDeleteUser = async () => {
+    if (!userToDelete || isDeleting) return;
     
     if (userToDelete.id === currentUser?.uid) {
       toast({
@@ -99,15 +104,47 @@ function AdminUsersContent() {
       return;
     }
 
-    const docRef = doc(db, 'users', userToDelete.id);
-    deleteDocumentNonBlocking(docRef);
-    
-    toast({
-      title: "User Removed",
-      description: `${userToDelete.name}'s profile is being removed from the system.`,
-    });
-    
-    setUserToDelete(null);
+    setIsDeleting(true);
+    const userId = userToDelete.id;
+    const batch = writeBatch(db);
+
+    try {
+      // 1. Queue user profile deletion
+      batch.delete(doc(db, 'users', userId));
+
+      // 2. Find and queue deletion for all requests created by this user across all status collections
+      const collectionsToClean = [
+        'assistance_requests_pending',
+        'assistance_requests_active',
+        'assistance_requests_completed'
+      ];
+
+      for (const collName of collectionsToClean) {
+        const q = query(collection(db, collName), where('createdByUserId', '==', userId));
+        const snapshot = await getDocs(q);
+        snapshot.forEach((d) => {
+          batch.delete(d.ref);
+        });
+      }
+
+      // 3. Execute all deletions atomically
+      await batch.commit();
+      
+      toast({
+        title: "User & Data Removed",
+        description: `${userToDelete.name}'s profile and all their requests have been deleted.`,
+      });
+    } catch (error) {
+      console.error("Deletion error:", error);
+      toast({
+        variant: "destructive",
+        title: "Cleanup Failed",
+        description: "User was deleted, but some associated data might remain.",
+      });
+    } finally {
+      setIsDeleting(false);
+      setUserToDelete(null);
+    }
   };
 
   const getDisplayRole = (role: string) => {
@@ -270,22 +307,27 @@ function AdminUsersContent() {
         </div>
       </ScrollArea>
 
-      <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
+      <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && !isDeleting && setUserToDelete(null)}>
         <AlertDialogContent className="rounded-3xl max-w-[90vw] mx-auto">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-xl font-bold">Remove User?</AlertDialogTitle>
             <AlertDialogDescription className="text-sm">
-              This will permanently delete <strong>{userToDelete?.name}</strong> from the community directory. They will lose all system access immediately.
+              This will permanently delete <strong>{userToDelete?.name}</strong> and <strong>all assistance requests</strong> created by them. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex flex-col gap-2 mt-4">
             <AlertDialogAction 
-              onClick={confirmDeleteUser}
+              onClick={(e) => {
+                e.preventDefault();
+                confirmDeleteUser();
+              }}
+              disabled={isDeleting}
               className="bg-destructive hover:bg-destructive/90 h-12 rounded-xl font-bold shadow-lg shadow-destructive/20"
             >
-              Yes, Remove Permanently
+              {isDeleting ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
+              {isDeleting ? "Deleting..." : "Yes, Remove Everything"}
             </AlertDialogAction>
-            <AlertDialogCancel className="h-12 rounded-xl font-bold border-none bg-slate-100 hover:bg-slate-200 transition-colors">
+            <AlertDialogCancel disabled={isDeleting} className="h-12 rounded-xl font-bold border-none bg-slate-100 hover:bg-slate-200 transition-colors">
               Cancel
             </AlertDialogCancel>
           </AlertDialogFooter>
