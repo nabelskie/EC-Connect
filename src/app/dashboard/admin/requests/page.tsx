@@ -187,14 +187,14 @@ function AdminRequestsContent() {
                     <Clock className="h-5 w-5" />
                   </div>
                   <div>
-                    <div className="font-bold text-sm text-primary">{req.createdByName || 'Unknown User'}</div>
+                    <div className="font-bold text-sm text-primary break-words whitespace-normal leading-tight">{req.createdByName || 'Unknown User'}</div>
                     <div className="text-[10px] text-muted-foreground font-semibold uppercase">{req.taskType}</div>
                   </div>
                 </div>
                 {getStatusBadge(req.status)}
               </div>
               
-              <p className="text-xs text-muted-foreground line-clamp-2 mb-3 leading-relaxed italic">
+              <p className="text-xs text-muted-foreground line-clamp-2 mb-3 leading-relaxed italic break-words">
                 "{req.description}"
               </p>
 
@@ -242,7 +242,7 @@ function AdminRequestsContent() {
                   {getStatusBadge(selectedRequest.status)}
                 </div>
                 <SheetTitle className="text-2xl font-bold text-primary">{selectedRequest.taskType} Request</SheetTitle>
-                <SheetDescription className="text-base leading-relaxed text-slate-600 italic">
+                <SheetDescription className="text-base leading-relaxed text-slate-600 italic break-words">
                   "{selectedRequest.description}"
                 </SheetDescription>
               </SheetHeader>
@@ -253,9 +253,9 @@ function AdminRequestsContent() {
                     <div className="p-2 rounded-lg bg-slate-50 text-slate-400">
                       <MapPin className="h-5 w-5" />
                     </div>
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <p className="text-[10px] text-muted-foreground uppercase font-bold">Location</p>
-                      <p className="text-sm text-primary font-medium">{selectedRequest.location}</p>
+                      <p className="text-sm text-primary font-medium break-words">{selectedRequest.location}</p>
                     </div>
                   </div>
 
@@ -286,10 +286,10 @@ function AdminRequestsContent() {
                   <div className="p-2 rounded-lg bg-slate-50 text-slate-400">
                     <User className="h-5 w-5" />
                   </div>
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <p className="text-[10px] text-muted-foreground uppercase font-bold">Requester Name</p>
-                    <p className="text-sm text-primary font-bold">{selectedRequest.createdByName || 'Unknown'}</p>
-                    <p className="text-[10px] font-mono text-muted-foreground">{selectedRequest.createdByUserId}</p>
+                    <p className="text-sm text-primary font-bold break-words">{selectedRequest.createdByName || 'Unknown'}</p>
+                    <p className="text-[10px] font-mono text-muted-foreground break-all">{selectedRequest.createdByUserId}</p>
                   </div>
                 </div>
 
@@ -298,10 +298,10 @@ function AdminRequestsContent() {
                     <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600">
                       <CheckCircle2 className="h-5 w-5" />
                     </div>
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <p className="text-[10px] text-muted-foreground uppercase font-bold">Assigned Volunteer</p>
-                      <p className="text-sm text-primary font-medium">{selectedRequest.volunteerName}</p>
-                      <p className="text-[10px] text-muted-foreground font-mono">{selectedRequest.assignedVolunteerId}</p>
+                      <p className="text-sm text-primary font-medium break-words">{selectedRequest.volunteerName}</p>
+                      <p className="text-[10px] text-muted-foreground font-mono break-all">{selectedRequest.assignedVolunteerId}</p>
                     </div>
                   </div>
                 )}
