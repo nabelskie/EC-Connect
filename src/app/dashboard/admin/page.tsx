@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,11 +17,13 @@ import {
   AlertCircle, 
   Heart,
   Clock,
-  MapPin
+  MapPin,
+  Download
 } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import Link from 'next/link';
+import { useToast } from '@/hooks/use-toast';
 import { 
   BarChart, 
   Bar, 
@@ -45,6 +48,9 @@ import {
 export default function AdminDashboard() {
   const db = useFirestore();
   const { user } = useUser();
+  const { toast } = useToast();
+  const [isExporting, setIsExporting] = useState(false);
+  const reportRef = useRef<HTMLDivElement>(null);
 
   const ADMIN_EMAIL = 'adminkn@gmail.com';
 
@@ -161,6 +167,47 @@ export default function AdminDashboard() {
       .slice(0, 5);
   }, [pendingData, activeData, completedData]);
 
+  const handleDownloadPDF = async () => {
+    if (!reportRef.current) return;
+    setIsExporting(true);
+    
+    try {
+      // Dynamic imports to prevent build bloat
+      const html2canvas = (await import('html2canvas')).default;
+      const jsPDF = (await import('jspdf')).jsPDF;
+      
+      const canvas = await html2canvas(reportRef.current, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#f8fafc' // bg-slate-50
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`ElderCare-Report-${new Date().toISOString().split('T')[0]}.pdf`);
+      
+      toast({
+        title: "Report Exported",
+        description: "The PDF report has been generated successfully.",
+      });
+    } catch (error) {
+      console.error("PDF Export Error:", error);
+      toast({
+        variant: "destructive",
+        title: "Export Failed",
+        description: "Could not generate PDF. Please try again.",
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   if (isProfileLoading) {
     return (
       <div className="flex h-[calc(100vh-160px)] items-center justify-center">
@@ -229,58 +276,71 @@ export default function AdminDashboard() {
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-6">
-          <Card className="border-none shadow-sm rounded-2xl overflow-hidden">
-            <CardHeader>
-              <CardTitle className="text-base font-bold text-primary">Age Group vs. Assistance Type</CardTitle>
-              <CardDescription className="text-xs">Correlation between elderly age and requested services</CardDescription>
-            </CardHeader>
-            <CardContent className="h-[300px] p-4">
-              <ChartContainer config={chartConfig}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={analyticsData.barData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="ageRange" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 'bold' }} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <ChartLegend content={<ChartLegendContent />} />
-                    <Bar dataKey="Groceries" fill="var(--color-Groceries)" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="Transportation" fill="var(--color-Transportation)" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="Tech Support" fill="var(--color-Tech Support)" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </CardContent>
-          </Card>
+          <div className="flex justify-end mb-2">
+            <Button 
+              onClick={handleDownloadPDF} 
+              disabled={isExporting}
+              className="h-14 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2 shadow-lg active:scale-95 transition-all"
+            >
+              {isExporting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Download className="h-5 w-5" />}
+              Export Report (PDF)
+            </Button>
+          </div>
 
-          <Card className="border-none shadow-sm rounded-2xl overflow-hidden">
-            <CardHeader>
-              <CardTitle className="text-base font-bold text-primary">Service Distribution</CardTitle>
-              <CardDescription className="text-xs">Overall demand for specific help categories</CardDescription>
-            </CardHeader>
-            <CardContent className="h-[250px] p-4">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={analyticsData.pieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {analyticsData.pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={Object.values(chartConfig)[index % 3].color} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                  />
-                  <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: 'bold' }} />
-                </PieChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+          <div ref={reportRef} className="space-y-6 p-4 -m-4 rounded-3xl">
+            <Card className="border-none shadow-sm rounded-2xl overflow-hidden">
+              <CardHeader>
+                <CardTitle className="text-base font-bold text-primary">Age Group vs. Assistance Type</CardTitle>
+                <CardDescription className="text-xs">Correlation between elderly age and requested services</CardDescription>
+              </CardHeader>
+              <CardContent className="h-[300px] p-4">
+                <ChartContainer config={chartConfig}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={analyticsData.barData}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="ageRange" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 'bold' }} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <ChartLegend content={<ChartLegendContent />} />
+                      <Bar dataKey="Groceries" fill="var(--color-Groceries)" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="Transportation" fill="var(--color-Transportation)" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="Tech Support" fill="var(--color-Tech Support)" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+
+            <Card className="border-none shadow-sm rounded-2xl overflow-hidden">
+              <CardHeader>
+                <CardTitle className="text-base font-bold text-primary">Service Distribution</CardTitle>
+                <CardDescription className="text-xs">Overall demand for specific help categories</CardDescription>
+              </CardHeader>
+              <CardContent className="h-[250px] p-4">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={analyticsData.pieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {analyticsData.pieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={Object.values(chartConfig)[index % 3].color} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                    />
+                    <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: 'bold' }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
