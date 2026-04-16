@@ -93,6 +93,10 @@
           "type": "string",
           "description": "The full name of the requester at the time of creation."
         },
+        "creatorAge": {
+          "type": "string",
+          "description": "The age of the requester at the time of creation, for demographic reporting."
+        },
         "taskType": {
           "type": "string",
           "description": "The type of task requested (e.g., 'Grocery', 'Transport', 'Tech Support', 'Other')."

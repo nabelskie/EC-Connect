@@ -146,10 +146,14 @@ export default function ElderlyDashboard() {
     
     setIsSubmitting(true);
     let nameToUse = user.displayName;
+    let ageToUse = "N/A";
+    
     try {
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       if (userDoc.exists()) {
-        nameToUse = userDoc.data().name;
+        const userData = userDoc.data();
+        nameToUse = userData.name;
+        ageToUse = userData.age || "N/A";
       }
     } catch (e) {}
     
@@ -171,6 +175,7 @@ export default function ElderlyDashboard() {
       id: requestId,
       createdByUserId: user.uid,
       createdByName: nameToUse || 'Elderly',
+      creatorAge: ageToUse,
       taskType: formData.type,
       description: finalDescription,
       location: finalLocation,
