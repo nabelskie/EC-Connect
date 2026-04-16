@@ -172,7 +172,6 @@ export default function AdminDashboard() {
     setIsExporting(true);
     
     try {
-      // Dynamic imports to prevent build bloat
       const html2canvas = (await import('html2canvas')).default;
       const jsPDF = (await import('jspdf')).jsPDF;
       
@@ -180,7 +179,7 @@ export default function AdminDashboard() {
         scale: 2,
         useCORS: true,
         logging: false,
-        backgroundColor: '#f8fafc' // bg-slate-50
+        backgroundColor: '#f8fafc' 
       });
       
       const imgData = canvas.toDataURL('image/png');
@@ -276,14 +275,14 @@ export default function AdminDashboard() {
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-6">
-          <div className="flex justify-end mb-2">
+          <div className="flex justify-center mb-6">
             <Button 
               onClick={handleDownloadPDF} 
               disabled={isExporting}
-              className="h-14 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2 shadow-lg active:scale-95 transition-all"
+              className="w-full h-18 rounded-[1.5rem] bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xl gap-3 shadow-xl shadow-emerald-600/20 active:scale-95 transition-all"
             >
-              {isExporting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Download className="h-5 w-5" />}
-              Export Report (PDF)
+              {isExporting ? <Loader2 className="h-7 w-7 animate-spin" /> : <Download className="h-7 w-7" />}
+              {isExporting ? 'Exporting...' : 'Export Report (PDF)'}
             </Button>
           </div>
 
