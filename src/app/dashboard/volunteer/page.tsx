@@ -120,6 +120,7 @@ export default function VolunteerDashboard() {
     setIsAccepting(task.id);
     const volunteerId = user.uid;
     const volunteerName = profile.name || user.displayName || 'Volunteer';
+    const volunteerPhotoURL = profile.photoURL || '';
     const residentId = task.createdByUserId;
     
     if (!residentId) {
@@ -129,6 +130,19 @@ export default function VolunteerDashboard() {
     }
 
     let residentName = task.createdByName || 'Resident';
+    let residentPhotoURL = '';
+
+    try {
+      const residentDoc = await getDoc(doc(db, 'users', residentId));
+      if (residentDoc.exists()) {
+        const resData = residentDoc.data();
+        residentName = resData.name || residentName;
+        residentPhotoURL = resData.photoURL || '';
+      }
+    } catch (e) {
+      console.warn("Could not fetch resident profile details");
+    }
+
     const chatRoomId = [residentId, volunteerId].sort().join('_');
     const participantUserIds = [residentId, volunteerId];
 
@@ -154,6 +168,8 @@ export default function VolunteerDashboard() {
       participantUserIds: participantUserIds, 
       residentName: residentName, 
       volunteerName: volunteerName, 
+      residentPhotoURL: residentPhotoURL,
+      volunteerPhotoURL: volunteerPhotoURL,
       createdAt: serverTimestamp(), 
       lastMessageSnippet: `Volunteer ${volunteerName} has joined the chat.`, 
       lastMessageAt: serverTimestamp() 

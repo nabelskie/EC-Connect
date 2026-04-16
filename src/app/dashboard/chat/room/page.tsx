@@ -47,6 +47,18 @@ function ChatContent() {
     }
   }, [mounted, isRoomLoading, chatRoom, retryCount]);
 
+  const partnerId = useMemo(() => {
+    if (!chatRoom || !user) return null;
+    return chatRoom.participantUserIds?.find((id: string) => id !== user.uid);
+  }, [chatRoom, user]);
+
+  const partnerUserRef = useMemoFirebase(() => {
+    if (!partnerId || !db) return null;
+    return doc(db, 'users', partnerId);
+  }, [db, partnerId]);
+
+  const { data: partnerProfile } = useDoc(partnerUserRef);
+
   const messagesQuery = useMemoFirebase(() => {
     if (!requestId || !db || !user) return null;
     return query(
@@ -81,14 +93,13 @@ function ChatContent() {
     const isVolunteerRole = role === 'volunteer';
     const partnerName = isVolunteerRole ? chatRoom.residentName : chatRoom.volunteerName;
     const partnerRole = isVolunteerRole ? 'Elderly' : 'Volunteer';
-    const partnerId = isVolunteerRole ? chatRoom.participantUserIds?.[0] : chatRoom.participantUserIds?.[1];
 
     return { 
-      name: partnerName || partnerRole, 
-      image: `https://picsum.photos/seed/${partnerId || 'default'}/1200/800`, 
+      name: partnerProfile?.name || partnerName || partnerRole, 
+      image: partnerProfile?.photoURL || `https://picsum.photos/seed/${partnerId || 'default'}/400/400`, 
       roleName: partnerRole 
     };
-  }, [chatRoom, role]);
+  }, [chatRoom, role, partnerProfile, partnerId]);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -156,7 +167,7 @@ function ChatContent() {
               <ArrowLeft className="h-9 w-9" />
             </Link>
             <Avatar className="h-12 w-12 border-2 border-white/20 shadow-sm">
-              <AvatarImage src={chatPartner.image} />
+              <AvatarImage src={chatPartner.image} className="object-cover" />
               <AvatarFallback>{chatPartner.name?.[0] || 'U'}</AvatarFallback>
             </Avatar>
             <div>

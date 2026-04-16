@@ -10,8 +10,26 @@ import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useMemo, useState, useEffect } from 'react';
-import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, query, where, doc } from 'firebase/firestore';
+
+/**
+ * A sub-component to handle live-fetching of the partner's avatar
+ */
+function ChatPartnerAvatar({ partnerId, partnerName }: { partnerId: string; partnerName: string }) {
+  const db = useFirestore();
+  const userRef = useMemoFirebase(() => (partnerId ? doc(db, 'users', partnerId) : null), [db, partnerId]);
+  const { data: profile } = useDoc(userRef);
+
+  return (
+    <div className="relative">
+      <Avatar className="h-14 w-14 border-2 border-slate-100">
+        <AvatarImage src={profile?.photoURL || `https://picsum.photos/seed/${partnerId}/100/100`} className="object-cover" />
+        <AvatarFallback>{partnerName?.[0] || 'U'}</AvatarFallback>
+      </Avatar>
+    </div>
+  );
+}
 
 function ChatInboxContent() {
   const searchParams = useSearchParams();
@@ -86,21 +104,14 @@ function ChatInboxContent() {
           ) : sortedChatRooms.map((chat) => {
             const partnerName = role === 'volunteer' ? chat.residentName : chat.volunteerName;
             const partnerRole = role === 'volunteer' ? 'Elderly' : 'Volunteer';
+            const partnerId = chat.participantUserIds?.find((id: string) => id !== user?.uid) || '';
             const isUnread = chat.lastMessageSenderId && chat.lastMessageSenderId !== user?.uid;
             
             return (
               <Link key={chat.id} href={`/dashboard/chat/room?requestId=${chat.id}&role=${role}`}>
                 <Card className={`border-none shadow-sm rounded-3xl overflow-hidden active:bg-slate-50 transition-colors mb-3 ${isUnread ? 'bg-accent/5 ring-1 ring-accent/10' : 'bg-white'}`}>
                   <CardContent className="p-4 flex items-center gap-4">
-                    <div className="relative">
-                      <Avatar className="h-14 w-14 border-2 border-slate-100">
-                        <AvatarImage src={`https://picsum.photos/seed/${chat.id}/100/100`} />
-                        <AvatarFallback>{partnerName?.[0] || 'C'}</AvatarFallback>
-                      </Avatar>
-                      {isUnread && (
-                        <div className="absolute top-0 right-0 h-4 w-4 bg-destructive border-2 border-white rounded-full animate-pulse shadow-sm" />
-                      )}
-                    </div>
+                    <ChatPartnerAvatar partnerId={partnerId} partnerName={partnerName || 'User'} />
                     
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-0.5">
