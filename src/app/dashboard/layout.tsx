@@ -274,7 +274,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [db, user]);
 
   const { data: profile } = useDoc(userRef);
-  const isLargeText = profile?.largeTextEnabled === true;
+
+  // CRITICAL: Ensure large font mode is only applied after mounting to prevent hydration mismatch
+  const isLargeText = mounted && profile?.largeTextEnabled === true;
 
   return (
     <div className={cn("flex flex-col h-screen-dvh bg-background overflow-hidden", isLargeText && "large-font-mode")}>
