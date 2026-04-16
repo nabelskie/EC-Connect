@@ -69,16 +69,23 @@
     min-height: 100dvh;
   }
 
-  /* Accessibility Scaling */
+  /* Accessibility Scaling - Enhanced for Elderly Users */
   .large-font-mode {
-    font-size: 1.15rem;
+    font-size: 1.25rem; /* Increased from 1.15rem */
   }
-  .large-font-mode .text-xs { font-size: 0.875rem !important; }
-  .large-font-mode .text-sm { font-size: 1rem !important; }
-  .large-font-mode .text-base { font-size: 1.125rem !important; }
-  .large-font-mode .text-lg { font-size: 1.25rem !important; }
-  .large-font-mode .text-xl { font-size: 1.5rem !important; }
-  .large-font-mode .text-2xl { font-size: 1.75rem !important; }
-  .large-font-mode .text-3xl { font-size: 2rem !important; }
-  .large-font-mode .text-4xl { font-size: 2.5rem !important; }
+  .large-font-mode .text-xs { font-size: 1rem !important; }
+  .large-font-mode .text-sm { font-size: 1.125rem !important; }
+  .large-font-mode .text-base { font-size: 1.25rem !important; }
+  .large-font-mode .text-lg { font-size: 1.5rem !important; }
+  .large-font-mode .text-xl { font-size: 1.75rem !important; }
+  .large-font-mode .text-2xl { font-size: 2rem !important; }
+  .large-font-mode .text-3xl { font-size: 2.5rem !important; }
+  .large-font-mode .text-4xl { font-size: 3rem !important; }
+  
+  /* Ensure inputs and buttons also scale well */
+  .large-font-mode input, 
+  .large-font-mode textarea, 
+  .large-font-mode button {
+    font-size: inherit !important;
+  }
 }
