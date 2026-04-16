@@ -1,7 +1,7 @@
-
+'use server';
 /**
  * @fileOverview Generates an operational summary for the admin dashboard.
- * Uses strict isolation to prevent build errors on mobile.
+ * Uses strict isolation and dynamic imports to prevent build errors on mobile.
  */
 
 import { z } from 'zod';
@@ -23,33 +23,36 @@ const GenerateAdminDashboardSummaryOutputSchema = z.object({
 export type GenerateAdminDashboardSummaryOutput = z.infer<typeof GenerateAdminDashboardSummaryOutputSchema>;
 
 /**
- * Main wrapper function. Safely handles browser/mobile environments.
+ * Main wrapper function. Executes as a Server Action.
  */
 export async function generateAdminDashboardSummary(
   input: GenerateAdminDashboardSummaryInput
 ): Promise<GenerateAdminDashboardSummaryOutput> {
-  if (typeof window !== 'undefined') {
-    return { 
-      summary: `System Overview: ${input.totalUsers} users, ${input.totalRequests} requests, and ${input.completedTasks} completed tasks.`
-    };
-  }
-
   try {
+    // Dynamic import prevents Genkit from being bundled in the client/mobile static output
     const { ai } = await import('@/ai/genkit');
 
     const prompt = ai.definePrompt({
       name: 'generateAdminDashboardSummaryPrompt',
       input: { schema: GenerateAdminDashboardSummaryInputSchema },
       output: { schema: GenerateAdminDashboardSummaryOutputSchema },
-      prompt: `Provide a concise operational summary for an admin dashboard based on these metrics: 
-      Total Users: {{{totalUsers}}}, Total Requests: {{{totalRequests}}}, Completed: {{{completedTasks}}}.`,
+      prompt: `You are an operations analyst for ElderCare Connect, a community support system.
+      
+      Provide a concise, professional operational summary for an admin dashboard based on these metrics: 
+      - Total Registered Users: {{{totalUsers}}}
+      - Total Assistance Requests (All time): {{{totalRequests}}}
+      - Completed Tasks: {{{completedTasks}}}
+      - Currently Active Volunteers: {{{activeVolunteers}}}
+
+      Identify a positive trend or a specific area of focus based on the numbers. Keep the summary under 3 sentences.`,
     });
 
     const { output } = await prompt(input);
     return output || { summary: "Dashboard data summary available." };
   } catch (error) {
+    console.error("AI Generation Error:", error);
     return { 
-      summary: `Quick Stats: ${input.totalUsers} Users, ${input.completedTasks} Tasks Completed.`
+      summary: `System Overview: ${input.totalUsers} Users registered, ${input.completedTasks} Tasks successfully completed.`
     };
   }
 }
