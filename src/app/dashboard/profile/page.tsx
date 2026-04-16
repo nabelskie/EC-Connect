@@ -250,7 +250,7 @@ function ProfileContent() {
 
   const RoleIcon = roleIcon;
 
-  if (!mounted || isAuthLoading || isProfileLoading) {
+  if (!mounted || isAuthLoading || isProfileLoading || !profileData) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-3">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
