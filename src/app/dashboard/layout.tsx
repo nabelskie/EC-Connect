@@ -94,7 +94,7 @@ function DashboardNav() {
   const roleNavItems = navItems[currentRole as keyof typeof navItems] || navItems.elderly;
 
   return (
-    <nav className="h-20 bg-white border-t flex items-center justify-around px-2 fixed bottom-0 left-0 right-0 z-50 safe-area-bottom shadow-[0_-4_-10px_rgba(0,0,0,0.05)]">
+    <nav className="h-24 bg-white border-t flex items-center justify-around px-2 fixed bottom-0 left-0 right-0 z-50 safe-area-bottom shadow-[0_-8px_30px_rgba(0,0,0,0.08)]">
       {roleNavItems.map((item) => {
         const Icon = item.icon;
         const itemPath = item.href.split('?')[0];
@@ -104,17 +104,17 @@ function DashboardNav() {
           <Link 
             key={item.href} 
             href={item.href}
-            className={`flex flex-col items-center justify-center gap-1 w-full h-full transition-all ${
+            className={`flex flex-col items-center justify-center gap-1.5 w-full h-full transition-all active:bg-slate-50 ${
               isActive ? 'text-accent' : 'text-muted-foreground'
             }`}
           >
-            <div className={`p-1.5 rounded-xl transition-colors relative ${isActive ? 'bg-accent/10' : ''}`}>
-              <Icon className={`h-6 w-6 ${isActive ? 'stroke-[2.5px]' : 'stroke-[2px]'}`} />
+            <div className={`p-2.5 rounded-2xl transition-colors relative ${isActive ? 'bg-accent/10' : ''}`}>
+              <Icon className={`h-7 w-7 ${isActive ? 'stroke-[2.5px]' : 'stroke-[2px]'}`} />
               {item.hasBadge && (
-                <div className="absolute -top-0.5 -right-0.5 h-3 w-3 bg-destructive rounded-full border-2 border-white animate-pulse" />
+                <div className="absolute top-1 right-1 h-3.5 w-3.5 bg-destructive rounded-full border-2 border-white animate-pulse" />
               )}
             </div>
-            <span className={`text-[10px] font-bold uppercase tracking-wider ${isActive ? 'opacity-100' : 'opacity-70'}`}>
+            <span className={`text-[11px] font-black uppercase tracking-widest ${isActive ? 'opacity-100' : 'opacity-60'}`}>
               {item.label}
             </span>
           </Link>
@@ -217,28 +217,28 @@ function NotificationContent() {
             <SheetClose asChild key={n.id}>
               <Link 
                 href={n.href}
-                className="block p-5 hover:bg-white transition-colors relative group active:bg-slate-50"
+                className="block p-6 hover:bg-white transition-colors relative group active:bg-slate-50"
               >
-                <div className="flex items-start gap-4">
-                  <div className={`p-2 rounded-xl bg-white shadow-sm shrink-0 ${n.color}`}>
-                    <Icon className="h-5 w-5" />
+                <div className="flex items-start gap-5">
+                  <div className={`p-3 rounded-2xl bg-white shadow-md shrink-0 ${n.color}`}>
+                    <Icon className="h-6 w-6" />
                   </div>
-                  <div className="flex-1 space-y-1 min-w-0">
+                  <div className="flex-1 space-y-2 min-w-0">
                     <div className="flex items-center justify-between">
-                      <p className={`text-sm font-bold truncate ${n.unread ? 'text-primary' : 'text-slate-500'}`}>
+                      <p className={`text-base font-black truncate ${n.unread ? 'text-primary' : 'text-slate-500'}`}>
                         {n.title}
                       </p>
-                      {n.unread && <div className="h-2 w-2 rounded-full bg-accent shrink-0 ml-2" />}
+                      {n.unread && <div className="h-2.5 w-2.5 rounded-full bg-accent shrink-0 ml-2 shadow-sm" />}
                     </div>
-                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
+                    <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2 font-medium">
                       {n.message}
                     </p>
                     <div className="flex items-center justify-between pt-1">
-                      <div className="flex items-center gap-1 text-[10px] text-muted-foreground/60 font-bold uppercase">
-                        <Clock className="h-3 w-3" />
+                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground/60 font-black uppercase tracking-widest">
+                        <Clock className="h-3.5 w-3.5" />
                         {n.time}
                       </div>
-                      <ChevronRight className="h-3 w-3 text-muted-foreground/30 group-hover:text-accent transition-colors" />
+                      <ChevronRight className="h-4 w-4 text-muted-foreground/30 group-hover:text-accent transition-colors" />
                     </div>
                   </div>
                 </div>
@@ -247,9 +247,9 @@ function NotificationContent() {
           );
         })
       ) : (
-        <div className="flex flex-col items-center justify-center py-20 px-6 text-center opacity-30">
-          <Bell className="h-12 w-12 mb-4" />
-          <p className="font-bold">No notifications yet</p>
+        <div className="flex flex-col items-center justify-center py-24 px-6 text-center opacity-30">
+          <Bell className="h-16 w-16 mb-6" />
+          <p className="text-xl font-black text-primary">No notifications yet</p>
         </div>
       )}
     </div>
@@ -280,47 +280,49 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className={cn("flex flex-col h-screen-dvh bg-background overflow-hidden", isLargeText && "large-font-mode")}>
-      <header className="h-16 bg-white border-b flex items-center justify-between px-6 sticky top-0 z-30 shadow-sm shrink-0">
-        <div className="flex items-center gap-2">
-          <Heart className="h-6 w-6 text-accent fill-accent" />
-          <span className="font-headline font-bold text-xl text-primary tracking-tight">ElderCare</span>
+      <header className="h-20 bg-white border-b flex items-center justify-between px-6 sticky top-0 z-30 shadow-md shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-accent/10">
+            <Heart className="h-7 w-7 text-accent fill-accent" />
+          </div>
+          <span className="font-headline font-black text-2xl text-primary tracking-tight">ElderCare</span>
         </div>
         
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           {mounted ? (
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full relative text-muted-foreground h-10 w-10">
-                  <Bell className="h-5 w-5" />
-                  <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-destructive rounded-full border-2 border-white" />
+                <Button variant="ghost" size="icon" className="rounded-2xl relative text-muted-foreground h-12 w-12 bg-slate-50 hover:bg-slate-100 transition-colors">
+                  <Bell className="h-6 w-6" />
+                  <span className="absolute top-2.5 right-2.5 w-3 h-3 bg-destructive rounded-full border-2 border-white shadow-sm" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[85vw] sm:w-[400px] p-0 rounded-l-3xl border-none shadow-2xl">
-                <SheetHeader className="p-6 border-b bg-primary text-white rounded-tl-3xl">
-                  <SheetTitle className="text-xl font-bold flex items-center gap-2 text-white">
-                    <Bell className="h-5 w-5" />
+              <SheetContent side="right" className="w-[85vw] sm:w-[450px] p-0 rounded-l-[3rem] border-none shadow-2xl">
+                <SheetHeader className="p-8 border-b bg-primary text-white rounded-tl-[3rem]">
+                  <SheetTitle className="text-2xl font-black flex items-center gap-3 text-white">
+                    <Bell className="h-7 w-7" />
                     Notifications
                   </SheetTitle>
                 </SheetHeader>
-                <ScrollArea className="h-[calc(100vh-80px)] bg-slate-50/50">
-                  <Suspense fallback={<div className="p-10 text-center text-sm text-muted-foreground">Loading alerts...</div>}>
+                <ScrollArea className="h-[calc(100vh-100px)] bg-slate-50/50">
+                  <Suspense fallback={<div className="p-16 text-center text-base font-bold text-muted-foreground animate-pulse">Checking alerts...</div>}>
                     <NotificationContent />
                   </Suspense>
                 </ScrollArea>
               </SheetContent>
             </Sheet>
           ) : (
-            <div className="h-10 w-10 rounded-full bg-slate-100 animate-pulse" />
+            <div className="h-12 w-12 rounded-2xl bg-slate-100 animate-pulse" />
           )}
         </div>
       </header>
 
-      <main className="flex-1 overflow-y-auto pb-24 px-4 pt-6 max-w-md mx-auto w-full">
+      <main className="flex-1 overflow-y-auto pb-28 px-4 pt-8 max-w-md mx-auto w-full">
         {children}
       </main>
 
       {mounted && (
-        <Suspense fallback={<div className="h-20 bg-white border-t" />}>
+        <Suspense fallback={<div className="h-24 bg-white border-t" />}>
           <DashboardNav />
         </Suspense>
       )}

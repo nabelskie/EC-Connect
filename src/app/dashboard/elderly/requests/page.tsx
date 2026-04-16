@@ -78,19 +78,19 @@ function RequestsHistoryContent() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'Pending': return <Badge className="bg-yellow-500 text-white rounded-full px-3">Pending</Badge>;
-      case 'Accepted': return <Badge className="bg-sky-500 text-white rounded-full px-3">Accepted</Badge>;
-      case 'Completed': return <Badge className="bg-emerald-500 text-white rounded-full px-3">Completed</Badge>;
-      default: return <Badge variant="outline" className="rounded-full px-3">{status}</Badge>;
+      case 'Pending': return <Badge className="bg-yellow-500 text-white rounded-full px-4 h-7 font-bold">Pending</Badge>;
+      case 'Accepted': return <Badge className="bg-sky-500 text-white rounded-full px-4 h-7 font-bold">Accepted</Badge>;
+      case 'Completed': return <Badge className="bg-emerald-500 text-white rounded-full px-4 h-7 font-bold">Completed</Badge>;
+      default: return <Badge variant="outline" className="rounded-full px-4 h-7 font-bold">{status}</Badge>;
     }
   };
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'Groceries': return <ShoppingCart className="h-5 w-5" />;
-      case 'Transportation': return <Truck className="h-5 w-5" />;
-      case 'Tech Support': return <Wrench className="h-5 w-5" />;
-      default: return <Info className="h-5 w-5" />;
+      case 'Groceries': return <ShoppingCart className="h-6 w-6" />;
+      case 'Transportation': return <Truck className="h-6 w-6" />;
+      case 'Tech Support': return <Wrench className="h-6 w-6" />;
+      default: return <Info className="h-6 w-6" />;
     }
   };
 
@@ -110,120 +110,136 @@ function RequestsHistoryContent() {
   const isLoading = isPendingLoading || isActiveLoading || isCompletedLoading;
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 pb-10">
+    <div className="space-y-8 animate-in fade-in duration-500 pb-12">
       <div className="flex items-center gap-4">
-        <Link href="/dashboard/elderly?role=elderly" className="p-2 -ml-2 hover:bg-slate-100 rounded-full transition-colors">
-          <ArrowLeft className="h-6 w-6 text-primary" />
+        <Link 
+          href="/dashboard/elderly?role=elderly" 
+          className="p-3 -ml-3 hover:bg-slate-100 rounded-full transition-colors active:scale-90"
+        >
+          <ArrowLeft className="h-8 w-8 text-primary" />
         </Link>
-        <h1 className="text-2xl font-headline font-bold text-primary">Request History</h1>
+        <h1 className="text-3xl font-headline font-black text-primary">History</h1>
       </div>
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide px-1">
+      <div className="flex items-center gap-3 overflow-x-auto pb-4 scrollbar-hide px-1">
         {filters.map((f) => (
-          <Button key={f} variant={activeFilter === f ? "default" : "outline"} size="sm" onClick={() => setActiveFilter(f)} className={cn("rounded-full px-4 h-8 text-[10px] font-bold uppercase tracking-wider transition-all shrink-0", activeFilter === f ? "bg-primary text-white border-primary shadow-sm" : "text-muted-foreground border-slate-200 bg-white")}>
+          <Button 
+            key={f} 
+            variant={activeFilter === f ? "default" : "outline"} 
+            size="lg" 
+            onClick={() => setActiveFilter(f)} 
+            className={cn(
+              "rounded-full px-6 h-12 text-xs font-black uppercase tracking-widest transition-all shrink-0 shadow-sm", 
+              activeFilter === f ? "bg-primary text-white border-primary" : "text-muted-foreground border-slate-200 bg-white"
+            )}
+          >
             {f}
           </Button>
         ))}
       </div>
-      <div className="space-y-4">
+      <div className="space-y-5">
         {isLoading && allRequests.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-2 opacity-40">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-[10px] font-bold uppercase">Loading your history...</p>
+          <div className="flex flex-col items-center justify-center py-24 gap-3 opacity-40">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            <p className="text-sm font-black uppercase tracking-widest">Loading history...</p>
           </div>
         ) : filteredRequests.map((req) => (
-          <Card key={req.id} className="border-none shadow-sm rounded-3xl overflow-hidden active:bg-slate-50 transition-colors cursor-pointer border border-transparent hover:border-slate-100" onClick={() => setSelectedRequest(req)}>
-            <CardContent className="p-5 flex items-start gap-4">
-              <div className="p-3 rounded-2xl bg-accent/10 text-accent shrink-0">{getTypeIcon(req.taskType)}</div>
+          <Card key={req.id} className="border-none shadow-md rounded-[2.25rem] overflow-hidden active:bg-slate-50 transition-all cursor-pointer border border-transparent hover:border-slate-200 hover:shadow-lg" onClick={() => setSelectedRequest(req)}>
+            <CardContent className="p-7 flex items-start gap-5">
+              <div className="p-4 rounded-[1.25rem] bg-accent/10 text-accent shrink-0">{getTypeIcon(req.taskType)}</div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-bold text-primary truncate text-lg">{req.taskType}</span>
-                  <span className="text-[10px] text-muted-foreground font-semibold uppercase">{formatDate(req.createdAt).split(',')[0]}</span>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-black text-primary truncate text-xl">{req.taskType}</span>
+                  <span className="text-xs text-muted-foreground font-black uppercase tracking-tighter">{formatDate(req.createdAt).split(',')[0]}</span>
                 </div>
-                <p className="text-sm text-muted-foreground leading-relaxed mb-3 line-clamp-2">{req.description}</p>
+                <p className="text-base text-muted-foreground leading-relaxed mb-4 line-clamp-2 font-medium">{req.description}</p>
                 <div className="flex items-center justify-between">
                   {getStatusBadge(req.status)}
-                  <ChevronRight className="h-5 w-5 text-muted-foreground/30" />
+                  <ChevronRight className="h-8 w-8 text-muted-foreground/20" />
                 </div>
               </div>
             </CardContent>
           </Card>
         ))}
         {!isLoading && filteredRequests.length === 0 && (
-          <div className="text-center py-24 bg-white rounded-[2.5rem] border-2 border-dashed border-slate-100 mx-1 flex flex-col items-center justify-center gap-4">
-             <div className="p-4 bg-slate-50 rounded-full"><Filter className="h-10 w-10 text-slate-200" /></div>
-             <div className="space-y-1">
-               <p className="text-lg font-bold text-primary">No {activeFilter === 'All' ? '' : activeFilter} Requests</p>
-               <p className="text-xs text-muted-foreground max-w-[200px] mx-auto">There are no requests matching this status in your history.</p>
+          <div className="text-center py-32 bg-white rounded-[3rem] border-2 border-dashed border-slate-200 mx-1 flex flex-col items-center justify-center gap-6">
+             <div className="p-5 bg-slate-50 rounded-full"><Filter className="h-12 w-12 text-slate-300" /></div>
+             <div className="space-y-2">
+               <p className="text-2xl font-black text-primary">No matching requests</p>
+               <p className="text-sm text-muted-foreground max-w-[240px] mx-auto font-bold uppercase tracking-widest leading-relaxed">Try changing the status filter above</p>
              </div>
           </div>
         )}
       </div>
       <Sheet open={!!selectedRequest} onOpenChange={() => setSelectedRequest(null)}>
-        <SheetContent side="bottom" className="rounded-t-[3rem] h-[85vh] px-6 py-8">
+        <SheetContent side="bottom" className="rounded-t-[3.5rem] h-[90vh] px-8 py-10">
           {selectedRequest && (
-            <div className="space-y-6 h-full overflow-y-auto pb-10">
-              <SheetHeader className="text-left space-y-4">
+            <div className="space-y-8 h-full overflow-y-auto pb-12">
+              <SheetHeader className="text-left space-y-6">
                 <div className="flex items-center justify-between">
-                  <div className="p-4 rounded-2xl bg-accent/10 text-accent w-fit">{getTypeIcon(selectedRequest.taskType)}</div>
+                  <div className="p-5 rounded-[1.5rem] bg-accent/10 text-accent w-fit">{getTypeIcon(selectedRequest.taskType)}</div>
                   {getStatusBadge(selectedRequest.status)}
                 </div>
-                <SheetTitle className="text-2xl font-bold text-primary">{selectedRequest.taskType} Help</SheetTitle>
-                <SheetDescription className="text-base leading-relaxed text-slate-600 italic">"{selectedRequest.description}"</SheetDescription>
+                <div>
+                  <SheetTitle className="text-3xl font-bold text-primary mb-2">{selectedRequest.taskType} Details</SheetTitle>
+                  <SheetDescription className="text-xl leading-relaxed text-slate-700 italic font-medium">
+                    "{selectedRequest.description}"
+                  </SheetDescription>
+                </div>
               </SheetHeader>
-              <div className="space-y-4 pt-4 border-t">
-                <div className="flex items-start gap-4">
-                  <div className="p-2 rounded-lg bg-slate-50 text-slate-400"><MapPin className="h-5 w-5" /></div>
+              <div className="space-y-6 pt-6 border-t">
+                <div className="flex items-start gap-5">
+                  <div className="p-3 rounded-xl bg-slate-100 text-slate-500"><MapPin className="h-6 w-6" /></div>
                   <div>
-                    <Label className="text-[10px] text-muted-foreground uppercase font-bold">Location</Label>
-                    <p className="text-primary font-medium">{selectedRequest.location}</p>
+                    <Label className="text-xs text-muted-foreground uppercase font-black tracking-widest">Location</Label>
+                    <p className="text-xl text-primary font-bold mt-1">{selectedRequest.location}</p>
                   </div>
                 </div>
-                <div className="flex items-start gap-4">
-                  <div className="p-2 rounded-lg bg-slate-50 text-slate-400"><Calendar className="h-5 w-5" /></div>
+                <div className="flex items-start gap-5">
+                  <div className="p-3 rounded-xl bg-slate-100 text-slate-500"><Calendar className="h-6 w-6" /></div>
                   <div>
-                    <Label className="text-[10px] text-muted-foreground uppercase font-bold">Requested On</Label>
-                    <p className="text-primary font-medium">{formatDate(selectedRequest.createdAt)}</p>
+                    <Label className="text-xs text-muted-foreground uppercase font-black tracking-widest">Requested On</Label>
+                    <p className="text-xl text-primary font-bold mt-1">{formatDate(selectedRequest.createdAt)}</p>
                   </div>
                 </div>
                 {selectedRequest.volunteerName && (
-                  <div className="flex items-start gap-4">
-                    <div className="p-2 rounded-lg bg-emerald-50 text-emerald-500"><User className="h-5 w-5" /></div>
+                  <div className="flex items-start gap-5">
+                    <div className="p-3 rounded-xl bg-emerald-50 text-emerald-500"><User className="h-6 w-6" /></div>
                     <div>
-                      <Label className="text-[10px] text-muted-foreground uppercase font-bold">Volunteer Assigned</Label>
-                      <p className="text-primary font-medium">{selectedRequest.volunteerName}</p>
+                      <Label className="text-xs text-muted-foreground uppercase font-black tracking-widest">Volunteer Assigned</Label>
+                      <p className="text-xl text-emerald-600 font-black mt-1">{selectedRequest.volunteerName}</p>
                     </div>
                   </div>
                 )}
               </div>
-              <div className="space-y-4 pt-6">
-                <h3 className="text-sm font-bold text-primary uppercase tracking-wider">Progress Timeline</h3>
-                <div className="space-y-6 relative before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-100">
-                  <div className="flex items-start gap-4 relative z-10">
-                    <div className="h-5 w-5 rounded-full bg-emerald-500 border-4 border-white shadow-sm mt-0.5" />
+              <div className="space-y-6 pt-8">
+                <h3 className="text-base font-black text-primary uppercase tracking-[0.2em]">Progress Timeline</h3>
+                <div className="space-y-8 relative before:absolute before:left-3.5 before:top-2 before:bottom-2 before:w-1 before:bg-slate-100">
+                  <div className="flex items-start gap-6 relative z-10">
+                    <div className="h-7 w-7 rounded-full bg-emerald-500 border-4 border-white shadow-md mt-0.5" />
                     <div>
-                      <p className="text-sm font-bold text-primary">Request Submitted</p>
-                      <p className="text-xs text-muted-foreground">{formatDate(selectedRequest.createdAt)}</p>
+                      <p className="text-lg font-black text-primary">Request Submitted</p>
+                      <p className="text-sm text-muted-foreground font-bold">{formatDate(selectedRequest.createdAt)}</p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-4 relative z-10">
-                    <div className={`h-5 w-5 rounded-full border-4 border-white shadow-sm mt-0.5 ${selectedRequest.status === 'Accepted' || selectedRequest.status === 'Completed' ? 'bg-emerald-500' : 'bg-slate-200'}`} />
+                  <div className="flex items-start gap-6 relative z-10">
+                    <div className={`h-7 w-7 rounded-full border-4 border-white shadow-md mt-0.5 ${selectedRequest.status === 'Accepted' || selectedRequest.status === 'Completed' ? 'bg-emerald-500' : 'bg-slate-200'}`} />
                     <div>
-                      <p className={`text-sm font-bold ${selectedRequest.status === 'Accepted' || selectedRequest.status === 'Completed' ? 'text-primary' : 'text-muted-foreground'}`}>Volunteer Accepted</p>
-                      {selectedRequest.volunteerName ? (<p className="text-xs text-muted-foreground">Assigned to {selectedRequest.volunteerName}</p>) : (<p className="text-xs text-muted-foreground">Awaiting a student volunteer</p>)}
+                      <p className={`text-lg font-black ${selectedRequest.status === 'Accepted' || selectedRequest.status === 'Completed' ? 'text-primary' : 'text-muted-foreground'}`}>Volunteer Accepted</p>
+                      {selectedRequest.volunteerName ? (<p className="text-sm text-muted-foreground font-bold">Assigned to {selectedRequest.volunteerName}</p>) : (<p className="text-sm text-muted-foreground font-bold italic">Awaiting verification</p>)}
                     </div>
                   </div>
-                  <div className="flex items-start gap-4 relative z-10">
-                    <div className={`h-5 w-5 rounded-full border-4 border-white shadow-sm mt-0.5 ${selectedRequest.status === 'Completed' ? 'bg-emerald-500' : 'bg-slate-200'}`} />
+                  <div className="flex items-start gap-6 relative z-10">
+                    <div className={`h-7 w-7 rounded-full border-4 border-white shadow-md mt-0.5 ${selectedRequest.status === 'Completed' ? 'bg-emerald-500' : 'bg-slate-200'}`} />
                     <div>
-                      <p className={`text-sm font-bold ${selectedRequest.status === 'Completed' ? 'text-primary' : 'text-muted-foreground'}`}>Task Completed</p>
-                      {selectedRequest.status === 'Completed' && (<p className="text-xs text-muted-foreground">Finished on {formatDate(selectedRequest.completedAt)}</p>)}
+                      <p className={`text-lg font-black ${selectedRequest.status === 'Completed' ? 'text-primary' : 'text-muted-foreground'}`}>Task Completed</p>
+                      {selectedRequest.status === 'Completed' && (<p className="text-sm text-muted-foreground font-bold">Finished on {formatDate(selectedRequest.completedAt)}</p>)}
                     </div>
                   </div>
                 </div>
               </div>
               {selectedRequest.status === 'Accepted' && (
-                <div className="pt-4">
-                  <Button asChild className="w-full h-14 rounded-2xl bg-accent hover:bg-accent/90 font-bold shadow-lg shadow-accent/20">
+                <div className="pt-6">
+                  <Button asChild className="w-full h-20 rounded-[1.5rem] bg-accent hover:bg-accent/90 font-bold text-2xl shadow-2xl shadow-accent/20">
                     <Link href={`/dashboard/chat/room?requestId=${selectedRequest.chatRoomId || selectedRequest.id}&role=elderly`}>Chat with Volunteer</Link>
                   </Button>
                 </div>
@@ -238,7 +254,7 @@ function RequestsHistoryContent() {
 
 export default function RequestsHistoryPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center py-20"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>}>
+    <Suspense fallback={<div className="flex items-center justify-center py-32"><Loader2 className="animate-spin h-10 w-10 text-primary" /></div>}>
       <RequestsHistoryContent />
     </Suspense>
   );

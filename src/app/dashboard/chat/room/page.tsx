@@ -72,7 +72,7 @@ function ChatContent() {
 
     return { 
       name: partnerName || partnerRole, 
-      image: `https://picsum.photos/seed/${partnerId || 'default'}/100/100`, 
+      image: `https://picsum.photos/seed/${partnerId || 'default'}/1200/800`, 
       roleName: partnerRole 
     };
   }, [chatRoom, role]);
@@ -107,64 +107,64 @@ function ChatContent() {
 
   if (isRoomLoading || (!chatRoom && retryCount < 1)) {
     return (
-      <div className="h-full flex flex-col items-center justify-center py-20 gap-3">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-xs font-bold uppercase text-muted-foreground tracking-widest">Connecting to chat...</p>
+      <div className="h-full flex flex-col items-center justify-center py-32 gap-4">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="text-sm font-black uppercase text-muted-foreground tracking-[0.3em]">Establishing link...</p>
       </div>
     );
   }
 
   if (roomError || (mounted && !isRoomLoading && !chatRoom && retryCount >= 1)) {
     return (
-      <div className="h-full flex flex-col items-center justify-center py-20 gap-3 text-center px-6">
-        <div className="p-4 bg-destructive/10 rounded-full">
-           <ShieldCheck className="h-10 w-10 text-destructive" />
+      <div className="h-full flex flex-col items-center justify-center py-32 gap-6 text-center px-10">
+        <div className="p-6 bg-destructive/10 rounded-[2rem]">
+           <ShieldCheck className="h-16 w-16 text-destructive" />
         </div>
-        <h2 className="text-lg font-bold text-primary">Chat Not Found</h2>
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          We couldn't establish a connection to this chat. The request might have been cancelled or there's a sync issue.
+        <h2 className="text-2xl font-black text-primary">Chat Disconnected</h2>
+        <p className="text-lg text-muted-foreground leading-relaxed font-medium">
+          The connection was lost or the chat has been archived.
         </p>
-        <Button asChild variant="outline" className="mt-4 rounded-xl">
-          <Link href={`/dashboard/chat?role=${role}`}>Back to Messages</Link>
+        <Button asChild variant="outline" className="h-16 px-10 rounded-2xl text-lg font-bold border-2">
+          <Link href={`/dashboard/chat?role=${role}`}>Return to Inbox</Link>
         </Button>
       </div>
     );
   }
 
   return (
-    <div className="h-[calc(100vh-140px)] flex flex-col bg-background -mx-4 -mt-6">
+    <div className="h-[calc(100vh-140px)] flex flex-col bg-background -mx-4 -mt-8">
       <Card className="flex-1 flex flex-col border-none shadow-none overflow-hidden bg-white">
-        <CardHeader className="bg-primary text-white border-b px-4 py-3 flex flex-row items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
+        <CardHeader className="bg-primary text-white border-b px-6 py-4 flex flex-row items-center justify-between shrink-0 shadow-lg z-10">
+          <div className="flex items-center gap-4">
             <Link 
               href={`/dashboard/chat?role=${role}`} 
-              className="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors flex items-center gap-1 group"
+              className="p-3 -ml-3 hover:bg-white/10 rounded-full transition-all active:scale-90"
             >
-              <ArrowLeft className="h-6 w-6" />
+              <ArrowLeft className="h-9 w-9" />
             </Link>
-            <Avatar className="h-10 w-10 border-2 border-white/20">
+            <Avatar className="h-12 w-12 border-2 border-white/20 shadow-sm">
               <AvatarImage src={chatPartner.image} />
               <AvatarFallback>{chatPartner.name?.[0] || 'U'}</AvatarFallback>
             </Avatar>
             <div>
-              <CardTitle className="text-lg font-headline font-bold">{chatPartner.name}</CardTitle>
-              <div className="text-[10px] text-white/70 flex items-center gap-1">
-                <div className="h-2 w-2 rounded-full bg-emerald-400"></div> {chatPartner.roleName}
+              <CardTitle className="text-xl font-headline font-black tracking-tight">{chatPartner.name}</CardTitle>
+              <div className="text-xs text-white/70 flex items-center gap-1.5 font-bold uppercase tracking-widest">
+                <div className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse"></div> {chatPartner.roleName}
               </div>
             </div>
           </div>
         </CardHeader>
 
         <CardContent className="flex-1 p-0 overflow-hidden bg-[#f0f2f5] relative">
-          <ScrollArea className="h-full p-4">
-            <div className="space-y-4">
+          <ScrollArea className="h-full p-6">
+            <div className="space-y-6">
               <div className="text-center">
-                <span className="bg-white/50 backdrop-blur-sm text-muted-foreground text-[10px] px-3 py-1 rounded-full font-bold uppercase tracking-wider">Secure Conversation</span>
+                <span className="bg-white/70 backdrop-blur-md text-muted-foreground text-[10px] px-4 py-1.5 rounded-full font-black uppercase tracking-[0.2em] shadow-sm">End-to-End Encrypted</span>
               </div>
               
               {isMessagesLoading ? (
-                <div className="flex justify-center py-10">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <div className="flex justify-center py-16">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
               ) : sortedMessages && sortedMessages.length > 0 ? (
                 sortedMessages.map((msg) => {
@@ -174,36 +174,36 @@ function ChatContent() {
                   return (
                     <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                       <div className={`max-w-[85%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
-                        <div className={`p-3 rounded-2xl shadow-sm text-sm ${
+                        <div className={`p-4 rounded-[1.5rem] shadow-sm text-lg leading-relaxed font-medium ${
                           isMe 
                             ? 'bg-accent text-white rounded-tr-none' 
                             : 'bg-white text-primary rounded-tl-none'
                         }`}>
                           {msg.messageText}
                         </div>
-                        <span className="text-[10px] text-muted-foreground mt-1 font-semibold">{timeStr}</span>
+                        <span className="text-[11px] text-muted-foreground mt-2 font-black uppercase tracking-tighter">{timeStr}</span>
                       </div>
                     </div>
                   );
                 })
               ) : (
-                <div className="flex flex-col items-center justify-center py-20 text-center opacity-40">
-                  <Sparkles className="h-8 w-8 mb-2" />
-                  <p className="text-[10px] font-bold uppercase">Ready for your first message</p>
+                <div className="flex flex-col items-center justify-center py-24 text-center opacity-30">
+                  <Sparkles className="h-12 w-12 mb-4 text-accent" />
+                  <p className="text-sm font-black uppercase tracking-[0.3em]">Start the conversation</p>
                 </div>
               )}
             </div>
           </ScrollArea>
         </CardContent>
 
-        <CardFooter className="p-3 bg-white border-t shrink-0">
+        <CardFooter className="p-4 bg-white border-t shrink-0 shadow-[0_-8px_30px_rgba(0,0,0,0.04)]">
           <form 
             onSubmit={handleSend}
-            className="flex items-center gap-2 w-full"
+            className="flex items-center gap-4 w-full"
           >
             <Input 
               placeholder="Type a message..." 
-              className="flex-1 h-12 text-sm bg-slate-50 border-none focus-visible:ring-accent rounded-2xl px-4"
+              className="flex-1 h-14 text-lg bg-slate-100 border-none focus-visible:ring-accent rounded-2xl px-6 font-medium"
               value={input}
               onChange={(e) => setInput(e.target.value)}
             />
@@ -211,9 +211,9 @@ function ChatContent() {
               type="submit" 
               size="icon" 
               disabled={!input.trim() || isSending || !chatRoom}
-              className="h-12 w-12 rounded-2xl bg-primary hover:bg-primary/90 text-white shadow-lg disabled:opacity-50"
+              className="h-14 w-14 rounded-2xl bg-primary hover:bg-primary/90 text-white shadow-xl disabled:opacity-50 transition-all active:scale-95"
             >
-              <Send className="h-5 w-5" />
+              <Send className="h-7 w-7" />
             </Button>
           </form>
         </CardFooter>
@@ -224,7 +224,7 @@ function ChatContent() {
 
 export default function ChatPage() {
   return (
-    <Suspense fallback={<div className="flex h-screen-dvh items-center justify-center py-20"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>}>
+    <Suspense fallback={<div className="flex h-screen-dvh items-center justify-center py-32"><Loader2 className="animate-spin h-10 w-10 text-primary" /></div>}>
       <ChatContent />
     </Suspense>
   );

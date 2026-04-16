@@ -219,10 +219,10 @@ export default function ElderlyDashboard() {
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'Groceries': return <ShoppingCart className="h-5 w-5" />;
-      case 'Transportation': return <Truck className="h-5 w-5" />;
-      case 'Tech Support': return <Wrench className="h-5 w-5" />;
-      default: return <Info className="h-5 w-5" />;
+      case 'Groceries': return <ShoppingCart className="h-6 w-6" />;
+      case 'Transportation': return <Truck className="h-6 w-6" />;
+      case 'Tech Support': return <Wrench className="h-6 w-6" />;
+      default: return <Info className="h-6 w-6" />;
     }
   };
 
@@ -247,78 +247,83 @@ export default function ElderlyDashboard() {
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-headline font-bold text-primary">Hi {user?.displayName?.split(' ')[0] || 'there'}!</h1>
-        <p className="text-muted-foreground">What can we help you with today?</p>
+        <h1 className="text-4xl font-headline font-bold text-primary">Hi {user?.displayName?.split(' ')[0] || 'there'}!</h1>
+        <p className="text-xl text-muted-foreground">What can we help you with today?</p>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <button 
           onClick={() => setShowForm(true)}
-          className="flex flex-col items-center justify-center p-6 bg-accent/10 rounded-3xl border-2 border-accent/20 text-accent group active:scale-95 transition-all"
+          className="flex flex-col items-center justify-center p-8 bg-accent/10 rounded-[2.5rem] border-2 border-accent/20 text-accent group active:scale-95 transition-all"
         >
-          <PlusCircle className="h-10 w-10 mb-2 group-hover:scale-110 transition-transform" />
-          <span className="font-bold">New Request</span>
+          <PlusCircle className="h-12 w-12 mb-3 group-hover:scale-110 transition-transform" />
+          <span className="font-bold text-xl">New Request</span>
         </button>
         <Link 
           href="/dashboard/elderly/requests"
-          className="flex flex-col items-center justify-center p-6 bg-primary/5 rounded-3xl border-2 border-primary/10 text-primary active:scale-95 transition-all"
+          className="flex flex-col items-center justify-center p-8 bg-primary/5 rounded-[2.5rem] border-2 border-primary/10 text-primary active:scale-95 transition-all"
         >
-          <Clock className="h-10 w-10 mb-2" />
-          <span className="font-bold">History</span>
+          <Clock className="h-12 w-12 mb-3" />
+          <span className="font-bold text-xl">History</span>
         </Link>
       </div>
 
       {showForm && (
         <div className="fixed inset-0 z-[100] bg-white overflow-y-auto p-6 safe-area-bottom animate-in slide-in-from-bottom duration-300">
           <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-bold text-primary">Request Help</h2>
-            <Button variant="ghost" size="icon" onClick={() => setShowForm(false)} className="rounded-full h-10 w-10 bg-slate-100">
-              <X className="h-5 w-5" />
+            <h2 className="text-3xl font-bold text-primary">Request Help</h2>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setShowForm(false)} 
+              className="rounded-full h-14 w-14 bg-slate-100 hover:bg-slate-200 transition-colors"
+            >
+              <X className="h-8 w-8 text-primary" />
             </Button>
           </div>
-          <div className="space-y-6 pb-10">
-            <div className="space-y-2">
-              <Label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">
+          <div className="space-y-6 pb-12">
+            <div className="space-y-3">
+              <Label className="text-base font-bold text-muted-foreground uppercase tracking-wider">
                 Help Category <span className="text-destructive">*</span>
               </Label>
               <Select onValueChange={(val) => setFormData({...formData, type: val})}>
-                <SelectTrigger className="h-14 rounded-2xl text-lg">
+                <SelectTrigger className="h-16 rounded-[1.25rem] text-xl px-6">
                   <SelectValue placeholder="Choose Category" />
                 </SelectTrigger>
                 <SelectContent className="z-[110]">
-                  <SelectItem value="Groceries">Groceries</SelectItem>
-                  <SelectItem value="Transportation">Transportation</SelectItem>
-                  <SelectItem value="Tech Support">Tech Support</SelectItem>
+                  <SelectItem value="Groceries" className="text-lg py-4">Groceries</SelectItem>
+                  <SelectItem value="Transportation" className="text-lg py-4">Transportation</SelectItem>
+                  <SelectItem value="Tech Support" className="text-lg py-4">Tech Support</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             
             {formData.type === 'Tech Support' && (
-              <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                <div className="space-y-2">
-                  <Label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">
+              <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="space-y-3">
+                  <Label className="text-base font-bold text-muted-foreground uppercase tracking-wider">
                     Device Type <span className="text-destructive">*</span>
                   </Label>
                   <Select onValueChange={(val) => setFormData({...formData, device: val})}>
-                    <SelectTrigger className="h-14 rounded-2xl text-lg">
+                    <SelectTrigger className="h-16 rounded-[1.25rem] text-xl px-6">
                       <SelectValue placeholder="Select Device" />
                     </SelectTrigger>
                     <SelectContent className="z-[110]">
-                      <SelectItem value="Smartphone">Smartphone (Handphone)</SelectItem>
-                      <SelectItem value="Tablet">Tablet (iPad/Tab)</SelectItem>
-                      <SelectItem value="Laptop">Laptop / Computer</SelectItem>
-                      <SelectItem value="Printer">Printer</SelectItem>
-                      <SelectItem value="Other">Other Device</SelectItem>
+                      <SelectItem value="Smartphone" className="text-lg py-4">Smartphone (Handphone)</SelectItem>
+                      <SelectItem value="Tablet" className="text-lg py-4">Tablet (iPad/Tab)</SelectItem>
+                      <SelectItem value="Laptop" className="text-lg py-4">Laptop / Computer</SelectItem>
+                      <SelectItem value="Printer" className="text-lg py-4">Printer</SelectItem>
+                      <SelectItem value="Other" className="text-lg py-4">Other Device</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">
+                <div className="space-y-3">
+                  <Label className="text-base font-bold text-muted-foreground uppercase tracking-wider">
                     Location / Address <span className="text-destructive">*</span>
                   </Label>
                   <Input 
                     placeholder="Where should the volunteer go?" 
-                    className="h-14 rounded-2xl text-lg" 
+                    className="h-16 rounded-[1.25rem] text-xl px-6" 
                     value={formData.address} 
                     onChange={(e) => setFormData({...formData, address: e.target.value})} 
                   />
@@ -327,13 +332,13 @@ export default function ElderlyDashboard() {
             )}
             
             {formData.type === 'Groceries' && (
-              <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                <Label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">
+              <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                <Label className="text-base font-bold text-muted-foreground uppercase tracking-wider">
                   Delivery Address <span className="text-destructive">*</span>
                 </Label>
                 <Input 
                   placeholder="e.g. Block A, Room 102" 
-                  className="h-14 rounded-2xl text-lg" 
+                  className="h-16 rounded-[1.25rem] text-xl px-6" 
                   value={formData.address} 
                   onChange={(e) => setFormData({...formData, address: e.target.value})} 
                 />
@@ -341,25 +346,25 @@ export default function ElderlyDashboard() {
             )}
             
             {formData.type === 'Transportation' && (
-              <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                <div className="space-y-2">
-                  <Label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">
+              <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="space-y-3">
+                  <Label className="text-base font-bold text-muted-foreground uppercase tracking-wider">
                     From (Pick-up) <span className="text-destructive">*</span>
                   </Label>
                   <Input 
                     placeholder="e.g. My Home / Block A" 
-                    className="h-14 rounded-2xl text-lg" 
+                    className="h-16 rounded-[1.25rem] text-xl px-6" 
                     value={formData.fromLocation} 
                     onChange={(e) => setFormData({...formData, fromLocation: e.target.value})} 
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">
+                <div className="space-y-3">
+                  <Label className="text-base font-bold text-muted-foreground uppercase tracking-wider">
                     To (Destination) <span className="text-destructive">*</span>
                   </Label>
                   <Input 
                     placeholder="e.g. General Hospital / Market" 
-                    className="h-14 rounded-2xl text-lg" 
+                    className="h-16 rounded-[1.25rem] text-xl px-6" 
                     value={formData.toLocation} 
                     onChange={(e) => setFormData({...formData, toLocation: e.target.value})} 
                   />
@@ -367,54 +372,54 @@ export default function ElderlyDashboard() {
               </div>
             )}
             
-            <div className="space-y-2">
-              <Label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Urgency Level</Label>
+            <div className="space-y-3">
+              <Label className="text-base font-bold text-muted-foreground uppercase tracking-wider">Urgency Level</Label>
               <Select value={formData.urgency} onValueChange={(val) => setFormData({...formData, urgency: val as 'Low' | 'Medium' | 'High'})}>
-                <SelectTrigger className="h-14 rounded-2xl text-lg">
+                <SelectTrigger className="h-16 rounded-[1.25rem] text-xl px-6">
                   <SelectValue placeholder="Select Urgency" />
                 </SelectTrigger>
                 <SelectContent className="z-[110]">
-                  <SelectItem value="Low">Low - Not Urgent</SelectItem>
-                  <SelectItem value="Medium">Medium - Needed Soon</SelectItem>
-                  <SelectItem value="High">High - Urgent / Emergency</SelectItem>
+                  <SelectItem value="Low" className="text-lg py-4">Low - Not Urgent</SelectItem>
+                  <SelectItem value="Medium" className="text-lg py-4">Medium - Needed Soon</SelectItem>
+                  <SelectItem value="High" className="text-lg py-4 text-destructive font-bold">High - Urgent / Emergency</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">
+                <Label className="text-base font-bold text-muted-foreground uppercase tracking-wider">
                   Details <span className="text-destructive">*</span>
                 </Label>
                 <Button 
                   variant="link" 
-                  size="sm" 
+                  size="lg" 
                   onClick={handleAiHelp} 
                   disabled={isAiLoading || !formData.type || !formData.initialDesc.trim()} 
-                  className="text-accent font-bold gap-1 p-0"
+                  className="text-accent font-black gap-2 p-0 h-10"
                 >
-                  {isAiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                  {isAiLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Sparkles className="h-6 w-6" />}
                   AI Refine
                 </Button>
               </div>
               <Textarea 
                 placeholder="What specifically do you need help with?" 
-                className="min-h-[120px] rounded-2xl text-lg p-4" 
+                className="min-h-[160px] rounded-[1.25rem] text-xl p-6" 
                 value={formData.initialDesc} 
                 onChange={(e) => setFormData({...formData, initialDesc: e.target.value})} 
               />
             </div>
             
-            <div className="pt-4">
+            <div className="pt-6">
               <Button 
                 size="lg" 
-                className="w-full h-16 text-xl rounded-2xl bg-primary font-bold shadow-xl" 
+                className="w-full h-20 text-2xl rounded-[1.5rem] bg-primary font-bold shadow-2xl" 
                 onClick={handleSubmit} 
                 disabled={!isFormValid || isSubmitting}
               >
-                {isSubmitting ? (<><Loader2 className="mr-2 h-6 w-6 animate-spin" />Submitting...</>) : 'Submit Request'}
+                {isSubmitting ? (<><Loader2 className="mr-3 h-8 w-8 animate-spin" />Submitting...</>) : 'Submit Request'}
               </Button>
-              <p className="text-[10px] text-center text-muted-foreground mt-3 font-medium italic">
+              <p className="text-xs text-center text-muted-foreground mt-4 font-bold italic">
                 All fields marked with (*) are required for a successful request.
               </p>
             </div>
@@ -422,109 +427,113 @@ export default function ElderlyDashboard() {
         </div>
       )}
 
-      <div className="space-y-4">
-        <h2 className="text-xl font-bold text-primary">Active Status</h2>
-        <div className="space-y-3">
+      <div className="space-y-5">
+        <h2 className="text-2xl font-bold text-primary">Active Status</h2>
+        <div className="space-y-4">
           {(isPendingLoading || isActiveLoading) ? (
-            <div className="flex flex-col items-center justify-center py-10 gap-2 opacity-40">
-              <Loader2 className="h-6 w-6 animate-spin" />
-              <p className="text-xs font-bold uppercase">Loading requests...</p>
+            <div className="flex flex-col items-center justify-center py-16 gap-3 opacity-40">
+              <Loader2 className="h-10 w-10 animate-spin" />
+              <p className="text-base font-bold uppercase tracking-widest">Loading requests...</p>
             </div>
           ) : allActiveRequests.map((req) => (
-            <Card key={req.id} className="border-none shadow-sm rounded-3xl overflow-hidden active:bg-slate-50 transition-colors cursor-pointer" onClick={() => setSelectedRequest(req)}>
-              <CardContent className="p-5 flex items-center gap-4">
-                <div className="p-3 rounded-2xl bg-accent/10 text-accent">{getTypeIcon(req.taskType)}</div>
+            <Card key={req.id} className="border-none shadow-md rounded-[2rem] overflow-hidden active:bg-slate-50 transition-all cursor-pointer hover:shadow-lg" onClick={() => setSelectedRequest(req)}>
+              <CardContent className="p-6 flex items-center gap-5">
+                <div className="p-4 rounded-[1.25rem] bg-accent/10 text-accent">{getTypeIcon(req.taskType)}</div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="font-bold text-primary truncate">{req.taskType}</span>
-                    <span className="text-[10px] text-muted-foreground font-semibold">{formatDate(req.createdAt)}</span>
+                    <span className="font-bold text-xl text-primary truncate">{req.taskType}</span>
+                    <span className="text-xs text-muted-foreground font-bold uppercase">{formatDate(req.createdAt)}</span>
                   </div>
-                  <p className="text-xs text-muted-foreground truncate mb-2">{req.description}</p>
-                  <div className="flex items-center gap-2">
+                  <p className="text-sm text-muted-foreground truncate mb-3">{req.description}</p>
+                  <div className="flex items-center gap-3">
                     {getStatusBadge(req.status)}
-                    {req.urgencyLevel === 'High' && <Badge variant="destructive" className="text-[8px] h-5">Urgent</Badge>}
+                    {req.urgencyLevel === 'High' && <Badge variant="destructive" className="text-[10px] h-6 px-2 font-bold uppercase">Urgent</Badge>}
                   </div>
                 </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground/30" />
+                <ChevronRight className="h-8 w-8 text-muted-foreground/20" />
               </CardContent>
             </Card>
           ))}
           {(!isPendingLoading && !isActiveLoading) && allActiveRequests.length === 0 && (
-            <div className="text-center py-10 opacity-40 bg-white rounded-3xl border-2 border-dashed">
-              <p className="text-sm font-bold">No active requests</p>
-              <p className="text-[10px] uppercase tracking-wider">Tap "New Request" to get help</p>
+            <div className="text-center py-16 opacity-40 bg-white rounded-[2.5rem] border-2 border-dashed border-slate-200">
+              <p className="text-xl font-bold text-primary mb-1">No active requests</p>
+              <p className="text-xs font-bold uppercase tracking-widest">Tap "New Request" to get help</p>
             </div>
           )}
         </div>
       </div>
 
       <Sheet open={!!selectedRequest} onOpenChange={() => setSelectedRequest(null)}>
-        <SheetContent side="bottom" className="rounded-t-[3rem] h-[85vh] px-6 py-8">
+        <SheetContent side="bottom" className="rounded-t-[3.5rem] h-[90vh] px-8 py-10">
           {selectedRequest && (
-            <div className="space-y-6 h-full overflow-y-auto pb-10">
-              <SheetHeader className="text-left space-y-4">
+            <div className="space-y-8 h-full overflow-y-auto pb-12">
+              <SheetHeader className="text-left space-y-6">
                 <div className="flex items-center justify-between">
-                  <div className="p-4 rounded-2xl bg-accent/10 text-accent w-fit">{getTypeIcon(selectedRequest.taskType)}</div>
+                  <div className="p-5 rounded-[1.5rem] bg-accent/10 text-accent w-fit">{getTypeIcon(selectedRequest.taskType)}</div>
                   {getStatusBadge(selectedRequest.status)}
                 </div>
-                <SheetTitle className="text-2xl font-bold text-primary">{selectedRequest.taskType} Help</SheetTitle>
-                <SheetDescription className="text-base leading-relaxed text-slate-600 italic">"{selectedRequest.description}"</SheetDescription>
+                <div>
+                  <SheetTitle className="text-3xl font-bold text-primary mb-2">{selectedRequest.taskType} Help</SheetTitle>
+                  <SheetDescription className="text-xl leading-relaxed text-slate-700 italic font-medium">
+                    "{selectedRequest.description}"
+                  </SheetDescription>
+                </div>
               </SheetHeader>
-              <div className="space-y-4 pt-4 border-t">
-                <div className="flex items-start gap-4">
-                  <div className="p-2 rounded-lg bg-slate-50 text-slate-400"><MapPin className="h-5 w-5" /></div>
+              <div className="space-y-6 pt-6 border-t">
+                <div className="flex items-start gap-5">
+                  <div className="p-3 rounded-xl bg-slate-100 text-slate-500"><MapPin className="h-6 w-6" /></div>
                   <div>
-                    <Label className="text-[10px] text-muted-foreground uppercase font-bold">Location Details</Label>
-                    <p className="text-primary font-medium">{selectedRequest.location}</p>
+                    <Label className="text-xs text-muted-foreground uppercase font-black tracking-widest">Location Details</Label>
+                    <p className="text-xl text-primary font-bold mt-1">{selectedRequest.location}</p>
                   </div>
                 </div>
-                <div className="flex items-start gap-4">
-                  <div className="p-2 rounded-lg bg-slate-50 text-slate-400"><Clock className="h-5 w-5" /></div>
+                <div className="flex items-start gap-5">
+                  <div className="p-3 rounded-xl bg-slate-100 text-slate-500"><Clock className="h-6 w-6" /></div>
                   <div>
-                    <Label className="text-[10px] text-muted-foreground uppercase font-bold">Urgency</Label>
-                    <p className={`font-bold ${selectedRequest.urgencyLevel === 'High' ? 'text-destructive' : 'text-primary'}`}>{selectedRequest.urgencyLevel}</p>
+                    <Label className="text-xs text-muted-foreground uppercase font-black tracking-widest">Urgency</Label>
+                    <p className={`text-xl font-black mt-1 ${selectedRequest.urgencyLevel === 'High' ? 'text-destructive' : 'text-primary'}`}>{selectedRequest.urgencyLevel}</p>
                   </div>
                 </div>
-                <div className="flex items-start gap-4">
-                  <div className="p-2 rounded-lg bg-slate-50 text-slate-400"><Calendar className="h-5 w-5" /></div>
+                <div className="flex items-start gap-5">
+                  <div className="p-3 rounded-xl bg-slate-100 text-slate-500"><Calendar className="h-6 w-6" /></div>
                   <div>
-                    <Label className="text-[10px] text-muted-foreground uppercase font-bold">Requested On</Label>
-                    <p className="text-primary font-medium">{selectedRequest.createdAt ? new Date(selectedRequest.createdAt).toLocaleDateString() : 'Recent'}</p>
+                    <Label className="text-xs text-muted-foreground uppercase font-black tracking-widest">Requested On</Label>
+                    <p className="text-xl text-primary font-bold mt-1">{selectedRequest.createdAt ? new Date(selectedRequest.createdAt).toLocaleDateString() : 'Recent'}</p>
                   </div>
                 </div>
                 {selectedRequest.volunteerName && (
-                  <div className="flex items-start gap-4">
-                    <div className="p-2 rounded-lg bg-emerald-50 text-emerald-500"><User className="h-5 w-5" /></div>
+                  <div className="flex items-start gap-5">
+                    <div className="p-3 rounded-xl bg-emerald-50 text-emerald-500"><User className="h-6 w-6" /></div>
                     <div>
-                      <Label className="text-[10px] text-muted-foreground uppercase font-bold">Volunteer Assigned</Label>
-                      <p className="text-primary font-medium">{selectedRequest.volunteerName}</p>
+                      <Label className="text-xs text-muted-foreground uppercase font-black tracking-widest">Volunteer Assigned</Label>
+                      <p className="text-xl text-emerald-600 font-black mt-1">{selectedRequest.volunteerName}</p>
                     </div>
                   </div>
                 )}
               </div>
-              <div className="flex flex-col gap-3 mt-8">
+              <div className="flex flex-col gap-4 mt-10">
                 {selectedRequest.status === 'Accepted' && (
-                  <div className="flex flex-col gap-3">
-                    <Button asChild className="w-full h-14 rounded-2xl bg-accent hover:bg-accent/90 font-bold">
+                  <div className="flex flex-col gap-4">
+                    <Button asChild className="w-full h-18 rounded-[1.5rem] bg-accent hover:bg-accent/90 font-bold text-xl shadow-xl shadow-accent/20">
                       <Link href={`/dashboard/chat/room?requestId=${selectedRequest.chatRoomId || selectedRequest.id}&role=elderly`}>
                         Chat with Volunteer
                       </Link>
                     </Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button className="w-full h-14 rounded-2xl bg-emerald-500 hover:bg-emerald-600 font-bold gap-2">
-                          <CheckCircle2 className="h-5 w-5" />
+                        <Button className="w-full h-18 rounded-[1.5rem] bg-emerald-500 hover:bg-emerald-600 font-bold text-xl gap-3 shadow-xl shadow-emerald-500/20">
+                          <CheckCircle2 className="h-7 w-7" />
                           Mark as Completed
                         </Button>
                       </AlertDialogTrigger>
-                      <AlertDialogContent className="rounded-3xl max-w-[90vw] mx-auto">
+                      <AlertDialogContent className="rounded-[2.5rem] max-w-[90vw] mx-auto p-8">
                         <AlertDialogHeader>
-                          <AlertDialogTitle>Is this task finished?</AlertDialogTitle>
-                          <AlertDialogDescription>Confirming this will let the volunteer and admin know the task is successfully completed.</AlertDialogDescription>
+                          <AlertDialogTitle className="text-2xl font-bold">Is this task finished?</AlertDialogTitle>
+                          <AlertDialogDescription className="text-lg">Confirming this will let the volunteer and admin know the task is successfully completed.</AlertDialogDescription>
                         </AlertDialogHeader>
-                        <AlertDialogFooter className="flex flex-col gap-2">
-                          <AlertDialogAction onClick={() => handleCompleteRequest(selectedRequest)} className="bg-emerald-500 hover:bg-emerald-600 h-12 rounded-xl font-bold">Yes, Mark Completed</AlertDialogAction>
-                          <AlertDialogCancel className="h-12 rounded-xl font-bold border-none bg-slate-100">Not Yet</AlertDialogCancel>
+                        <AlertDialogFooter className="flex flex-col gap-3 mt-6">
+                          <AlertDialogAction onClick={() => handleCompleteRequest(selectedRequest)} className="bg-emerald-500 hover:bg-emerald-600 h-16 rounded-2xl font-bold text-lg">Yes, Mark Completed</AlertDialogAction>
+                          <AlertDialogCancel className="h-16 rounded-2xl font-bold border-none bg-slate-100 text-lg">Not Yet</AlertDialogCancel>
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
@@ -533,19 +542,19 @@ export default function ElderlyDashboard() {
                 {selectedRequest.status === 'Pending' && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button variant="outline" className="w-full h-14 rounded-2xl text-destructive hover:bg-destructive/10 border-destructive/20 font-bold gap-2">
-                        <Trash2 className="h-5 w-5" />
+                      <Button variant="outline" className="w-full h-18 rounded-[1.5rem] text-destructive hover:bg-destructive/10 border-destructive/20 font-bold text-xl gap-3">
+                        <Trash2 className="h-7 w-7" />
                         Cancel Request
                       </Button>
                     </AlertDialogTrigger>
-                    <AlertDialogContent className="rounded-3xl max-w-[90vw] mx-auto">
+                    <AlertDialogContent className="rounded-[2.5rem] max-w-[90vw] mx-auto p-8">
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                        <AlertDialogDescription>This will remove your request from the system permanently.</AlertDialogDescription>
+                        <AlertDialogTitle className="text-2xl font-bold">Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription className="text-lg">This will remove your request from the system permanently.</AlertDialogDescription>
                       </AlertDialogHeader>
-                      <AlertDialogFooter className="flex flex-col gap-2">
-                        <AlertDialogAction onClick={() => handleCancelRequest(selectedRequest)} className="bg-destructive hover:bg-destructive/90 h-12 rounded-xl font-bold">Yes, Cancel Request</AlertDialogAction>
-                        <AlertDialogCancel className="h-12 rounded-xl font-bold border-none bg-slate-100">Keep Request</AlertDialogCancel>
+                      <AlertDialogFooter className="flex flex-col gap-3 mt-6">
+                        <AlertDialogAction onClick={() => handleCancelRequest(selectedRequest)} className="bg-destructive hover:bg-destructive/90 h-16 rounded-2xl font-bold text-lg">Yes, Cancel Request</AlertDialogAction>
+                        <AlertDialogCancel className="h-16 rounded-2xl font-bold border-none bg-slate-100 text-lg">Keep Request</AlertDialogCancel>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
