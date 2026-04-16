@@ -2,7 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { Heart, ArrowRight, Sparkles } from 'lucide-react';
+import { Heart, ArrowRight } from 'lucide-react';
 
 export default function Home() {
   const heroImage = PlaceHolderImages.find(img => img.id === 'hero-elderly');
@@ -47,7 +47,6 @@ export default function Home() {
         <div className="w-full max-w-xs space-y-6">
           <Button asChild size="lg" className="w-full h-16 text-xl rounded-2xl bg-primary hover:bg-primary/90 font-bold shadow-xl shadow-primary/20 gap-3 group">
             <Link href="/auth/register">
-              <Sparkles className="h-6 w-6 text-accent" />
               Get Started
               <ArrowRight className="h-5 w-5 ml-auto group-hover:translate-x-1 transition-transform" />
             </Link>

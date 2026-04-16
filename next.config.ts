@@ -1,4 +1,3 @@
-
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
@@ -19,25 +18,7 @@ const nextConfig: NextConfig = {
   },
   webpack: (config, { isServer }) => {
     if (!isServer) {
-      // 1. Resolve Aliases: Force Webpack to treat these as non-existent (false)
-      config.resolve.alias = {
-        ...config.resolve.alias,
-        'genkit': false,
-        'genkit/core': false,
-        '@genkit-ai/google-genai': false,
-        '@genkit-ai/ai': false,
-        '@genkit-ai/core': false,
-        'wav': false,
-        'grpc': false,
-        '@grpc/grpc-js': false,
-        'http2': false,
-        'net': false,
-        'tls': false,
-        'fs': false,
-        'child_process': false,
-      };
-
-      // 2. Fallbacks for standard Node.js modules
+      // Standard Node.js module fallbacks for browser compatibility
       config.resolve.fallback = {
         ...config.resolve.fallback,
         fs: false,
@@ -58,12 +39,6 @@ const nextConfig: NextConfig = {
         punycode: false,
         async_hooks: false,
       };
-      
-      // 3. Use null-loader to effectively delete these modules from the mobile bundle
-      config.module.rules.push({
-        test: /node_modules\/(@genkit-ai|genkit|@grpc|@opentelemetry|google-auth-library|gaxios|gcp-metadata|google-p12-asn1|retry-request|http2|wav)/,
-        use: 'null-loader',
-      });
     }
     return config;
   },

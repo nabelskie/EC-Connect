@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, useMemo } from 'react';
@@ -9,21 +8,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Users, 
   FileText, 
-  CheckCircle, 
-  Clock, 
   Search, 
   Filter, 
   ShieldCheck, 
-  Sparkles, 
   ChevronRight, 
   Loader2, 
   AlertCircle, 
   Heart,
-  BarChart3,
-  PieChart as PieIcon,
-  LayoutDashboard
+  Clock,
+  MapPin
 } from 'lucide-react';
-import { generateAdminDashboardSummary } from '@/ai/flows/generate-admin-dashboard-summary-flow';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import Link from 'next/link';
@@ -49,8 +43,6 @@ import {
 } from '@/components/ui/chart';
 
 export default function AdminDashboard() {
-  const [aiSummary, setAiSummary] = useState<string>("");
-  const [isAiLoading, setIsAiLoading] = useState(false);
   const db = useFirestore();
   const { user } = useUser();
 
@@ -73,17 +65,16 @@ export default function AdminDashboard() {
   const activeQuery = useMemoFirebase(() => (isAdminConfirmed && user) ? collection(db, 'assistance_requests_active') : null, [db, isAdminConfirmed, user]);
   const completedQuery = useMemoFirebase(() => (isAdminConfirmed && user) ? collection(db, 'assistance_requests_completed') : null, [db, isAdminConfirmed, user]);
 
-  const { data: usersData, isLoading: isUsersLoading, error: usersError } = useCollection(usersQuery);
+  const { data: usersData, isLoading: isUsersLoading } = useCollection(usersQuery);
   const { data: pendingData, isLoading: isPendingLoading } = useCollection(pendingQuery);
   const { data: activeData, isLoading: isActiveLoading } = useCollection(activeQuery);
   const { data: completedData, isLoading: isCompletedLoading } = useCollection(completedQuery);
 
   const metrics = useMemo(() => {
     const totalUsers = usersData?.length || 0;
-    const elderlyUsers = usersData?.filter(u => u.role === 'elderly').length || 0;
-    const activeVolunteers = usersData?.filter(u => u.role === 'volunteer').length || 0;
     const completedTasksCount = completedData?.length || 0;
     const totalRequests = (pendingData?.length || 0) + (activeData?.length || 0) + completedTasksCount;
+    const activeVolunteers = usersData?.filter(u => u.role === 'volunteer').length || 0;
 
     const counts: Record<string, number> = {};
     const allReqs = [...(pendingData || []), ...(activeData || []), ...(completedData || [])];
@@ -96,7 +87,6 @@ export default function AdminDashboard() {
 
     return {
       totalUsers,
-      elderlyUsers,
       totalRequests,
       activeVolunteers,
       completedTasks: completedTasksCount,
@@ -152,24 +142,6 @@ export default function AdminDashboard() {
     Transportation: { label: "Transportation", color: "hsl(var(--chart-2))" },
     'Tech Support': { label: "Tech Support", color: "hsl(var(--chart-3))" }
   };
-
-  const handleGenerateSummary = async () => {
-    if (isAiLoading || !isAdminConfirmed || !usersData || usersData.length === 0) return;
-    setIsAiLoading(true);
-    try {
-      const result = await generateAdminDashboardSummary(metrics);
-      setAiSummary(result.summary);
-    } catch (err) {
-    } finally {
-      setIsAiLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!isUsersLoading && !isPendingLoading && !isActiveLoading && !isCompletedLoading && usersData && usersData.length > 0 && isAdminConfirmed) {
-      handleGenerateSummary();
-    }
-  }, [isUsersLoading, isPendingLoading, isActiveLoading, isCompletedLoading, usersData, isAdminConfirmed]);
 
   const recentActivity = useMemo(() => {
     const allReqs = [
@@ -230,21 +202,6 @@ export default function AdminDashboard() {
             </Link>
           </div>
 
-          <Card className="bg-primary/5 border-primary/20 shadow-none overflow-hidden border-2 border-dashed rounded-2xl">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-accent" />
-                <CardTitle className="text-sm font-bold text-primary">AI Insights</CardTitle>
-              </div>
-              <Button variant="ghost" size="sm" onClick={handleGenerateSummary} disabled={isAiLoading} className="text-[10px] h-7 px-2 font-bold">Refresh</Button>
-            </CardHeader>
-            <CardContent className="p-4 pt-0">
-              <div className="text-xs text-primary/80 leading-relaxed font-medium">
-                {isAiLoading ? "Analyzing system data..." : aiSummary || "Tap refresh to generate new community insights."}
-              </div>
-            </CardContent>
-          </Card>
-
           <div className="space-y-3">
             <h2 className="text-lg font-bold text-primary">Recent Activity</h2>
             <div className="space-y-2">
@@ -264,6 +221,9 @@ export default function AdminDashboard() {
                   <Badge className={`text-[8px] h-4 px-1 ${req.status === 'Completed' ? 'bg-emerald-500' : 'bg-yellow-500'}`}>{req.status}</Badge>
                 </Card>
               ))}
+              {recentActivity.length === 0 && (
+                <div className="text-center py-10 text-muted-foreground text-xs italic">No recent activity recorded.</div>
+              )}
             </div>
           </div>
         </TabsContent>
@@ -321,17 +281,6 @@ export default function AdminDashboard() {
               </ResponsiveContainer>
             </CardContent>
           </Card>
-
-          <div className="grid grid-cols-1 gap-4">
-             <div className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
-                <h4 className="text-[10px] font-black uppercase text-muted-foreground mb-4 flex items-center gap-2">
-                   <AlertCircle className="h-3 w-3" /> System Recommendation
-                </h4>
-                <p className="text-xs text-primary leading-relaxed">
-                  Based on the Age Group report, elderly users in the <strong>80-89 bracket</strong> are showing a higher dependency on <strong>Transportation</strong> services. We recommend prioritizing volunteer outreach for driving-certified students.
-                </p>
-             </div>
-          </div>
         </TabsContent>
       </Tabs>
     </div>

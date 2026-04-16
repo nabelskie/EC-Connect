@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -29,7 +28,6 @@ import {
   Truck, 
   Wrench, 
   Info, 
-  Sparkles, 
   Loader2, 
   ChevronRight, 
   X, 
@@ -37,10 +35,8 @@ import {
   Calendar,
   User,
   Trash2,
-  CheckCircle2,
-  ArrowRight
+  CheckCircle2
 } from 'lucide-react';
-import { generateTaskDescription } from '@/ai/flows/generate-task-description-flow';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, doc, getDoc } from 'firebase/firestore';
@@ -53,7 +49,6 @@ export default function ElderlyDashboard() {
   const [mounted, setMounted] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
-  const [isAiLoading, setIsAiLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     type: '',
@@ -109,30 +104,6 @@ export default function ElderlyDashboard() {
     
     return true;
   }, [formData]);
-
-  const handleAiHelp = async () => {
-    if (!formData.type || !formData.initialDesc) return;
-    setIsAiLoading(true);
-    try {
-      let combinedLocation = '';
-      if (formData.type === 'Transportation') {
-        combinedLocation = `From: ${formData.fromLocation} To: ${formData.toLocation}`;
-      } else if (formData.type === 'Groceries' || formData.type === 'Tech Support') {
-        combinedLocation = formData.address;
-      }
-
-      const result = await generateTaskDescription({
-        taskType: formData.type as 'Groceries' | 'Transportation' | 'Tech Support',
-        initialDescription: formData.device ? `Device: ${formData.device}. ${formData.initialDesc}` : formData.initialDesc,
-        location: combinedLocation,
-        urgencyLevel: formData.urgency
-      });
-      setFormData({ ...formData, initialDesc: result.generatedDescription });
-    } catch (error) {
-    } finally {
-      setIsAiLoading(false);
-    }
-  };
 
   const handleSubmit = async () => {
     if (!isFormValid || !user) {
@@ -392,21 +363,9 @@ export default function ElderlyDashboard() {
             </div>
             
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label className="text-base font-bold text-muted-foreground uppercase tracking-wider">
-                  Details <span className="text-destructive">*</span>
-                </Label>
-                <Button 
-                  variant="link" 
-                  size="lg" 
-                  onClick={handleAiHelp} 
-                  disabled={isAiLoading || !formData.type || !formData.initialDesc.trim()} 
-                  className="text-accent font-black gap-2 p-0 h-10"
-                >
-                  {isAiLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Sparkles className="h-6 w-6" />}
-                  AI Refine
-                </Button>
-              </div>
+              <Label className="text-base font-bold text-muted-foreground uppercase tracking-wider">
+                Details <span className="text-destructive">*</span>
+              </Label>
               <Textarea 
                 placeholder="What specifically do you need help with?" 
                 className="min-h-[160px] rounded-[1.25rem] text-xl p-6" 
