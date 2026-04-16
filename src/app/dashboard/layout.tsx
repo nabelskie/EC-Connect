@@ -258,6 +258,7 @@ function NotificationContent() {
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
+  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(true);
   const db = useFirestore();
   const { user } = useUser();
   
@@ -278,6 +279,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // CRITICAL: Ensure large font mode is only applied after mounting to prevent hydration mismatch
   const isLargeText = mounted && profile?.largeTextEnabled === true;
 
+  const handleOpenNotifications = (open: boolean) => {
+    if (open) {
+      setHasUnreadNotifications(false);
+    }
+  };
+
   return (
     <div className={cn("flex flex-col h-screen-dvh bg-background overflow-hidden", isLargeText && "large-font-mode")}>
       <header className="h-20 bg-white border-b flex items-center justify-between px-6 sticky top-0 z-30 shadow-md shrink-0">
@@ -290,11 +297,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         
         <div className="flex items-center gap-4">
           {mounted ? (
-            <Sheet>
+            <Sheet onOpenChange={handleOpenNotifications}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="rounded-2xl relative text-muted-foreground h-12 w-12 bg-slate-50 hover:bg-slate-100 transition-colors">
                   <Bell className="h-6 w-6" />
-                  <span className="absolute top-2.5 right-2.5 w-3 h-3 bg-destructive rounded-full border-2 border-white shadow-sm" />
+                  {hasUnreadNotifications && (
+                    <span className="absolute top-2.5 right-2.5 w-3 h-3 bg-destructive rounded-full border-2 border-white shadow-sm" />
+                  )}
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-[85vw] sm:w-[450px] p-0 rounded-l-[3rem] border-none shadow-2xl">

@@ -259,8 +259,8 @@ function ProfileContent() {
     );
   }
 
-  const avatarSrc = tempPhotoPreview || profileData.photoURL || `https://picsum.photos/seed/${profileData.id}/200/200`;
-  const formattedDate = profileData.createdAt 
+  const avatarSrc = tempPhotoPreview || profileData?.photoURL || `https://picsum.photos/seed/${profileData?.id || 'default'}/200/200`;
+  const formattedDate = profileData?.createdAt 
     ? new Date(profileData.createdAt).toLocaleDateString('en-MY', { year: 'numeric', month: 'long' })
     : 'Recently';
 
