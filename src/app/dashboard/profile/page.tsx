@@ -76,6 +76,7 @@ function ProfileContent() {
   const [editAddress, setEditAddress] = useState('');
   const [editGender, setEditGender] = useState('');
   const [editPhotoURL, setEditPhotoURL] = useState('');
+  const [editAge, setEditAge] = useState('');
   const [tempPhotoPreview, setTempPhotoPreview] = useState<string | null>(null);
   
   // Password state
@@ -106,6 +107,7 @@ function ProfileContent() {
       setEditAddress(profileData.address || '');
       setEditGender(profileData.gender || '');
       setEditPhotoURL(profileData.photoURL || '');
+      setEditAge(profileData.age || '');
     }
   }, [profileData]);
 
@@ -181,7 +183,7 @@ function ProfileContent() {
         phone: editPhone,
         address: editAddress,
         gender: editGender,
-        // Matrix Number is immutable and not included here
+        age: editAge,
         photoURL: editPhotoURL
       });
 
@@ -239,33 +241,6 @@ function ProfileContent() {
     }
   };
 
-  const toggleNotifications = (enabled: boolean) => {
-    if (!userRef) return;
-    
-    updateDocumentNonBlocking(userRef, { 
-      notificationsEnabled: enabled,
-      fcmToken: enabled ? profileData?.fcmToken : null 
-    });
-
-    toast({
-      title: enabled ? "Notifications Enabled" : "Notifications Disabled",
-      description: enabled ? "You'll stay updated on your requests." : "Alerts have been silenced.",
-    });
-  };
-
-  const toggleLargeText = (enabled: boolean) => {
-    if (!userRef) return;
-    
-    updateDocumentNonBlocking(userRef, { 
-      largeTextEnabled: enabled 
-    });
-
-    toast({
-      title: enabled ? "Large Text Enabled" : "Text Size Reset",
-      description: enabled ? "The app font size has been increased for better readability." : "Font size returned to standard settings.",
-    });
-  };
-
   const roleIcon = useMemo(() => {
     const role = profileData?.role || 'elderly';
     if (role === 'admin') return ShieldCheck;
@@ -284,27 +259,22 @@ function ProfileContent() {
     );
   }
 
-  if (!profileData) {
-    return (
-      <div className="text-center py-20 space-y-4">
-        <p className="text-muted-foreground">Profile not found.</p>
-        <Button onClick={handleLogout} variant="outline">Logout</Button>
-      </div>
-    );
-  }
-
+  const avatarSrc = tempPhotoPreview || profileData.photoURL || `https://picsum.photos/seed/${profileData.id}/200/200`;
   const formattedDate = profileData.createdAt 
     ? new Date(profileData.createdAt).toLocaleDateString('en-MY', { year: 'numeric', month: 'long' })
     : 'Recently';
 
-  const getDisplayRole = (role: string) => {
-    if (role === 'elderly') return 'Elderly';
-    if (role === 'volunteer') return 'Volunteer';
-    if (role === 'admin') return 'Admin';
-    return role.charAt(0).toUpperCase() + role.slice(1);
+  const toggleNotifications = (enabled: boolean) => {
+    if (!userRef) return;
+    updateDocumentNonBlocking(userRef, { notificationsEnabled: enabled });
+    toast({ title: enabled ? "Notifications Enabled" : "Notifications Disabled" });
   };
 
-  const avatarSrc = tempPhotoPreview || profileData.photoURL || `https://picsum.photos/seed/${profileData.id}/200/200`;
+  const toggleLargeText = (enabled: boolean) => {
+    if (!userRef) return;
+    updateDocumentNonBlocking(userRef, { largeTextEnabled: enabled });
+    toast({ title: enabled ? "Large Text Enabled" : "Text Size Reset" });
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">
@@ -319,7 +289,7 @@ function ProfileContent() {
           <h1 className="text-2xl font-headline font-bold text-primary">{profileData.name}</h1>
           <div className="flex items-center justify-center gap-1 mt-1 text-accent font-bold uppercase text-[10px] tracking-widest">
             <RoleIcon className="h-3 w-3" />
-            {getDisplayRole(profileData.role)}
+            {profileData.role === 'admin' ? 'Admin' : profileData.role === 'volunteer' ? 'Volunteer' : 'Elderly'}
           </div>
         </div>
       </div>
@@ -336,7 +306,6 @@ function ProfileContent() {
               onClick={() => {
                 setIsEditing(!isEditing);
                 setTempPhotoPreview(null);
-                if (!isEditing) setEditPhotoURL(profileData.photoURL || '');
               }}
               className="text-accent font-bold h-7 px-2"
             >
@@ -348,52 +317,19 @@ function ProfileContent() {
               <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
                 <div className="space-y-2">
                   <Label>Profile Picture</Label>
-                  <div className="flex flex-col gap-3">
-                    <div className="flex gap-2">
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        className="w-full h-12 rounded-xl gap-2 border-dashed"
-                        onClick={() => fileInputRef.current?.click()}
-                      >
-                        <Upload className="h-4 w-4" />
-                        Upload from Device
-                      </Button>
-                      <input 
-                        type="file" 
-                        ref={fileInputRef} 
-                        className="hidden" 
-                        accept="image/*" 
-                        onChange={handleFileChange}
-                      />
-                    </div>
-                    <div className="relative">
-                      <Input 
-                        placeholder="Or paste an image link here"
-                        value={editPhotoURL.startsWith('data:') ? '' : editPhotoURL} 
-                        onChange={(e) => {
-                          setEditPhotoURL(e.target.value);
-                          setTempPhotoPreview(null);
-                        }}
-                        className="h-12 rounded-xl pl-10 text-xs"
-                      />
-                      <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    </div>
-                  </div>
+                  <Button type="button" variant="outline" className="w-full h-12 rounded-xl border-dashed" onClick={() => fileInputRef.current?.click()}>
+                    <Upload className="h-4 w-4 mr-2" /> Upload Image
+                  </Button>
+                  <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-name">Full Name</Label>
                   <Input id="edit-name" value={editName} onChange={(e) => setEditName(e.target.value)} className="h-12 rounded-xl" />
                 </div>
-                {profileData.role === 'volunteer' && (
-                  <div className="space-y-2 opacity-60">
-                    <Label>Matrix Number (Permanent)</Label>
-                    <div className="h-12 rounded-xl bg-slate-100 flex items-center px-4 font-black text-accent border border-slate-200">
-                      {profileData.matrixNumber}
-                    </div>
-                    <p className="text-[10px] text-muted-foreground italic">Official student ID cannot be changed after registration.</p>
-                  </div>
-                )}
+                <div className="space-y-2">
+                  <Label htmlFor="edit-age">Age</Label>
+                  <Input id="edit-age" type="number" value={editAge} onChange={(e) => setEditAge(e.target.value)} className="h-12 rounded-xl" />
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-gender">Gender</Label>
                   <Select value={editGender} onValueChange={setEditGender}>
@@ -411,10 +347,10 @@ function ProfileContent() {
                   <Input id="edit-phone" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} className="h-12 rounded-xl" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-address">Address / Room No</Label>
+                  <Label htmlFor="edit-address">Address</Label>
                   <Input id="edit-address" value={editAddress} onChange={(e) => setEditAddress(e.target.value)} className="h-12 rounded-xl" />
                 </div>
-                <Button onClick={handleSaveProfile} disabled={isSaving} className="w-full h-12 rounded-xl bg-accent hover:bg-accent/90 gap-2 shadow-lg shadow-accent/20">
+                <Button onClick={handleSaveProfile} disabled={isSaving} className="w-full h-12 rounded-xl bg-accent hover:bg-accent/90 gap-2">
                   {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                   Save Changes
                 </Button>
@@ -426,28 +362,26 @@ function ProfileContent() {
                     <Mail className="h-5 w-5" />
                   </div>
                   <div className="flex-1">
-                    <Label className="text-[10px] text-muted-foreground uppercase font-bold">Email Address</Label>
+                    <Label className="text-[10px] text-muted-foreground uppercase font-bold">Email</Label>
                     <p className="text-primary font-medium">{profileData.email}</p>
                   </div>
                 </div>
-                {profileData.role === 'volunteer' && (
-                  <div className="flex items-start gap-4">
-                    <div className="p-3 rounded-2xl bg-accent/10 text-accent font-black">
-                      <Hash className="h-5 w-5" />
-                    </div>
-                    <div className="flex-1">
-                      <Label className="text-[10px] text-muted-foreground uppercase font-bold">Matrix Number</Label>
-                      <p className="text-accent font-black">{profileData.matrixNumber || 'Not provided'}</p>
-                    </div>
+                <div className="flex items-start gap-4">
+                  <div className="p-3 rounded-2xl bg-slate-50 text-slate-400">
+                    <Calendar className="h-5 w-5" />
                   </div>
-                )}
+                  <div className="flex-1">
+                    <Label className="text-[10px] text-muted-foreground uppercase font-bold">Age</Label>
+                    <p className="text-primary font-medium">{profileData.age || 'N/A'}</p>
+                  </div>
+                </div>
                 <div className="flex items-start gap-4">
                   <div className="p-3 rounded-2xl bg-slate-50 text-slate-400">
                     <UserCircle className="h-5 w-5" />
                   </div>
                   <div className="flex-1">
                     <Label className="text-[10px] text-muted-foreground uppercase font-bold">Gender</Label>
-                    <p className="text-primary font-medium">{profileData.gender || 'Not provided'}</p>
+                    <p className="text-primary font-medium">{profileData.gender || 'N/A'}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-4">
@@ -455,8 +389,8 @@ function ProfileContent() {
                     <Phone className="h-5 w-5" />
                   </div>
                   <div className="flex-1">
-                    <Label className="text-[10px] text-muted-foreground uppercase font-bold">Phone Number</Label>
-                    <p className="text-primary font-medium">{profileData.phone || 'Not provided'}</p>
+                    <Label className="text-[10px] text-muted-foreground uppercase font-bold">Phone</Label>
+                    <p className="text-primary font-medium">{profileData.phone || 'N/A'}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-4">
@@ -465,7 +399,7 @@ function ProfileContent() {
                   </div>
                   <div className="flex-1">
                     <Label className="text-[10px] text-muted-foreground uppercase font-bold">Address</Label>
-                    <p className="text-primary font-medium">{profileData.address || 'Not provided'}</p>
+                    <p className="text-primary font-medium">{profileData.address || 'N/A'}</p>
                   </div>
                 </div>
               </>
@@ -479,16 +413,13 @@ function ProfileContent() {
               <Type className="h-4 w-4" /> Accessibility
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent>
             <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
               <div className="space-y-0.5">
                 <p className="text-sm font-bold text-primary">Large Text Mode</p>
-                <p className="text-[10px] text-muted-foreground">Increases font size for readability</p>
+                <p className="text-[10px] text-muted-foreground">Better visibility for elders</p>
               </div>
-              <Switch 
-                checked={profileData.largeTextEnabled === true}
-                onCheckedChange={toggleLargeText}
-              />
+              <Switch checked={profileData.largeTextEnabled === true} onCheckedChange={toggleLargeText} />
             </div>
           </CardContent>
         </Card>
@@ -499,68 +430,13 @@ function ProfileContent() {
               <Bell className="h-4 w-4" /> Preferences
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent>
             <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
               <div className="space-y-0.5">
-                <p className="text-sm font-bold text-primary">Push Notifications</p>
-                <p className="text-[10px] text-muted-foreground">Get alerted for new messages</p>
+                <p className="text-sm font-bold text-primary">Notifications</p>
+                <p className="text-[10px] text-muted-foreground">Alerts for new messages</p>
               </div>
-              <Switch 
-                checked={profileData.notificationsEnabled !== false}
-                onCheckedChange={toggleNotifications}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-none shadow-sm rounded-[2rem] overflow-hidden">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-              <Lock className="h-4 w-4" /> Account Security
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="w-full h-14 rounded-2xl border-dashed border-2 text-primary font-bold gap-2">
-                  <Lock className="h-4 w-4" />
-                  Change Password
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="rounded-3xl max-w-[90vw] mx-auto">
-                <DialogHeader>
-                  <DialogTitle>Update Password</DialogTitle>
-                  <DialogDescription>Enter your new password below.</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="new-pass">New Password</Label>
-                    <div className="relative">
-                      <Input id="new-pass" type={showNewPassword ? "text" : "password"} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="h-12 rounded-xl pr-10" />
-                      <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors">
-                        {showNewPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                      </button>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="confirm-pass">Confirm Password</Label>
-                    <div className="relative">
-                      <Input id="confirm-pass" type={showConfirmPassword ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="h-12 rounded-xl pr-10" />
-                      <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors">
-                        {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button onClick={handleChangePassword} disabled={isChangingPassword || !newPassword} className="w-full h-12 rounded-xl bg-primary font-bold">
-                    {isChangingPassword ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Update Password'}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-            <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium px-4">
-              <Calendar className="h-3 w-3 text-accent" /> Member since {formattedDate}
+              <Switch checked={profileData.notificationsEnabled !== false} onCheckedChange={toggleNotifications} />
             </div>
           </CardContent>
         </Card>
@@ -578,7 +454,7 @@ function ProfileContent() {
             </AlertDialogHeader>
             <AlertDialogFooter className="flex flex-col gap-3 mt-6">
               <AlertDialogAction onClick={handleLogout} className="bg-destructive hover:bg-destructive/90 h-14 rounded-2xl font-bold text-lg shadow-lg shadow-destructive/20">
-                {isLoggingOut ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null} Yes, Sign Out
+                Yes, Sign Out
               </AlertDialogAction>
               <AlertDialogCancel className="h-14 rounded-2xl font-bold border-none bg-slate-100 hover:bg-slate-200 transition-colors text-lg">Stay Signed In</AlertDialogCancel>
             </AlertDialogFooter>

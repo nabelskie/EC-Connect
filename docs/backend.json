@@ -24,6 +24,10 @@
           "type": "string",
           "description": "The role of the user within the system (e.g., 'elderly', 'volunteer', 'admin')."
         },
+        "age": {
+          "type": "string",
+          "description": "The age of the user. Mandatory for elderly users."
+        },
         "matrixNumber": {
           "type": "string",
           "description": "The official student matrix number for volunteers (e.g., 05DIT23F2000). (Optional for non-volunteers)"

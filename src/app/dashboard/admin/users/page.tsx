@@ -28,7 +28,8 @@ import {
   AlertCircle,
   MapPin,
   UserCircle,
-  Hash
+  Hash,
+  Calendar
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -204,6 +205,12 @@ function AdminUsersContent() {
                     </Badge>
                   </div>
                   <div className="flex flex-col gap-1 mt-2">
+                    {u.age && u.age !== "N/A" && (
+                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-bold">
+                        <Calendar className="h-3 w-3 shrink-0" />
+                        <span>Age: {u.age}</span>
+                      </div>
+                    )}
                     {u.matrixNumber && u.matrixNumber !== "N/A" && (
                       <div className="flex items-center gap-2 text-[10px] text-accent font-black">
                         <Hash className="h-3 w-3 shrink-0" />
