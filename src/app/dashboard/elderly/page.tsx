@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -35,11 +36,12 @@ import {
   Calendar,
   User,
   Trash2,
-  CheckCircle2
+  CheckCircle2,
+  Star
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export default function ElderlyDashboard() {
@@ -49,7 +51,10 @@ export default function ElderlyDashboard() {
   const [mounted, setMounted] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
+  const [ratingRequest, setRatingRequest] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRating, setIsRating] = useState(false);
+  
   const [formData, setFormData] = useState({
     type: '',
     initialDesc: '',
@@ -58,6 +63,11 @@ export default function ElderlyDashboard() {
     address: '',
     device: '',
     urgency: 'Low' as 'Low' | 'Medium' | 'High'
+  });
+
+  const [ratingData, setRatingData] = useState({
+    score: 10,
+    feedback: ''
   });
 
   useEffect(() => {
@@ -178,10 +188,37 @@ export default function ElderlyDashboard() {
     const completedData = { ...request, status: 'Completed', completedAt: new Date().toISOString() };
     const completedRef = doc(db, 'assistance_requests_completed', requestId);
     const activeRef = doc(db, 'assistance_requests_active', requestId);
+    
     setDocumentNonBlocking(completedRef, completedData, { merge: true });
     deleteDocumentNonBlocking(activeRef);
+    
+    // Prepare for rating
+    setRatingRequest(request);
     setSelectedRequest(null);
-    toast({ title: "Task Completed", description: "Thank you! The status has been updated." });
+    toast({ title: "Task Completed", description: "Please take a moment to rate the volunteer." });
+  };
+
+  const handleSubmitRating = () => {
+    if (!user || !ratingRequest || isRating) return;
+    setIsRating(true);
+
+    const ratingId = Math.random().toString(36).substring(7);
+    const finalRating = {
+      id: ratingId,
+      requestId: ratingRequest.id,
+      volunteerUserId: ratingRequest.assignedVolunteerId,
+      elderlyUserId: user.uid,
+      ratingScore: ratingData.score,
+      feedback: ratingData.feedback,
+      createdAt: new Date().toISOString()
+    };
+
+    setDocumentNonBlocking(doc(db, 'ratings', ratingId), finalRating, { merge: true });
+    
+    setIsRating(false);
+    setRatingRequest(null);
+    setRatingData({ score: 10, feedback: '' });
+    toast({ title: "Rating Submitted", description: "Thank you for your feedback!" });
   };
 
   const getStatusBadge = (status: string) => {
@@ -383,9 +420,6 @@ export default function ElderlyDashboard() {
               >
                 {isSubmitting ? (<><Loader2 className="mr-3 h-8 w-8 animate-spin" />Submitting...</>) : 'Submit Request'}
               </Button>
-              <p className="text-xs text-center text-muted-foreground mt-4 font-bold italic">
-                All fields marked with (*) are required for a successful request.
-              </p>
             </div>
           </div>
         </div>
@@ -427,6 +461,7 @@ export default function ElderlyDashboard() {
         </div>
       </div>
 
+      {/* Details Sheet */}
       <Sheet open={!!selectedRequest} onOpenChange={() => setSelectedRequest(null)}>
         <SheetContent side="bottom" className="rounded-t-[3.5rem] h-[90vh] px-8 py-10">
           {selectedRequest && (
@@ -456,13 +491,6 @@ export default function ElderlyDashboard() {
                   <div>
                     <Label className="text-xs text-muted-foreground uppercase font-black tracking-widest">Urgency</Label>
                     <p className={`text-xl font-black mt-1 ${selectedRequest.urgencyLevel === 'High' ? 'text-destructive' : 'text-primary'}`}>{selectedRequest.urgencyLevel}</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-5">
-                  <div className="p-3 rounded-xl bg-slate-100 text-slate-500"><Calendar className="h-6 w-6" /></div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground uppercase font-black tracking-widest">Requested On</Label>
-                    <p className="text-xl text-primary font-bold mt-1">{selectedRequest.createdAt ? new Date(selectedRequest.createdAt).toLocaleDateString() : 'Recent'}</p>
                   </div>
                 </div>
                 {selectedRequest.volunteerName && (
@@ -523,6 +551,68 @@ export default function ElderlyDashboard() {
                     </AlertDialogContent>
                   </AlertDialog>
                 )}
+              </div>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* Rating Sheet */}
+      <Sheet open={!!ratingRequest} onOpenChange={() => !isRating && setRatingRequest(null)}>
+        <SheetContent side="bottom" className="rounded-t-[3.5rem] h-[85vh] px-8 py-10">
+          {ratingRequest && (
+            <div className="space-y-8 h-full overflow-y-auto pb-12 text-center">
+              <SheetHeader className="text-center space-y-6">
+                <div className="flex justify-center">
+                  <div className="p-6 rounded-full bg-yellow-50 text-yellow-500">
+                    <Star className="h-12 w-12 fill-yellow-500" />
+                  </div>
+                </div>
+                <div>
+                  <SheetTitle className="text-3xl font-bold text-primary mb-2">Rate Volunteer Achievement</SheetTitle>
+                  <SheetDescription className="text-lg font-medium">
+                    How helpful was <strong>{ratingRequest.volunteerName}</strong> with your {ratingRequest.taskType.toLowerCase()}?
+                  </SheetDescription>
+                </div>
+              </SheetHeader>
+
+              <div className="space-y-8 pt-6">
+                <div className="space-y-4">
+                  <Label className="text-sm font-black uppercase tracking-widest text-muted-foreground">Score (Out of 10)</Label>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                      <button
+                        key={num}
+                        onClick={() => setRatingData({...ratingData, score: num})}
+                        className={`h-14 w-14 rounded-2xl text-xl font-bold border-2 transition-all active:scale-90 ${
+                          ratingData.score === num 
+                            ? 'bg-accent border-accent text-white shadow-lg shadow-accent/20' 
+                            : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'
+                        }`}
+                      >
+                        {num}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-4 text-left">
+                  <Label className="text-sm font-black uppercase tracking-widest text-muted-foreground">Feedback (Optional)</Label>
+                  <Textarea 
+                    placeholder="Write a short message to thank the volunteer or share your experience..." 
+                    className="min-h-[120px] rounded-[1.5rem] text-lg p-6" 
+                    value={ratingData.feedback}
+                    onChange={(e) => setRatingData({...ratingData, feedback: e.target.value})}
+                  />
+                </div>
+                
+                <Button 
+                  onClick={handleSubmitRating}
+                  disabled={isRating}
+                  className="w-full h-20 rounded-[1.5rem] bg-primary text-2xl font-bold shadow-2xl"
+                >
+                  {isRating ? <Loader2 className="animate-spin h-8 w-8" /> : 'Submit Achievement Score'}
+                </Button>
               </div>
             </div>
           )}

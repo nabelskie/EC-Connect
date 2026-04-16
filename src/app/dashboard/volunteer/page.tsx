@@ -20,7 +20,10 @@ import {
   Filter,
   CheckCircle2,
   Loader2,
-  SearchX
+  SearchX,
+  Star,
+  Trophy,
+  MessageSquareQuote
 } from 'lucide-react';
 import { 
   DropdownMenu, 
@@ -83,11 +86,28 @@ export default function VolunteerDashboard() {
   
   const { data: completedTasks, isLoading: isCompletedLoading } = useCollection(completedQuery);
 
+  // Ratings collection
+  const ratingsQuery = useMemoFirebase(() => {
+    if (!user || !mounted) return null;
+    return query(collection(db, 'ratings'), where('volunteerUserId', '==', user.uid));
+  }, [db, user, mounted]);
+
+  const { data: ratingsData, isLoading: isRatingsLoading } = useCollection(ratingsQuery);
+
   const availableTasks = useMemo(() => {
     if (!pendingTasks) return [];
     if (filter === 'All') return pendingTasks;
     return pendingTasks.filter(t => t.taskType === filter);
   }, [pendingTasks, filter]);
+
+  const achievementStats = useMemo(() => {
+    if (!ratingsData || ratingsData.length === 0) return { avg: 0, count: 0 };
+    const sum = ratingsData.reduce((acc, curr) => acc + (curr.ratingScore || 0), 0);
+    return {
+      avg: (sum / ratingsData.length).toFixed(1),
+      count: ratingsData.length
+    };
+  }, [ratingsData]);
 
   const handleAcceptTask = async (task: any) => {
     if (!user || !db || !profile || isAccepting) return;
@@ -112,7 +132,6 @@ export default function VolunteerDashboard() {
     const chatRoomId = [residentId, volunteerId].sort().join('_');
     const participantUserIds = [residentId, volunteerId];
 
-    // 1. Move to Active
     const activeRef = doc(db, 'assistance_requests_active', task.id);
     const pendingRef = doc(db, 'assistance_requests_pending', task.id);
     
@@ -128,7 +147,6 @@ export default function VolunteerDashboard() {
 
     deleteDocumentNonBlocking(pendingRef);
 
-    // 2. Initialize Chat Room
     const chatRoomRef = doc(db, 'chat_rooms', chatRoomId);
     setDocumentNonBlocking(chatRoomRef, { 
       id: chatRoomId, 
@@ -141,7 +159,6 @@ export default function VolunteerDashboard() {
       lastMessageAt: serverTimestamp() 
     }, { merge: true });
 
-    // 3. Send Initial Message
     const messagesRef = collection(db, 'chat_rooms', chatRoomId, 'messages');
     addDocumentNonBlocking(messagesRef, { 
       chatRoomId: chatRoomId, 
@@ -153,7 +170,6 @@ export default function VolunteerDashboard() {
 
     toast({ title: "Task Accepted", description: `You are now helping ${residentName}.` });
     
-    // Slight delay to allow Firestore cache to settle before navigating
     setTimeout(() => {
       router.push(`/dashboard/chat/room?requestId=${chatRoomId}&role=volunteer`);
     }, 500);
@@ -198,12 +214,15 @@ export default function VolunteerDashboard() {
           <span className="text-sm font-bold text-primary">{activeTasks?.length || 0} Active</span>
         </div>
       </div>
+
       <Tabs defaultValue="available" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-6 h-12 rounded-2xl p-1 bg-slate-100">
-          <TabsTrigger value="available" className="rounded-xl font-bold text-sm">Available ({availableTasks.length})</TabsTrigger>
-          <TabsTrigger value="active" className="rounded-xl font-bold text-sm">Active ({activeTasks?.length || 0})</TabsTrigger>
-          <TabsTrigger value="completed" className="rounded-xl font-bold text-sm">History ({completedTasks?.length || 0})</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-4 mb-6 h-12 rounded-2xl p-1 bg-slate-100">
+          <TabsTrigger value="available" className="rounded-xl font-bold text-[10px] uppercase">Browse</TabsTrigger>
+          <TabsTrigger value="active" className="rounded-xl font-bold text-[10px] uppercase">Active</TabsTrigger>
+          <TabsTrigger value="completed" className="rounded-xl font-bold text-[10px] uppercase">History</TabsTrigger>
+          <TabsTrigger value="achievement" className="rounded-xl font-bold text-[10px] uppercase">Stars</TabsTrigger>
         </TabsList>
+
         <TabsContent value="available" className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-primary">Open Requests</h2>
@@ -259,6 +278,7 @@ export default function VolunteerDashboard() {
             )}
           </div>
         </TabsContent>
+
         <TabsContent value="active" className="space-y-4">
           <div className="flex items-center justify-between"><h2 className="text-lg font-bold text-primary">Ongoing Tasks</h2></div>
           <div className="space-y-4">
@@ -284,8 +304,12 @@ export default function VolunteerDashboard() {
                 </CardContent>
               </Card>
             ))}
+            {(!activeTasks || activeTasks.length === 0) && !isActiveLoading && (
+              <div className="text-center py-20 opacity-30 italic text-sm">No active tasks.</div>
+            )}
           </div>
         </TabsContent>
+
         <TabsContent value="completed" className="space-y-4">
           <div className="flex items-center justify-between"><h2 className="text-lg font-bold text-primary">Completed Tasks</h2></div>
           <div className="space-y-4">
@@ -306,6 +330,74 @@ export default function VolunteerDashboard() {
                 </CardContent>
               </Card>
             ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="achievement" className="space-y-6">
+          <div className="space-y-6">
+            <Card className="border-none shadow-xl rounded-[2.5rem] bg-gradient-to-br from-primary to-primary/80 text-white overflow-hidden">
+              <CardContent className="p-8 text-center space-y-4">
+                <div className="flex justify-center">
+                  <div className="p-4 bg-white/10 backdrop-blur-md rounded-full">
+                    <Trophy className="h-10 w-10 text-yellow-400" />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-3xl font-black">Community Achievement</h3>
+                  <p className="text-white/70 text-sm font-bold uppercase tracking-widest">Your impact at PKS</p>
+                </div>
+                <div className="grid grid-cols-2 gap-4 pt-4">
+                  <div className="bg-white/10 rounded-3xl p-4">
+                    <div className="text-3xl font-black flex items-center justify-center gap-1">
+                      {achievementStats.avg} <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                    </div>
+                    <div className="text-[10px] font-bold uppercase opacity-60">Avg Score (out of 10)</div>
+                  </div>
+                  <div className="bg-white/10 rounded-3xl p-4">
+                    <div className="text-3xl font-black">{achievementStats.count}</div>
+                    <div className="text-[10px] font-bold uppercase opacity-60">Total Reviews</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="space-y-4">
+              <h2 className="text-xl font-bold text-primary px-2">Community Feedback</h2>
+              <div className="space-y-4 px-2">
+                {isRatingsLoading ? (
+                  <div className="flex justify-center py-10"><Loader2 className="animate-spin h-6 w-6 text-primary" /></div>
+                ) : ratingsData && ratingsData.length > 0 ? (
+                  ratingsData.map((rating) => (
+                    <Card key={rating.id} className="border-none shadow-sm rounded-3xl overflow-hidden bg-white">
+                      <CardContent className="p-5 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="h-8 w-8 rounded-full bg-accent/10 flex items-center justify-center text-accent">
+                               <Star className="h-4 w-4 fill-accent" />
+                            </div>
+                            <span className="font-black text-primary">{rating.ratingScore}/10</span>
+                          </div>
+                          <span className="text-[10px] text-muted-foreground font-bold">{new Date(rating.createdAt).toLocaleDateString()}</span>
+                        </div>
+                        {rating.feedback && (
+                          <div className="relative">
+                            <MessageSquareQuote className="h-8 w-8 text-slate-50 absolute -top-1 -left-2 -z-10" />
+                            <p className="text-sm text-slate-600 italic font-medium leading-relaxed pl-1">
+                              "{rating.feedback}"
+                            </p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  <div className="text-center py-20 bg-white rounded-[2.5rem] border-2 border-dashed border-slate-100 opacity-50">
+                    <p className="text-lg font-bold text-primary">No Achievements Yet</p>
+                    <p className="text-xs uppercase font-bold tracking-widest">Complete tasks to earn community stars</p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </TabsContent>
       </Tabs>

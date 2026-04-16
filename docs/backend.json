@@ -255,7 +255,7 @@
         },
         "ratingScore": {
           "type": "number",
-          "description": "The numerical score given to the volunteer (e.g., 1-5)."
+          "description": "The numerical score given to the volunteer (1-10)."
         },
         "feedback": {
           "type": "string",
@@ -291,11 +291,11 @@
           "schema": {
             "$ref": "#/backend/entities/UserProfile"
           },
-          "description": "Stores individual user profiles. The document ID (`userId`) must match `request.auth.uid`. Includes the 'role' field for DBAC, which is critical for enforcing role-based access control throughout the application. Users can read/write their own profile; admins have full access.",
+          "description": "Stores individual user profiles.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique ID of the user, matching Firebase Authentication UID."
+              "description": "The unique ID of the user."
             }
           ]
         }
@@ -307,11 +307,11 @@
           "schema": {
             "$ref": "#/backend/entities/AssistanceRequest"
           },
-          "description": "Collection for assistance requests that are awaiting acceptance by a volunteer. Documents in this collection have a 'status' of 'Pending'. The `createdByUserId` field is denormalized for authorization independence. Volunteers can read; elderly users/caregivers can create their own; no `assignedVolunteerId` is present yet.",
+          "description": "Collection for assistance requests awaiting acceptance.",
           "params": [
             {
               "name": "requestId",
-              "description": "The unique ID of the assistance request."
+              "description": "The unique ID of the request."
             }
           ]
         }
@@ -323,11 +323,11 @@
           "schema": {
             "$ref": "#/backend/entities/AssistanceRequest"
           },
-          "description": "Collection for assistance requests that have been accepted by a volunteer and are currently in progress. Documents in this collection have a 'status' of 'Accepted' or 'In Progress'. The `createdByUserId` and `assignedVolunteerId` fields are denormalized for authorization independence. Only the created user, the assigned volunteer, or an admin can read/write these documents.",
+          "description": "Collection for assistance requests currently in progress.",
           "params": [
             {
               "name": "requestId",
-              "description": "The unique ID of the assistance request."
+              "description": "The unique ID of the request."
             }
           ]
         }
@@ -339,11 +339,11 @@
           "schema": {
             "$ref": "#/backend/entities/AssistanceRequest"
           },
-          "description": "Collection for assistance requests that have been marked as completed. Documents in this collection have a 'status' of 'Completed'. The `createdByUserId` and `assignedVolunteerId` fields are denormalized for authorization independence. Only the created user, the assigned volunteer, or an admin can read these documents.",
+          "description": "Collection for assistance requests marked as completed.",
           "params": [
             {
               "name": "requestId",
-              "description": "The unique ID of the assistance request."
+              "description": "The unique ID of the request."
             }
           ]
         }
@@ -355,7 +355,7 @@
           "schema": {
             "$ref": "#/backend/entities/ChatRoom"
           },
-          "description": "Top-level collection for chat rooms. Each document includes `participantUserIds` (an array of UIDs) denormalized for authorization independence for itself and its subcollection messages. Includes `requestId` to link to the related assistance request. Only users listed in `participantUserIds` can read/write.",
+          "description": "Top-level collection for chat rooms.",
           "params": [
             {
               "name": "chatRoomId",
@@ -371,15 +371,15 @@
           "schema": {
             "$ref": "#/backend/entities/Message"
           },
-          "description": "Subcollection for messages within a specific chat room. Each message document includes `senderUserId` and crucially, it **denormalizes `participantUserIds` from its parent ChatRoom document** to ensure strict Authorization Independence for message access. Only `senderUserId` can create, and only users in `participantUserIds` can read.",
+          "description": "Subcollection for messages within a chat room.",
           "params": [
             {
               "name": "chatRoomId",
-              "description": "The unique ID of the parent chat room."
+              "description": "Parent chat room ID."
             },
             {
               "name": "messageId",
-              "description": "The unique ID of the message."
+              "description": "The unique message ID."
             }
           ]
         }
@@ -391,11 +391,11 @@
           "schema": {
             "$ref": "#/backend/entities/Rating"
           },
-          "description": "Collection for ratings provided by elderly users/caregivers to volunteers. The `requestId`, `volunteerUserId`, and `elderlyUserId` fields are denormalized for authorization independence. Only `elderlyUserId` can create; `elderlyUserId`, `volunteerUserId`, or an admin can read.",
+          "description": "Collection for volunteer ratings.",
           "params": [
             {
               "name": "ratingId",
-              "description": "The unique ID of the rating."
+              "description": "The unique rating ID."
             }
           ]
         }
