@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, Suspense, useEffect } from 'react';
+import { useState, useMemo, Suspense, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
@@ -24,6 +24,9 @@ function ChatContent() {
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  
+  // Ref for automatic scrolling
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -62,6 +65,16 @@ function ChatContent() {
       return timeA - timeB;
     });
   }, [messages]);
+
+  // Handle automatic scrolling to bottom when messages change
+  useEffect(() => {
+    if (sortedMessages.length > 0) {
+      const timer = setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [sortedMessages]);
 
   const chatPartner = useMemo(() => {
     if (!chatRoom) return { name: 'Chat', image: '', roleName: '...' };
@@ -167,25 +180,29 @@ function ChatContent() {
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
               ) : sortedMessages && sortedMessages.length > 0 ? (
-                sortedMessages.map((msg) => {
-                  const isMe = msg.senderUserId === user?.uid;
-                  const timeStr = msg.timestamp?.toDate ? msg.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '...';
-                  
-                  return (
-                    <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[85%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
-                        <div className={`p-4 rounded-[1.5rem] shadow-sm text-lg leading-relaxed font-medium ${
-                          isMe 
-                            ? 'bg-accent text-white rounded-tr-none' 
-                            : 'bg-white text-primary rounded-tl-none'
-                        }`}>
-                          {msg.messageText}
+                <>
+                  {sortedMessages.map((msg) => {
+                    const isMe = msg.senderUserId === user?.uid;
+                    const timeStr = msg.timestamp?.toDate ? msg.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '...';
+                    
+                    return (
+                      <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`max-w-[85%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
+                          <div className={`p-4 rounded-[1.5rem] shadow-sm text-lg leading-relaxed font-medium ${
+                            isMe 
+                              ? 'bg-accent text-white rounded-tr-none' 
+                              : 'bg-white text-primary rounded-tl-none'
+                          }`}>
+                            {msg.messageText}
+                          </div>
+                          <span className="text-[11px] text-muted-foreground mt-2 font-black uppercase tracking-tighter">{timeStr}</span>
                         </div>
-                        <span className="text-[11px] text-muted-foreground mt-2 font-black uppercase tracking-tighter">{timeStr}</span>
                       </div>
-                    </div>
-                  );
-                })
+                    );
+                  })}
+                  {/* Invisible element to target for scrolling */}
+                  <div ref={messagesEndRef} className="h-2" />
+                </>
               ) : (
                 <div className="flex flex-col items-center justify-center py-24 text-center opacity-30">
                   <Sparkles className="h-12 w-12 mb-4 text-accent" />
