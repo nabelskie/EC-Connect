@@ -23,7 +23,6 @@ export default function LoginPage() {
   const router = useRouter();
   const auth = useAuth();
   const db = useFirestore();
-  const { user, isUserLoading } = useUser();
   const { toast } = useToast();
 
   const ADMIN_EMAIL = 'adminkn@gmail.com';
@@ -32,10 +31,22 @@ export default function LoginPage() {
     setMounted(true);
   }, []);
 
-  // Redirect logic when user state is detected
-  useEffect(() => {
-    if (user && !isUserLoading && mounted && db) {
-      const checkRoleAndRedirect = async () => {
+  /**
+   * Manual Login Handler
+   * This function now handles both authentication AND the role-based redirection logic.
+   * Auto-login (session detection redirect) has been removed to ensure manual entry.
+   */
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+    const targetEmail = email.toLowerCase().trim();
+
+    signInWithEmailAndPassword(auth, targetEmail, password)
+      .then(async (userCredential) => {
+        const user = userCredential.user;
+        
         try {
           const userEmail = user.email?.toLowerCase().trim();
           const userDocRef = doc(db, 'users', user.uid);
@@ -43,8 +54,7 @@ export default function LoginPage() {
           
           let role = 'elderly';
 
-          // CRITICAL: Check if the profile document exists. 
-          // If it doesn't exist and it's not the master admin, the account has been deleted by an admin.
+          // 1. Check if the account was deleted/disabled by an admin
           if (!userDoc.exists() && userEmail !== ADMIN_EMAIL) {
             await signOut(auth);
             setIsSubmitting(false);
@@ -56,16 +66,16 @@ export default function LoginPage() {
             return;
           }
 
+          // 2. Determine Role and handle self-healing for Admin
           if (userDoc.exists()) {
             role = userDoc.data().role;
             
-            // Self-healing: if it's the admin email but role isn't admin, fix it
             if (userEmail === ADMIN_EMAIL && role !== 'admin') {
               await updateDoc(userDocRef, { role: 'admin' });
               role = 'admin';
             }
           } else if (userEmail === ADMIN_EMAIL) {
-            // If doc doesn't exist but it's the admin email, create it
+            // Re-create admin doc if it was missing
             await setDoc(userDocRef, {
               id: user.uid,
               name: "System Administrator",
@@ -76,31 +86,27 @@ export default function LoginPage() {
             role = 'admin';
           }
 
+          // 3. Final Redirect
           router.push(`/dashboard/${role}?role=${role}`);
         } catch (error) {
           setIsSubmitting(false);
+          toast({
+            variant: "destructive",
+            title: "Sync Error",
+            description: "Successfully signed in, but could not verify profile. Please try again.",
+          });
         }
-      };
-      checkRoleAndRedirect();
-    }
-  }, [user, isUserLoading, db, router, mounted, auth, toast]);
-
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isSubmitting) return;
-
-    setIsSubmitting(true);
-    const targetEmail = email.toLowerCase().trim();
-
-    signInWithEmailAndPassword(auth, targetEmail, password)
+      })
       .catch((err: any) => {
         setIsSubmitting(false);
         
         let errorMessage = "Invalid email or password. Please try again.";
-        if (err.code === 'auth/invalid-credential') {
+        if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
           errorMessage = "Incorrect credentials. Please check your email and password.";
         } else if (err.code === 'auth/user-not-found') {
           errorMessage = "No account found with this email.";
+        } else if (err.code === 'auth/too-many-requests') {
+          errorMessage = "Too many failed attempts. Please try again later.";
         }
 
         toast({
@@ -132,11 +138,11 @@ export default function LoginPage() {
         <CardHeader className="space-y-1 pb-6 text-center">
           <CardTitle className="text-2xl font-headline font-bold text-primary">Welcome Back</CardTitle>
           <CardDescription className="text-muted-foreground">
-            Access your ElderCare account
+            Enter your credentials manually to log in
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-4" autoComplete="off">
             <div className="space-y-2">
               <Label htmlFor="email">Email Address</Label>
               <Input 
@@ -147,6 +153,7 @@ export default function LoginPage() {
                 className="h-12 text-lg"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                autoComplete="off"
                 suppressHydrationWarning
               />
             </div>
@@ -162,6 +169,7 @@ export default function LoginPage() {
                   className="h-12 text-lg pr-12"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="off"
                   suppressHydrationWarning
                 />
                 <button
