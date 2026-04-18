@@ -175,20 +175,39 @@ export default function AdminDashboard() {
       const html2canvas = (await import('html2canvas')).default;
       const jsPDF = (await import('jspdf')).jsPDF;
       
+      // Force the capture width to ensure charts don't squash on mobile
       const canvas = await html2canvas(reportRef.current, {
         scale: 2,
         useCORS: true,
         logging: false,
-        backgroundColor: '#f8fafc' 
+        backgroundColor: '#f8fafc',
+        width: 1000, // Fixed width for consistent capture layout
+        windowWidth: 1000 // Force high-res desktop-like viewport
       });
       
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgProps = pdf.getImageProperties(imgData);
       const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      const pdfHeight = pdf.internal.pageSize.getHeight();
       
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      const imgProps = pdf.getImageProperties(imgData);
+      const contentHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      
+      let heightLeft = contentHeight;
+      let position = 0;
+
+      // First page
+      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, contentHeight);
+      heightLeft -= pdfHeight;
+
+      // Extra pages if needed
+      while (heightLeft >= 0) {
+        position = heightLeft - contentHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, contentHeight);
+        heightLeft -= pdfHeight;
+      }
+      
       pdf.save(`ElderCare-Report-${new Date().toISOString().split('T')[0]}.pdf`);
       
       toast({
@@ -286,8 +305,8 @@ export default function AdminDashboard() {
             </Button>
           </div>
 
-          <div ref={reportRef} className="space-y-6 p-4 -m-4 rounded-3xl">
-            <Card className="border-none shadow-sm rounded-2xl overflow-hidden">
+          <div ref={reportRef} className="space-y-6 p-4 -m-4 rounded-3xl overflow-visible">
+            <Card className="border-none shadow-sm rounded-2xl overflow-hidden bg-white">
               <CardHeader>
                 <CardTitle className="text-base font-bold text-primary">Age Group vs. Assistance Type</CardTitle>
                 <CardDescription className="text-xs">Correlation between elderly age and requested services</CardDescription>
@@ -310,7 +329,7 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
 
-            <Card className="border-none shadow-sm rounded-2xl overflow-hidden">
+            <Card className="border-none shadow-sm rounded-2xl overflow-hidden bg-white">
               <CardHeader>
                 <CardTitle className="text-base font-bold text-primary">Service Distribution</CardTitle>
                 <CardDescription className="text-xs">Overall demand for specific help categories</CardDescription>
