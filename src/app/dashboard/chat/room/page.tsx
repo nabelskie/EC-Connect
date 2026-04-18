@@ -8,7 +8,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/componen
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, ArrowLeft, ShieldCheck, Loader2, Sparkles, Mic, Square, Volume2, Play, Pause } from 'lucide-react';
+import { Send, ArrowLeft, ShieldCheck, Loader2, Sparkles, Mic, Square, Volume2, Play, Pause, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useFirestore, useUser, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, serverTimestamp, where } from 'firebase/firestore';
@@ -111,14 +111,25 @@ function ChatContent() {
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
+      
+      // Determine the best MIME type for the browser (especially iOS compatibility)
+      const mimeType = MediaRecorder.isTypeSupported('audio/mp4') 
+        ? 'audio/mp4' 
+        : (MediaRecorder.isTypeSupported('audio/mpeg') ? 'audio/mpeg' : 'audio/webm');
+        
+      const mediaRecorder = new MediaRecorder(stream, { mimeType });
       mediaRecorderRef.current = mediaRecorder;
       
       const chunks: BlobPart[] = [];
-      mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+      
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunks, { type: 'audio/webm' });
+        const blob = new Blob(chunks, { type: mimeType });
         setAudioBlob(blob);
+        // Stop all tracks to release microphone
+        stream.getTracks().forEach(track => track.stop());
       };
 
       mediaRecorder.start();
@@ -155,7 +166,7 @@ function ChatContent() {
     const messageData = {
       chatRoomId: requestId,
       senderUserId: user.uid,
-      messageText: messageText || "Voice Message",
+      messageText: messageText || "🎤 Voice Message",
       audioUrl: audioDataUri || null,
       type: audioDataUri ? 'audio' : 'text',
       timestamp: serverTimestamp(),
@@ -185,7 +196,7 @@ function ChatContent() {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.9; // Slightly slower for clarity
+      utterance.rate = 0.9;
       window.speechSynthesis.speak(utterance);
     }
   };
@@ -247,11 +258,18 @@ function ChatContent() {
                               : 'bg-white text-primary rounded-tl-none'
                           }`}>
                             {msg.audioUrl ? (
-                              <div className="flex items-center gap-3 min-w-[200px] py-1">
-                                <div className={cn("p-2 rounded-full", isMe ? "bg-white/20" : "bg-primary/5")}>
-                                  <Mic className={cn("h-6 w-6", isMe ? "text-white" : "text-primary")} />
+                              <div className="flex flex-col gap-2 min-w-[220px]">
+                                <div className="flex items-center gap-3 py-1">
+                                  <div className={cn("p-2 rounded-full", isMe ? "bg-white/20" : "bg-primary/5")}>
+                                    <Mic className={cn("h-6 w-6", isMe ? "text-white" : "text-primary")} />
+                                  </div>
+                                  <audio 
+                                    controls 
+                                    className="h-10 w-full rounded-full" 
+                                    src={msg.audioUrl}
+                                    preload="metadata"
+                                  />
                                 </div>
-                                <audio controls className="h-10 w-full" src={msg.audioUrl} />
                               </div>
                             ) : (
                               <div className="flex items-start gap-3">
@@ -303,7 +321,9 @@ function ChatContent() {
                   Voice Note Ready
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => setAudioBlob(null)} className="text-muted-foreground font-bold">Cancel</Button>
+                  <Button variant="ghost" size="sm" onClick={() => setAudioBlob(null)} className="text-muted-foreground font-bold h-10 px-4">
+                    <Trash2 className="h-5 w-5" />
+                  </Button>
                   <Button size="sm" onClick={handleSendVoiceNote} className="bg-accent text-white font-bold rounded-xl h-10 px-6">Send Audio</Button>
                 </div>
               </div>
