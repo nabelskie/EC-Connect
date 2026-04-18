@@ -8,11 +8,12 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/componen
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, ArrowLeft, ShieldCheck, Loader2, Sparkles } from 'lucide-react';
+import { Send, ArrowLeft, ShieldCheck, Loader2, Sparkles, Mic, Square, Volume2, Play, Pause } from 'lucide-react';
 import Link from 'next/link';
 import { useFirestore, useUser, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, serverTimestamp, where } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { cn } from '@/lib/utils';
 
 function ChatContent() {
   const searchParams = useSearchParams();
@@ -25,6 +26,13 @@ function ChatContent() {
   const [isSending, setIsSending] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   
+  // Voice Recording State
+  const [isRecording, setIsRecording] = useState(false);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
   // Ref for automatic scrolling
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -39,7 +47,6 @@ function ChatContent() {
 
   const { data: chatRoom, isLoading: isRoomLoading, error: roomError } = useDoc(chatRoomRef);
 
-  // Auto-retry once if doc is null (to handle sync latency)
   useEffect(() => {
     if (mounted && !isRoomLoading && !chatRoom && retryCount < 1) {
       const timer = setTimeout(() => setRetryCount(prev => prev + 1), 1000);
@@ -78,7 +85,6 @@ function ChatContent() {
     });
   }, [messages]);
 
-  // Handle automatic scrolling to bottom when messages change
   useEffect(() => {
     if (sortedMessages.length > 0) {
       const timer = setTimeout(() => {
@@ -101,30 +107,87 @@ function ChatContent() {
     };
   }, [chatRoom, role, partnerProfile, partnerId]);
 
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || !user || !requestId || isSending || !chatRoom) return;
+  // Handle Recording
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      
+      const chunks: BlobPart[] = [];
+      mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'audio/webm' });
+        setAudioBlob(blob);
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+      timerRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+    } catch (err) {
+      console.error("Recording error:", err);
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      if (timerRef.current) clearInterval(timerRef.current);
+    }
+  };
+
+  const handleSend = async (e?: React.FormEvent, audioDataUri?: string) => {
+    if (e) e.preventDefault();
+    if (!user || !requestId || isSending || !chatRoom) return;
+
+    const messageText = input.trim();
+    if (!messageText && !audioDataUri) return;
 
     setIsSending(true);
-    const messageText = input.trim();
     setInput('');
+    setAudioBlob(null);
 
     const messagesRef = collection(db, 'chat_rooms', requestId, 'messages');
     const messageData = {
       chatRoomId: requestId,
       senderUserId: user.uid,
-      messageText: messageText,
+      messageText: messageText || "Voice Message",
+      audioUrl: audioDataUri || null,
+      type: audioDataUri ? 'audio' : 'text',
       timestamp: serverTimestamp(),
       participantUserIds: chatRoom.participantUserIds || []
     };
 
     addDocumentNonBlocking(messagesRef, messageData);
     updateDocumentNonBlocking(doc(db, 'chat_rooms', requestId), {
-      lastMessageSnippet: messageText,
+      lastMessageSnippet: audioDataUri ? "🎤 Voice Message" : messageText,
       lastMessageAt: serverTimestamp(),
       lastMessageSenderId: user.uid
     });
     setIsSending(false);
+  };
+
+  const handleSendVoiceNote = async () => {
+    if (!audioBlob) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64data = reader.result as string;
+      handleSend(undefined, base64data);
+    };
+    reader.readAsDataURL(audioBlob);
+  };
+
+  const speakMessage = (text: string) => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.9; // Slightly slower for clarity
+      window.speechSynthesis.speak(utterance);
+    }
   };
 
   if (!mounted) return null;
@@ -133,24 +196,7 @@ function ChatContent() {
     return (
       <div className="h-full flex flex-col items-center justify-center py-32 gap-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="text-sm font-black uppercase text-muted-foreground tracking-[0.3em]">Establishing link...</p>
-      </div>
-    );
-  }
-
-  if (roomError || (mounted && !isRoomLoading && !chatRoom && retryCount >= 1)) {
-    return (
-      <div className="h-full flex flex-col items-center justify-center py-32 gap-6 text-center px-10">
-        <div className="p-6 bg-destructive/10 rounded-[2rem]">
-           <ShieldCheck className="h-16 w-16 text-destructive" />
-        </div>
-        <h2 className="text-2xl font-black text-primary">Chat Disconnected</h2>
-        <p className="text-lg text-muted-foreground leading-relaxed font-medium">
-          The connection was lost or the chat has been archived.
-        </p>
-        <Button asChild variant="outline" className="h-16 px-10 rounded-2xl text-lg font-bold border-2">
-          <Link href={`/dashboard/chat?role=${role}`}>Return to Inbox</Link>
-        </Button>
+        <p className="text-sm font-black uppercase text-muted-foreground tracking-[0.3em]">Connecting...</p>
       </div>
     );
   }
@@ -166,7 +212,7 @@ function ChatContent() {
             >
               <ArrowLeft className="h-9 w-9" />
             </Link>
-            <Avatar className="h-12 w-12 border-2 border-white/20 shadow-sm">
+            <Avatar className="h-12 w-12 border-2 border-white/20">
               <AvatarImage src={chatPartner.image} className="object-cover" />
               <AvatarFallback>{chatPartner.name?.[0] || 'U'}</AvatarFallback>
             </Avatar>
@@ -182,15 +228,11 @@ function ChatContent() {
         <CardContent className="flex-1 p-0 overflow-hidden bg-[#f0f2f5] relative">
           <ScrollArea className="h-full p-6">
             <div className="space-y-6">
-              <div className="text-center">
-                <span className="bg-white/70 backdrop-blur-md text-muted-foreground text-[10px] px-4 py-1.5 rounded-full font-black uppercase tracking-[0.2em] shadow-sm">End-to-End Encrypted</span>
-              </div>
-              
               {isMessagesLoading ? (
                 <div className="flex justify-center py-16">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
-              ) : sortedMessages && sortedMessages.length > 0 ? (
+              ) : sortedMessages.length > 0 ? (
                 <>
                   {sortedMessages.map((msg) => {
                     const isMe = msg.senderUserId === user?.uid;
@@ -199,19 +241,35 @@ function ChatContent() {
                     return (
                       <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                         <div className={`max-w-[85%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
-                          <div className={`p-4 rounded-[1.5rem] shadow-sm text-lg leading-relaxed font-medium ${
+                          <div className={`p-4 rounded-[1.5rem] shadow-sm text-lg leading-relaxed font-medium relative group ${
                             isMe 
                               ? 'bg-accent text-white rounded-tr-none' 
                               : 'bg-white text-primary rounded-tl-none'
                           }`}>
-                            {msg.messageText}
+                            {msg.audioUrl ? (
+                              <div className="flex items-center gap-3 min-w-[200px] py-1">
+                                <div className={cn("p-2 rounded-full", isMe ? "bg-white/20" : "bg-primary/5")}>
+                                  <Mic className={cn("h-6 w-6", isMe ? "text-white" : "text-primary")} />
+                                </div>
+                                <audio controls className="h-10 w-full" src={msg.audioUrl} />
+                              </div>
+                            ) : (
+                              <div className="flex items-start gap-3">
+                                <span className="flex-1">{msg.messageText}</span>
+                                <button 
+                                  onClick={() => speakMessage(msg.messageText)}
+                                  className={cn("p-1.5 rounded-full transition-all active:scale-90", isMe ? "hover:bg-white/20" : "hover:bg-slate-100")}
+                                >
+                                  <Volume2 className="h-5 w-5 opacity-60 hover:opacity-100" />
+                                </button>
+                              </div>
+                            )}
                           </div>
                           <span className="text-[11px] text-muted-foreground mt-2 font-black uppercase tracking-tighter">{timeStr}</span>
                         </div>
                       </div>
                     );
                   })}
-                  {/* Invisible element to target for scrolling */}
                   <div ref={messagesEndRef} className="h-2" />
                 </>
               ) : (
@@ -224,26 +282,62 @@ function ChatContent() {
           </ScrollArea>
         </CardContent>
 
-        <CardFooter className="p-4 bg-white border-t shrink-0 shadow-[0_-8px_30px_rgba(0,0,0,0.04)]">
-          <form 
-            onSubmit={handleSend}
-            className="flex items-center gap-4 w-full"
-          >
-            <Input 
-              placeholder="Type a message..." 
-              className="flex-1 h-14 text-lg bg-slate-100 border-none focus-visible:ring-accent rounded-2xl px-6 font-medium"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-            />
-            <Button 
-              type="submit" 
-              size="icon" 
-              disabled={!input.trim() || isSending || !chatRoom}
-              className="h-14 w-14 rounded-2xl bg-primary hover:bg-primary/90 text-white shadow-xl disabled:opacity-50 transition-all active:scale-95"
-            >
-              <Send className="h-7 w-7" />
-            </Button>
-          </form>
+        <CardFooter className="p-4 bg-white border-t shrink-0 shadow-lg">
+          <div className="flex flex-col w-full gap-3">
+            {isRecording && (
+              <div className="flex items-center justify-between bg-destructive/5 p-4 rounded-2xl animate-pulse">
+                <div className="flex items-center gap-3 text-destructive font-black uppercase tracking-widest text-xs">
+                  <div className="h-3 w-3 rounded-full bg-destructive" />
+                  Recording... {recordingTime}s
+                </div>
+                <Button variant="ghost" size="icon" onClick={stopRecording} className="text-destructive h-10 w-10">
+                  <Square className="h-6 w-6 fill-destructive" />
+                </Button>
+              </div>
+            )}
+            
+            {audioBlob && !isRecording && (
+              <div className="flex items-center justify-between bg-accent/5 p-4 rounded-2xl">
+                <div className="flex items-center gap-3 text-accent font-black uppercase tracking-widest text-xs">
+                  <Play className="h-5 w-5" />
+                  Voice Note Ready
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => setAudioBlob(null)} className="text-muted-foreground font-bold">Cancel</Button>
+                  <Button size="sm" onClick={handleSendVoiceNote} className="bg-accent text-white font-bold rounded-xl h-10 px-6">Send Audio</Button>
+                </div>
+              </div>
+            )}
+
+            {!isRecording && !audioBlob && (
+              <form onSubmit={handleSend} className="flex items-center gap-3 w-full">
+                <Button 
+                  type="button" 
+                  size="icon" 
+                  onClick={startRecording}
+                  className="h-14 w-14 rounded-2xl bg-slate-100 hover:bg-slate-200 text-primary border-none shadow-none shrink-0"
+                >
+                  <Mic className="h-7 w-7" />
+                </Button>
+                
+                <Input 
+                  placeholder="Type or use mic..." 
+                  className="flex-1 h-14 text-lg bg-slate-100 border-none focus-visible:ring-accent rounded-2xl px-6 font-medium"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                />
+                
+                <Button 
+                  type="submit" 
+                  size="icon" 
+                  disabled={!input.trim() || isSending}
+                  className="h-14 w-14 rounded-2xl bg-primary hover:bg-primary/90 text-white shadow-xl active:scale-95 transition-all"
+                >
+                  <Send className="h-7 w-7" />
+                </Button>
+              </form>
+            )}
+          </div>
         </CardFooter>
       </Card>
     </div>
