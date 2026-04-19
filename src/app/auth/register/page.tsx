@@ -58,7 +58,7 @@ export default function RegisterPage() {
       return;
     }
 
-    if (role === 'elderly' && !age.trim()) {
+    if (!isAdminEmail && !age.trim()) {
       toast({
         variant: "destructive",
         title: "Registration Failed",
@@ -143,7 +143,7 @@ export default function RegisterPage() {
           name: isAdminEmail ? "System Administrator" : name,
           email: targetEmail,
           role: finalRole,
-          age: finalRole === 'elderly' ? age.trim() : "N/A",
+          age: !isAdminEmail ? age.trim() : "N/A",
           matrixNumber: finalRole === 'volunteer' ? normalizedMatrix : "N/A",
           gender: isAdminEmail ? "N/A" : gender,
           phone: isAdminEmail ? "N/A" : phone,
@@ -275,21 +275,19 @@ export default function RegisterPage() {
                     <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0123456789" required className="h-12" />
                     <p className="text-[10px] text-muted-foreground">Length must be 10-11 digits.</p>
                   </div>
-                  {role === 'elderly' && (
-                    <div className="space-y-2">
-                      <Label htmlFor="age">Age <span className="text-destructive">*</span></Label>
-                      <Input 
-                        id="age" 
-                        type="number"
-                        value={age} 
-                        onChange={(e) => setAge(e.target.value)} 
-                        placeholder="e.g. 65" 
-                        required 
-                        className="h-12" 
-                      />
-                      <p className="text-[10px] text-muted-foreground">Mandatory for elderly registration.</p>
-                    </div>
-                  )}
+                  <div className="space-y-2">
+                    <Label htmlFor="age">Age <span className="text-destructive">*</span></Label>
+                    <Input 
+                      id="age" 
+                      type="number"
+                      value={age} 
+                      onChange={(e) => setAge(e.target.value)} 
+                      placeholder={role === 'elderly' ? "e.g. 65" : "e.g. 21"} 
+                      required 
+                      className="h-12" 
+                    />
+                    <p className="text-[10px] text-muted-foreground">Age is required for all community members.</p>
+                  </div>
                   {role === 'volunteer' && (
                     <div className="space-y-2">
                       <Label htmlFor="matrix">Matrix Number <span className="text-destructive">*</span></Label>
