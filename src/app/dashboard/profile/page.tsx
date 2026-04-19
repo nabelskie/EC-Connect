@@ -21,15 +21,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { 
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { 
   LogOut, 
   User as UserIcon, 
   Phone, 
@@ -77,6 +68,7 @@ function ProfileContent() {
   const [editGender, setEditGender] = useState('');
   const [editPhotoURL, setEditPhotoURL] = useState('');
   const [editAge, setEditAge] = useState('');
+  const [editMatrixNumber, setEditMatrixNumber] = useState('');
   const [tempPhotoPreview, setTempPhotoPreview] = useState<string | null>(null);
   
   // Password state
@@ -108,6 +100,7 @@ function ProfileContent() {
       setEditGender(profileData.gender || '');
       setEditPhotoURL(profileData.photoURL || '');
       setEditAge(profileData.age || '');
+      setEditMatrixNumber(profileData.matrixNumber || '');
     }
   }, [profileData]);
 
@@ -178,14 +171,20 @@ function ProfileContent() {
         displayName: editName
       });
       
-      updateDocumentNonBlocking(userRef, {
+      const updates: any = {
         name: editName,
         phone: editPhone,
         address: editAddress,
         gender: editGender,
         age: editAge,
         photoURL: editPhotoURL
-      });
+      };
+
+      if (profileData?.role === 'volunteer') {
+        updates.matrixNumber = editMatrixNumber.toUpperCase().trim();
+      }
+
+      updateDocumentNonBlocking(userRef, updates);
 
       toast({
         title: "Profile Updated",
@@ -260,9 +259,6 @@ function ProfileContent() {
   }
 
   const avatarSrc = tempPhotoPreview || profileData?.photoURL || `https://picsum.photos/seed/${profileData?.id || 'default'}/200/200`;
-  const formattedDate = profileData?.createdAt 
-    ? new Date(profileData.createdAt).toLocaleDateString('en-MY', { year: 'numeric', month: 'long' })
-    : 'Recently';
 
   const toggleNotifications = (enabled: boolean) => {
     if (!userRef) return;
@@ -326,6 +322,12 @@ function ProfileContent() {
                   <Label htmlFor="edit-name">Full Name</Label>
                   <Input id="edit-name" value={editName} onChange={(e) => setEditName(e.target.value)} className="h-12 rounded-xl" />
                 </div>
+                {profileData.role === 'volunteer' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-matrix">Matrix Number</Label>
+                    <Input id="edit-matrix" value={editMatrixNumber} onChange={(e) => setEditMatrixNumber(e.target.value)} className="h-12 rounded-xl uppercase" />
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="edit-age">Age</Label>
                   <Input id="edit-age" type="number" value={editAge} onChange={(e) => setEditAge(e.target.value)} className="h-12 rounded-xl" />
@@ -366,6 +368,17 @@ function ProfileContent() {
                     <p className="text-primary font-medium">{profileData.email}</p>
                   </div>
                 </div>
+                {profileData.role === 'volunteer' && profileData.matrixNumber && (
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 rounded-2xl bg-slate-50 text-accent">
+                      <Hash className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1">
+                      <Label className="text-[10px] text-muted-foreground uppercase font-bold">Matrix Number</Label>
+                      <p className="text-primary font-black uppercase">{profileData.matrixNumber}</p>
+                    </div>
+                  </div>
+                )}
                 <div className="flex items-start gap-4">
                   <div className="p-3 rounded-2xl bg-slate-50 text-slate-400">
                     <Calendar className="h-5 w-5" />
