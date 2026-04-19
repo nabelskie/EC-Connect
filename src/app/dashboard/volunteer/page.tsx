@@ -97,7 +97,6 @@ export default function VolunteerDashboard() {
   
   const { data: completedTasks, isLoading: isCompletedLoading } = useCollection(completedQuery);
 
-  // Ratings collection
   const ratingsQuery = useMemoFirebase(() => {
     if (!user || !mounted) return null;
     return query(collection(db, 'ratings'), where('volunteerUserId', '==', user.uid));
@@ -108,19 +107,16 @@ export default function VolunteerDashboard() {
   const availableTasks = useMemo(() => {
     if (!pendingTasks) return [];
     
-    // 1. Filter by category
     let filtered = filter === 'All' 
       ? [...pendingTasks] 
       : pendingTasks.filter(t => t.taskType === filter);
 
-    // 2. Define Urgency Weights
     const urgencyWeights: Record<string, number> = {
       'High': 3,
       'Medium': 2,
       'Low': 1
     };
 
-    // 3. Sort by Urgency (Primary) and Date (Secondary)
     return filtered.sort((a, b) => {
       const weightA = urgencyWeights[a.urgencyLevel] || 0;
       const weightB = urgencyWeights[b.urgencyLevel] || 0;
@@ -129,7 +125,6 @@ export default function VolunteerDashboard() {
         return weightB - weightA;
       }
 
-      // If urgency is the same, newest first
       const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
       return dateB - dateA;
@@ -175,9 +170,7 @@ export default function VolunteerDashboard() {
         residentName = resData.name || residentName;
         residentPhotoURL = resData.photoURL || '';
       }
-    } catch (e) {
-      console.warn("Could not fetch resident profile details");
-    }
+    } catch (e) {}
 
     const chatRoomId = [residentId, volunteerId].sort().join('_');
     const participantUserIds = [residentId, volunteerId];
@@ -185,6 +178,7 @@ export default function VolunteerDashboard() {
     const activeRef = doc(db, 'assistance_requests_active', task.id);
     const pendingRef = doc(db, 'assistance_requests_pending', task.id);
     
+    // Non-blocking writes for smooth UI
     setDocumentNonBlocking(activeRef, { 
       ...task, 
       status: 'Accepted', 
@@ -192,7 +186,7 @@ export default function VolunteerDashboard() {
       volunteerName: volunteerName, 
       residentName: residentName, 
       chatRoomId: chatRoomId, 
-      acceptedAt: serverTimestamp() 
+      acceptedAt: new Date().toISOString()
     }, { merge: true });
 
     deleteDocumentNonBlocking(pendingRef);
@@ -206,7 +200,7 @@ export default function VolunteerDashboard() {
       volunteerName: volunteerName, 
       residentPhotoURL: residentPhotoURL,
       volunteerPhotoURL: volunteerPhotoURL,
-      createdAt: serverTimestamp(), 
+      createdAt: new Date().toISOString(), 
       lastMessageSnippet: `Volunteer ${volunteerName} has joined the chat.`, 
       lastMessageAt: serverTimestamp() 
     }, { merge: true });
@@ -222,9 +216,10 @@ export default function VolunteerDashboard() {
 
     toast({ title: "Task Accepted", description: `You are now helping ${residentName}.` });
     
+    // Short delay before navigation to allow UI to breathe
     setTimeout(() => {
       router.push(`/dashboard/chat/room?requestId=${chatRoomId}&role=volunteer`);
-    }, 500);
+    }, 400);
   };
 
   const getUrgencyColor = (urgency: string) => {
@@ -295,7 +290,12 @@ export default function VolunteerDashboard() {
             </DropdownMenu>
           </div>
           <div className="space-y-4">
-            {isPendingLoading ? (<div className="flex flex-col items-center justify-center py-12 gap-2 text-muted-foreground"><Loader2 className="h-8 w-8 animate-spin" /><p className="text-xs font-bold uppercase">Loading requests...</p></div>) : availableTasks.map((task) => (
+            {isPendingLoading ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-2 text-muted-foreground">
+                <Loader2 className="h-8 w-8 animate-spin" />
+                <p className="text-xs font-bold uppercase">Loading requests...</p>
+              </div>
+            ) : availableTasks.map((task) => (
               <Card key={task.id} className="overflow-hidden border-none shadow-sm rounded-3xl transition-all">
                 <CardContent className="p-0">
                   <div className="p-4 flex items-center justify-between bg-slate-50/50 border-b">
@@ -334,7 +334,12 @@ export default function VolunteerDashboard() {
         <TabsContent value="active" className="space-y-4">
           <div className="flex items-center justify-between"><h2 className="text-lg font-bold text-primary">Ongoing Tasks</h2></div>
           <div className="space-y-4">
-            {isActiveLoading ? (<div className="flex flex-col items-center justify-center py-12 gap-2 text-muted-foreground"><Loader2 className="h-8 w-8 animate-spin" /><p className="text-xs font-bold uppercase">Loading tasks...</p></div>) : activeTasks?.map((task) => (
+            {isActiveLoading ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-2 text-muted-foreground">
+                <Loader2 className="h-8 w-8 animate-spin" />
+                <p className="text-xs font-bold uppercase">Loading tasks...</p>
+              </div>
+            ) : activeTasks?.map((task) => (
               <Card key={task.id} className="overflow-hidden border-none shadow-sm rounded-3xl border-l-4 border-l-emerald-500">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-3">
@@ -365,7 +370,11 @@ export default function VolunteerDashboard() {
         <TabsContent value="completed" className="space-y-4">
           <div className="flex items-center justify-between"><h2 className="text-lg font-bold text-primary">Completed Tasks</h2></div>
           <div className="space-y-4">
-            {isCompletedLoading ? (<div className="flex flex-col items-center justify-center py-12 gap-2 text-muted-foreground"><Loader2 className="h-8 w-8 animate-spin" /></div>) : completedTasks?.map((task) => (
+            {isCompletedLoading ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-2 text-muted-foreground">
+                <Loader2 className="h-8 w-8 animate-spin" />
+              </div>
+            ) : completedTasks?.map((task) => (
               <Card key={task.id} className="overflow-hidden border-none shadow-sm rounded-3xl opacity-80">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-2">
