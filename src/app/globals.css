@@ -31,7 +31,6 @@
     --chart-4: 30 80% 55%;
     --chart-5: 280 65% 60%;
 
-    /* Sidebar Variables */
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 240 10% 3.9%;
     --sidebar-primary: 240 24% 36%;
@@ -51,7 +50,8 @@
   body {
     @apply bg-background text-foreground font-body;
     touch-action: manipulation;
-    transition: font-size 0.2s ease-in-out;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-headline;
@@ -65,13 +65,15 @@
   .h-screen-dvh {
     height: 100dvh;
   }
-  .min-h-screen-dvh {
-    min-height: 100dvh;
+  
+  .gpu-accelerated {
+    transform: translateZ(0);
+    will-change: transform, opacity;
+    backface-visibility: hidden;
   }
 
-  /* Accessibility Scaling - Enhanced for Elderly Users */
   .large-font-mode {
-    font-size: 1.25rem; /* Increased from 1.15rem */
+    font-size: 1.25rem;
   }
   .large-font-mode .text-xs { font-size: 1rem !important; }
   .large-font-mode .text-sm { font-size: 1.125rem !important; }
@@ -82,7 +84,6 @@
   .large-font-mode .text-3xl { font-size: 2.5rem !important; }
   .large-font-mode .text-4xl { font-size: 3rem !important; }
   
-  /* Ensure inputs and buttons also scale well */
   .large-font-mode input, 
   .large-font-mode textarea, 
   .large-font-mode button {

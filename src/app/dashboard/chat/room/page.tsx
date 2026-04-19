@@ -8,7 +8,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/componen
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, ArrowLeft, ShieldCheck, Loader2, Sparkles, Mic, Square, Volume2, Play, Pause, Trash2 } from 'lucide-react';
+import { Send, ArrowLeft, Loader2, Mic, Square, Volume2, Play, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useFirestore, useUser, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, serverTimestamp, where } from 'firebase/firestore';
@@ -26,14 +26,11 @@ function ChatContent() {
   const [isSending, setIsSending] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   
-  // Voice Recording State
   const [isRecording, setIsRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [recordingTime, setRecordingTime] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Ref for automatic scrolling
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -45,11 +42,11 @@ function ChatContent() {
     return doc(db, 'chat_rooms', requestId);
   }, [db, requestId]);
 
-  const { data: chatRoom, isLoading: isRoomLoading, error: roomError } = useDoc(chatRoomRef);
+  const { data: chatRoom, isLoading: isRoomLoading } = useDoc(chatRoomRef);
 
   useEffect(() => {
     if (mounted && !isRoomLoading && !chatRoom && retryCount < 1) {
-      const timer = setTimeout(() => setRetryCount(prev => prev + 1), 1000);
+      const timer = setTimeout(() => setRetryCount(prev => prev + 1), 500);
       return () => clearTimeout(timer);
     }
   }, [mounted, isRoomLoading, chatRoom, retryCount]);
@@ -85,12 +82,13 @@ function ChatContent() {
     });
   }, [messages]);
 
+  // Faster, GPU-friendly scroll to bottom
   useEffect(() => {
     if (sortedMessages.length > 0) {
-      const timer = setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
-      return () => clearTimeout(timer);
+      const frame = requestAnimationFrame(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+      });
+      return () => cancelAnimationFrame(frame);
     }
   }, [sortedMessages]);
 
@@ -99,7 +97,6 @@ function ChatContent() {
     const isVolunteerRole = role === 'volunteer';
     const partnerName = isVolunteerRole ? chatRoom.residentName : chatRoom.volunteerName;
     const partnerRole = isVolunteerRole ? 'Elderly' : 'Volunteer';
-
     return { 
       name: partnerProfile?.name || partnerName || partnerRole, 
       image: partnerProfile?.photoURL || `https://picsum.photos/seed/${partnerId || 'default'}/400/400`, 
@@ -107,40 +104,26 @@ function ChatContent() {
     };
   }, [chatRoom, role, partnerProfile, partnerId]);
 
-  // Handle Recording
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      
-      // Determine the best MIME type for the browser (especially iOS compatibility)
       const mimeType = MediaRecorder.isTypeSupported('audio/mp4') 
-        ? 'audio/mp4' 
-        : (MediaRecorder.isTypeSupported('audio/mpeg') ? 'audio/mpeg' : 'audio/webm');
+        ? 'audio/mp4' : (MediaRecorder.isTypeSupported('audio/mpeg') ? 'audio/mpeg' : 'audio/webm');
         
       const mediaRecorder = new MediaRecorder(stream, { mimeType });
       mediaRecorderRef.current = mediaRecorder;
-      
       const chunks: BlobPart[] = [];
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunks.push(e.data);
-      };
-      
+      mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
       mediaRecorder.onstop = () => {
         const blob = new Blob(chunks, { type: mimeType });
         setAudioBlob(blob);
-        // Stop all tracks to release microphone
         stream.getTracks().forEach(track => track.stop());
       };
-
       mediaRecorder.start();
       setIsRecording(true);
       setRecordingTime(0);
-      timerRef.current = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
-      }, 1000);
-    } catch (err) {
-      console.error("Recording error:", err);
-    }
+      timerRef.current = setInterval(() => setRecordingTime(prev => prev + 1), 1000);
+    } catch (err) { console.error("Recording error:", err); }
   };
 
   const stopRecording = () => {
@@ -154,7 +137,6 @@ function ChatContent() {
   const handleSend = async (e?: React.FormEvent, audioDataUri?: string) => {
     if (e) e.preventDefault();
     if (!user || !requestId || isSending || !chatRoom) return;
-
     const messageText = input.trim();
     if (!messageText && !audioDataUri) return;
 
@@ -163,7 +145,7 @@ function ChatContent() {
     setAudioBlob(null);
 
     const messagesRef = collection(db, 'chat_rooms', requestId, 'messages');
-    const messageData = {
+    addDocumentNonBlocking(messagesRef, {
       chatRoomId: requestId,
       senderUserId: user.uid,
       messageText: messageText || "🎤 Voice Message",
@@ -171,9 +153,7 @@ function ChatContent() {
       type: audioDataUri ? 'audio' : 'text',
       timestamp: serverTimestamp(),
       participantUserIds: chatRoom.participantUserIds || []
-    };
-
-    addDocumentNonBlocking(messagesRef, messageData);
+    });
     updateDocumentNonBlocking(doc(db, 'chat_rooms', requestId), {
       lastMessageSnippet: audioDataUri ? "🎤 Voice Message" : messageText,
       lastMessageAt: serverTimestamp(),
@@ -196,7 +176,7 @@ function ChatContent() {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.9;
+      utterance.rate = 1.0;
       window.speechSynthesis.speak(utterance);
     }
   };
@@ -206,155 +186,91 @@ function ChatContent() {
   if (isRoomLoading || (!chatRoom && retryCount < 1)) {
     return (
       <div className="h-full flex flex-col items-center justify-center py-32 gap-4">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="text-sm font-black uppercase text-muted-foreground tracking-[0.3em]">Connecting...</p>
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <p className="text-xs font-black uppercase text-muted-foreground tracking-widest">Connecting...</p>
       </div>
     );
   }
 
   return (
-    <div className="h-[calc(100vh-140px)] flex flex-col bg-background -mx-4 -mt-8">
+    <div className="h-[calc(100vh-140px)] flex flex-col bg-background -mx-4 -mt-8 gpu-accelerated">
       <Card className="flex-1 flex flex-col border-none shadow-none overflow-hidden bg-white">
-        <CardHeader className="bg-primary text-white border-b px-6 py-4 flex flex-row items-center justify-between shrink-0 shadow-lg z-10">
+        <CardHeader className="bg-primary text-white border-b px-6 py-4 flex flex-row items-center justify-between shrink-0 shadow-md z-10">
           <div className="flex items-center gap-4">
-            <Link 
-              href={`/dashboard/chat?role=${role}`} 
-              className="p-3 -ml-3 hover:bg-white/10 rounded-full transition-all active:scale-90"
-            >
-              <ArrowLeft className="h-9 w-9" />
+            <Link href={`/dashboard/chat?role=${role}`} className="p-2 -ml-2 hover:bg-white/10 rounded-full active:scale-90 transition-transform">
+              <ArrowLeft className="h-8 w-8" />
             </Link>
-            <Avatar className="h-12 w-12 border-2 border-white/20">
+            <Avatar className="h-10 w-10 border border-white/20">
               <AvatarImage src={chatPartner.image} className="object-cover" />
               <AvatarFallback>{chatPartner.name?.[0] || 'U'}</AvatarFallback>
             </Avatar>
             <div>
-              <CardTitle className="text-xl font-headline font-black tracking-tight">{chatPartner.name}</CardTitle>
-              <div className="text-xs text-white/70 flex items-center gap-1.5 font-bold uppercase tracking-widest">
-                <div className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse"></div> {chatPartner.roleName}
+              <CardTitle className="text-lg font-headline font-black leading-none mb-1">{chatPartner.name}</CardTitle>
+              <div className="text-[10px] text-white/70 flex items-center gap-1.5 font-bold uppercase tracking-wider">
+                <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></div> {chatPartner.roleName}
               </div>
             </div>
           </div>
         </CardHeader>
 
-        <CardContent className="flex-1 p-0 overflow-hidden bg-[#f0f2f5] relative">
-          <ScrollArea className="h-full p-6">
-            <div className="space-y-6">
+        <CardContent className="flex-1 p-0 overflow-hidden bg-[#f8fafc] relative">
+          <ScrollArea className="h-full p-4 md:p-6">
+            <div className="space-y-4">
               {isMessagesLoading ? (
-                <div className="flex justify-center py-16">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
-              ) : sortedMessages.length > 0 ? (
-                <>
-                  {sortedMessages.map((msg) => {
-                    const isMe = msg.senderUserId === user?.uid;
-                    const timeStr = msg.timestamp?.toDate ? msg.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '...';
-                    
-                    return (
-                      <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[85%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
-                          <div className={`p-4 rounded-[1.5rem] shadow-sm text-lg leading-relaxed font-medium relative group ${
-                            isMe 
-                              ? 'bg-accent text-white rounded-tr-none' 
-                              : 'bg-white text-primary rounded-tl-none'
-                          }`}>
-                            {msg.audioUrl ? (
-                              <div className="flex flex-col gap-2 min-w-[220px]">
-                                <div className="flex items-center gap-3 py-1">
-                                  <div className={cn("p-2 rounded-full", isMe ? "bg-white/20" : "bg-primary/5")}>
-                                    <Mic className={cn("h-6 w-6", isMe ? "text-white" : "text-primary")} />
-                                  </div>
-                                  <audio 
-                                    controls 
-                                    className="h-10 w-full rounded-full" 
-                                    src={msg.audioUrl}
-                                    preload="metadata"
-                                  />
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="flex items-start gap-3">
-                                <span className="flex-1">{msg.messageText}</span>
-                                <button 
-                                  onClick={() => speakMessage(msg.messageText)}
-                                  className={cn("p-1.5 rounded-full transition-all active:scale-90", isMe ? "hover:bg-white/20" : "hover:bg-slate-100")}
-                                >
-                                  <Volume2 className="h-5 w-5 opacity-60 hover:opacity-100" />
-                                </button>
-                              </div>
-                            )}
+                <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+              ) : sortedMessages.map((msg) => {
+                const isMe = msg.senderUserId === user?.uid;
+                const timeStr = msg.timestamp?.toDate ? msg.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                return (
+                  <div key={msg.id} className={cn("flex", isMe ? 'justify-end' : 'justify-start')}>
+                    <div className={cn("max-w-[85%] flex flex-col", isMe ? 'items-end' : 'items-start')}>
+                      <div className={cn("p-3.5 rounded-2xl shadow-sm text-base leading-snug", isMe ? 'bg-accent text-white rounded-tr-none' : 'bg-white text-primary rounded-tl-none')}>
+                        {msg.audioUrl ? (
+                          <div className="flex items-center gap-2 min-w-[200px]">
+                            <Mic className={cn("h-4 w-4 shrink-0", isMe ? "text-white/70" : "text-primary/50")} />
+                            <audio controls className="h-8 w-full" src={msg.audioUrl} preload="metadata" />
                           </div>
-                          <span className="text-[11px] text-muted-foreground mt-2 font-black uppercase tracking-tighter">{timeStr}</span>
-                        </div>
+                        ) : (
+                          <div className="flex items-start gap-2">
+                            <span>{msg.messageText}</span>
+                            <button onClick={() => speakMessage(msg.messageText)} className="shrink-0 mt-0.5 opacity-50 hover:opacity-100"><Volume2 className="h-4 w-4" /></button>
+                          </div>
+                        )}
                       </div>
-                    );
-                  })}
-                  <div ref={messagesEndRef} className="h-2" />
-                </>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-24 text-center opacity-30">
-                  <Sparkles className="h-12 w-12 mb-4 text-accent" />
-                  <p className="text-sm font-black uppercase tracking-[0.3em]">Start the conversation</p>
-                </div>
-              )}
+                      <span className="text-[9px] text-muted-foreground mt-1 font-bold uppercase">{timeStr}</span>
+                    </div>
+                  </div>
+                );
+              })}
+              <div ref={messagesEndRef} className="h-2" />
             </div>
           </ScrollArea>
         </CardContent>
 
-        <CardFooter className="p-4 bg-white border-t shrink-0 shadow-lg">
-          <div className="flex flex-col w-full gap-3">
+        <CardFooter className="p-3 bg-white border-t shrink-0 shadow-sm">
+          <div className="flex flex-col w-full gap-2">
             {isRecording && (
-              <div className="flex items-center justify-between bg-destructive/5 p-4 rounded-2xl animate-pulse">
-                <div className="flex items-center gap-3 text-destructive font-black uppercase tracking-widest text-xs">
-                  <div className="h-3 w-3 rounded-full bg-destructive" />
-                  Recording... {recordingTime}s
+              <div className="flex items-center justify-between bg-destructive/5 p-3 rounded-xl animate-pulse">
+                <div className="flex items-center gap-2 text-destructive font-black uppercase text-[10px]">
+                  <div className="h-2 w-2 rounded-full bg-destructive" /> REC {recordingTime}s
                 </div>
-                <Button variant="ghost" size="icon" onClick={stopRecording} className="text-destructive h-10 w-10">
-                  <Square className="h-6 w-6 fill-destructive" />
-                </Button>
+                <Button variant="ghost" size="icon" onClick={stopRecording} className="text-destructive h-8 w-8"><Square className="h-4 w-4 fill-destructive" /></Button>
               </div>
             )}
-            
             {audioBlob && !isRecording && (
-              <div className="flex items-center justify-between bg-accent/5 p-4 rounded-2xl">
-                <div className="flex items-center gap-3 text-accent font-black uppercase tracking-widest text-xs">
-                  <Play className="h-5 w-5" />
-                  Voice Note Ready
-                </div>
+              <div className="flex items-center justify-between bg-accent/5 p-3 rounded-xl">
+                <div className="flex items-center gap-2 text-accent font-black uppercase text-[10px]"><Play className="h-4 w-4" /> Ready</div>
                 <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => setAudioBlob(null)} className="text-muted-foreground font-bold h-10 px-4">
-                    <Trash2 className="h-5 w-5" />
-                  </Button>
-                  <Button size="sm" onClick={handleSendVoiceNote} className="bg-accent text-white font-bold rounded-xl h-10 px-6">Send Audio</Button>
+                  <Button variant="ghost" size="sm" onClick={() => setAudioBlob(null)} className="h-8 px-2"><Trash2 className="h-4 w-4" /></Button>
+                  <Button size="sm" onClick={handleSendVoiceNote} className="bg-accent h-8 px-4 rounded-lg text-[10px] font-bold">Send</Button>
                 </div>
               </div>
             )}
-
             {!isRecording && !audioBlob && (
-              <form onSubmit={handleSend} className="flex items-center gap-3 w-full">
-                <Button 
-                  type="button" 
-                  size="icon" 
-                  onClick={startRecording}
-                  className="h-14 w-14 rounded-2xl bg-slate-100 hover:bg-slate-200 text-primary border-none shadow-none shrink-0"
-                >
-                  <Mic className="h-7 w-7" />
-                </Button>
-                
-                <Input 
-                  placeholder="Type or use mic..." 
-                  className="flex-1 h-14 text-lg bg-slate-100 border-none focus-visible:ring-accent rounded-2xl px-6 font-medium"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                />
-                
-                <Button 
-                  type="submit" 
-                  size="icon" 
-                  disabled={!input.trim() || isSending}
-                  className="h-14 w-14 rounded-2xl bg-primary hover:bg-primary/90 text-white shadow-xl active:scale-95 transition-all"
-                >
-                  <Send className="h-7 w-7" />
-                </Button>
+              <form onSubmit={handleSend} className="flex items-center gap-2 w-full">
+                <Button type="button" size="icon" onClick={startRecording} className="h-12 w-12 rounded-xl bg-slate-50 text-primary shrink-0"><Mic className="h-5 w-5" /></Button>
+                <Input placeholder="Message..." className="flex-1 h-12 bg-slate-50 border-none rounded-xl px-4 text-sm" value={input} onChange={(e) => setInput(e.target.value)} />
+                <Button type="submit" size="icon" disabled={!input.trim() || isSending} className="h-12 w-12 rounded-xl bg-primary text-white shadow-md active:scale-95 transition-transform"><Send className="h-5 w-5" /></Button>
               </form>
             )}
           </div>
@@ -366,7 +282,7 @@ function ChatContent() {
 
 export default function ChatPage() {
   return (
-    <Suspense fallback={<div className="flex h-screen-dvh items-center justify-center py-32"><Loader2 className="animate-spin h-10 w-10 text-primary" /></div>}>
+    <Suspense fallback={<div className="flex items-center justify-center py-20"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>}>
       <ChatContent />
     </Suspense>
   );
