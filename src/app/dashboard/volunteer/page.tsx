@@ -96,8 +96,33 @@ export default function VolunteerDashboard() {
 
   const availableTasks = useMemo(() => {
     if (!pendingTasks) return [];
-    if (filter === 'All') return pendingTasks;
-    return pendingTasks.filter(t => t.taskType === filter);
+    
+    // 1. Filter by category
+    let filtered = filter === 'All' 
+      ? [...pendingTasks] 
+      : pendingTasks.filter(t => t.taskType === filter);
+
+    // 2. Define Urgency Weights
+    const urgencyWeights: Record<string, number> = {
+      'High': 3,
+      'Medium': 2,
+      'Low': 1
+    };
+
+    // 3. Sort by Urgency (Primary) and Date (Secondary)
+    return filtered.sort((a, b) => {
+      const weightA = urgencyWeights[a.urgencyLevel] || 0;
+      const weightB = urgencyWeights[b.urgencyLevel] || 0;
+      
+      if (weightB !== weightA) {
+        return weightB - weightA;
+      }
+
+      // If urgency is the same, newest first
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
+    });
   }, [pendingTasks, filter]);
 
   const achievementStats = useMemo(() => {
