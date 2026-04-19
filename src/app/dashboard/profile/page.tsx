@@ -180,9 +180,7 @@ function ProfileContent() {
         photoURL: editPhotoURL
       };
 
-      if (profileData?.role === 'volunteer') {
-        updates.matrixNumber = editMatrixNumber.toUpperCase().trim();
-      }
+      // Matrix Number is NOT updated here because it is read-only for volunteers
 
       updateDocumentNonBlocking(userRef, updates);
 
@@ -324,8 +322,8 @@ function ProfileContent() {
                 </div>
                 {profileData.role === 'volunteer' && (
                   <div className="space-y-2">
-                    <Label htmlFor="edit-matrix">Matrix Number</Label>
-                    <Input id="edit-matrix" value={editMatrixNumber} onChange={(e) => setEditMatrixNumber(e.target.value)} className="h-12 rounded-xl uppercase" />
+                    <Label htmlFor="edit-matrix" className="opacity-50">Matrix Number (Permanent)</Label>
+                    <Input id="edit-matrix" value={editMatrixNumber} disabled className="h-12 rounded-xl bg-slate-50 border-dashed opacity-70 cursor-not-allowed" />
                   </div>
                 )}
                 <div className="space-y-2">
