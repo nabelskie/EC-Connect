@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -42,15 +42,26 @@ import { setDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocki
 export default function VolunteerDashboard() {
   const { toast } = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const db = useFirestore();
   const { user, isUserLoading } = useUser();
   const [filter, setFilter] = useState('All');
   const [mounted, setMounted] = useState(false);
   const [isAccepting, setIsAccepting] = useState<string | null>(null);
 
+  // Deep-linking: handle tab from URL
+  const [currentTab, setCurrentTab] = useState(searchParams.get('tab') || 'available');
+
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam) {
+      setCurrentTab(tabParam);
+    }
+  }, [searchParams]);
 
   const userProfileRef = useMemoFirebase(() => {
     if (!user || !db) return null;
@@ -256,7 +267,7 @@ export default function VolunteerDashboard() {
         </div>
       </div>
 
-      <Tabs defaultValue="available" className="w-full">
+      <Tabs value={currentTab} onValueChange={setCurrentTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4 mb-6 h-12 rounded-2xl p-1 bg-slate-100">
           <TabsTrigger value="available" className="rounded-xl font-bold text-[10px] uppercase">Browse</TabsTrigger>
           <TabsTrigger value="active" className="rounded-xl font-bold text-[10px] uppercase">Active</TabsTrigger>

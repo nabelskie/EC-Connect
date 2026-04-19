@@ -142,7 +142,7 @@ function NotificationContent() {
       { 
         id: 1, 
         title: 'Request Accepted', 
-        message: 'A volunteer has accepted your assistance request.', 
+        message: 'A volunteer has accepted your assistance request. See status on home.', 
         time: 'Just now', 
         unread: true,
         icon: CheckCircle2,
@@ -169,17 +169,17 @@ function NotificationContent() {
         unread: true,
         icon: AlertCircle,
         color: 'text-orange-500',
-        href: '/dashboard/volunteer?role=volunteer'
+        href: '/dashboard/volunteer?role=volunteer&tab=available'
       },
       { 
         id: 2, 
-        title: 'Task Verified', 
-        message: 'Your completed task has been verified by the administrator.', 
+        title: 'New Achievement Review', 
+        message: 'An elderly resident has left a star rating for your last task.', 
         time: 'Yesterday', 
         unread: false,
         icon: CheckCircle2,
         color: 'text-emerald-500',
-        href: '/dashboard/volunteer?role=volunteer'
+        href: '/dashboard/volunteer?role=volunteer&tab=achievement'
       },
     ],
     admin: [
@@ -195,13 +195,13 @@ function NotificationContent() {
       },
       { 
         id: 2, 
-        title: 'Weekly Report', 
-        message: 'The automated system summary for the current week is now ready.', 
+        title: 'System Performance Ready', 
+        message: 'The operational analytics report for the current week is now ready.', 
         time: 'Yesterday', 
         unread: false,
         icon: BarChart3,
         color: 'text-accent',
-        href: '/dashboard/admin?role=admin'
+        href: '/dashboard/admin?role=admin&tab=analytics'
       },
     ]
   };

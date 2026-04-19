@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState, useMemo, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -49,8 +50,19 @@ export default function AdminDashboard() {
   const db = useFirestore();
   const { user } = useUser();
   const { toast } = useToast();
+  const searchParams = useSearchParams();
   const [isExporting, setIsExporting] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
+
+  // Deep-linking: handle tab from URL
+  const [currentTab, setCurrentTab] = useState(searchParams.get('tab') || 'overview');
+
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam) {
+      setCurrentTab(tabParam);
+    }
+  }, [searchParams]);
 
   const ADMIN_EMAIL = 'adminkn@gmail.com';
 
@@ -243,7 +255,7 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      <Tabs defaultValue="overview" className="w-full">
+      <Tabs value={currentTab} onValueChange={setCurrentTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2 mb-6 h-12 rounded-2xl p-1 bg-slate-100">
           <TabsTrigger value="overview" className="rounded-xl font-bold text-sm">Overview</TabsTrigger>
           <TabsTrigger value="analytics" className="rounded-xl font-bold text-sm">Reports</TabsTrigger>
