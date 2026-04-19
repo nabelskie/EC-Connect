@@ -10,21 +10,18 @@ import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useMemo, useState, useEffect } from 'react';
-import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, where, doc } from 'firebase/firestore';
+import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
 
 /**
- * A sub-component to handle live-fetching of the partner's avatar
+ * Optimized Avatar component that uses pre-fetched URLs from the chat record.
+ * This removes the "N+1" listener performance bottleneck.
  */
-function ChatPartnerAvatar({ partnerId, partnerName }: { partnerId: string; partnerName: string }) {
-  const db = useFirestore();
-  const userRef = useMemoFirebase(() => (partnerId ? doc(db, 'users', partnerId) : null), [db, partnerId]);
-  const { data: profile } = useDoc(userRef);
-
+function ChatPartnerAvatar({ partnerId, partnerName, photoURL }: { partnerId: string; partnerName: string; photoURL?: string }) {
   return (
     <div className="relative">
-      <Avatar className="h-14 w-14 border-2 border-slate-100">
-        <AvatarImage src={profile?.photoURL || `https://picsum.photos/seed/${partnerId}/100/100`} className="object-cover" />
+      <Avatar className="h-14 w-14 border-2 border-slate-100 transition-transform active:scale-95">
+        <AvatarImage src={photoURL || `https://picsum.photos/seed/${partnerId}/100/100`} className="object-cover" />
         <AvatarFallback>{partnerName?.[0] || 'U'}</AvatarFallback>
       </Avatar>
     </div>
@@ -37,6 +34,7 @@ function ChatInboxContent() {
   const role = searchParams.get('role') || 'elderly';
   const db = useFirestore();
   const { user } = useUser();
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     setMounted(true);
@@ -54,12 +52,18 @@ function ChatInboxContent() {
 
   const sortedChatRooms = useMemo(() => {
     if (!chatRooms) return [];
-    return [...chatRooms].sort((a, b) => {
+    
+    const filtered = chatRooms.filter(chat => {
+      const name = role === 'volunteer' ? chat.residentName : chat.volunteerName;
+      return name?.toLowerCase().includes(searchTerm.toLowerCase());
+    });
+
+    return [...filtered].sort((a, b) => {
       const timeA = a.lastMessageAt?.toMillis?.() || 0;
       const timeB = b.lastMessageAt?.toMillis?.() || 0;
       return timeB - timeA;
     });
-  }, [chatRooms]);
+  }, [chatRooms, searchTerm, role]);
 
   const backHref = role === 'admin' ? '/dashboard/admin' : role === 'volunteer' ? '/dashboard/volunteer' : '/dashboard/elderly';
 
@@ -67,18 +71,18 @@ function ChatInboxContent() {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-2 text-muted-foreground">
         <Loader2 className="h-8 w-8 animate-spin" />
-        <p className="text-xs font-bold uppercase">Preparing messages...</p>
+        <p className="text-xs font-bold uppercase tracking-widest">Preparing messages...</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="space-y-6 animate-in fade-in duration-200">
       <div className="flex flex-col gap-4">
         <div className="flex items-center gap-2 px-2">
           <Link 
             href={`${backHref}?role=${role}`} 
-            className="p-2 -ml-2 hover:bg-slate-100 rounded-full transition-colors"
+            className="p-2 -ml-2 hover:bg-slate-100 rounded-full transition-colors active:scale-90"
           >
             <ArrowLeft className="h-6 w-6 text-primary" />
           </Link>
@@ -90,28 +94,32 @@ function ChatInboxContent() {
           <Input 
             placeholder="Search conversations..." 
             className="pl-10 h-12 rounded-2xl bg-white border-none shadow-sm focus-visible:ring-accent"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
       </div>
 
       <ScrollArea className="h-[calc(100vh-280px)]">
-        <div className="space-y-3 px-2">
+        <div className="space-y-3 px-2 pb-6">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-2 text-muted-foreground">
               <Loader2 className="h-8 w-8 animate-spin" />
-              <p className="text-xs font-bold uppercase">Loading conversations...</p>
+              <p className="text-xs font-bold uppercase tracking-widest">Loading conversations...</p>
             </div>
           ) : sortedChatRooms.map((chat) => {
-            const partnerName = role === 'volunteer' ? chat.residentName : chat.volunteerName;
-            const partnerRole = role === 'volunteer' ? 'Elderly' : 'Volunteer';
+            const isVolunteerRole = role === 'volunteer';
+            const partnerName = isVolunteerRole ? chat.residentName : chat.volunteerName;
+            const partnerPhoto = isVolunteerRole ? chat.residentPhotoURL : chat.volunteerPhotoURL;
+            const partnerRole = isVolunteerRole ? 'Elderly' : 'Volunteer';
             const partnerId = chat.participantUserIds?.find((id: string) => id !== user?.uid) || '';
             const isUnread = chat.lastMessageSenderId && chat.lastMessageSenderId !== user?.uid;
             
             return (
               <Link key={chat.id} href={`/dashboard/chat/room?requestId=${chat.id}&role=${role}`}>
-                <Card className={`border-none shadow-sm rounded-3xl overflow-hidden active:bg-slate-50 transition-colors mb-3 ${isUnread ? 'bg-accent/5 ring-1 ring-accent/10' : 'bg-white'}`}>
+                <Card className={`border-none shadow-sm rounded-3xl overflow-hidden active:bg-slate-50 transition-all mb-3 ${isUnread ? 'bg-accent/5 ring-1 ring-accent/10' : 'bg-white'}`}>
                   <CardContent className="p-4 flex items-center gap-4">
-                    <ChatPartnerAvatar partnerId={partnerId} partnerName={partnerName || 'User'} />
+                    <ChatPartnerAvatar partnerId={partnerId} partnerName={partnerName || 'User'} photoURL={partnerPhoto} />
                     
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-0.5">
@@ -139,7 +147,7 @@ function ChatInboxContent() {
             );
           })}
 
-          {!isLoading && (!chatRooms || chatRooms.length === 0) && !error && (
+          {!isLoading && sortedChatRooms.length === 0 && (
             <div className="text-center py-20 bg-white rounded-[2.5rem] border-2 border-dashed border-slate-100 flex flex-col items-center justify-center gap-4 mx-2">
               <div className="p-4 bg-slate-50 rounded-full">
                 <MessageSquare className="h-10 w-10 text-slate-300" />
@@ -147,18 +155,12 @@ function ChatInboxContent() {
               <div className="space-y-1">
                 <p className="text-lg font-bold text-primary">No Chats Available</p>
                 <p className="text-xs text-muted-foreground max-w-[220px] mx-auto leading-relaxed">
-                  {role === 'volunteer' 
-                    ? "Accept a request to start a conversation with an elderly member." 
-                    : "Once a volunteer accepts your request, you'll be able to chat here."
+                  {searchTerm 
+                    ? "No conversations match your search." 
+                    : (role === 'volunteer' ? "Accept a request to start a conversation." : "Wait for a volunteer to accept your request.")
                   }
                 </p>
               </div>
-            </div>
-          )}
-
-          {error && (
-            <div className="text-center py-10 text-destructive text-sm font-bold">
-              Failed to load chats. Please try again.
             </div>
           )}
         </div>
