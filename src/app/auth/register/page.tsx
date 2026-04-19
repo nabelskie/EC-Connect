@@ -13,7 +13,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Heart, User, GraduationCap, Loader2, ShieldCheck, AlertCircle, Eye, EyeOff, Hash, Calendar } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 export default function RegisterPage() {
@@ -45,7 +45,7 @@ export default function RegisterPage() {
 
   const isAdminEmail = email.toLowerCase().trim() === ADMIN_EMAIL;
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isLoading) return;
 
@@ -111,6 +111,26 @@ export default function RegisterPage() {
 
     const targetEmail = email.toLowerCase().trim();
     const finalRole = isAdminEmail ? 'admin' : role;
+    const normalizedMatrix = matrixNumber.trim().toUpperCase();
+
+    // Check for duplicate Matrix Number for volunteers
+    if (finalRole === 'volunteer') {
+      try {
+        const q = query(collection(db, 'users'), where('matrixNumber', '==', normalizedMatrix));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          setIsLoading(false);
+          toast({
+            variant: "destructive",
+            title: "Matrix Already Registered",
+            description: "This matrix number is already associated with an account.",
+          });
+          return;
+        }
+      } catch (err) {
+        console.error("Matrix verification error:", err);
+      }
+    }
 
     createUserWithEmailAndPassword(auth, targetEmail, password)
       .then(async (userCredential) => {
@@ -124,7 +144,7 @@ export default function RegisterPage() {
           email: targetEmail,
           role: finalRole,
           age: finalRole === 'elderly' ? age.trim() : "N/A",
-          matrixNumber: role === 'volunteer' ? matrixNumber.trim().toUpperCase() : "N/A",
+          matrixNumber: finalRole === 'volunteer' ? normalizedMatrix : "N/A",
           gender: isAdminEmail ? "N/A" : gender,
           phone: isAdminEmail ? "N/A" : phone,
           address: isAdminEmail ? "System Console" : address,
@@ -281,7 +301,7 @@ export default function RegisterPage() {
                         required 
                         className="h-12" 
                       />
-                      <p className="text-[10px] text-muted-foreground">Required for student verification.</p>
+                      <p className="text-[10px] text-muted-foreground">Required for student verification. Must be unique.</p>
                     </div>
                   )}
                 </>
