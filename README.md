@@ -80,6 +80,23 @@ For the **Voice Message** feature to work, you MUST manually add microphone perm
 
 ---
 
+## 🔔 Step 6: Enabling Push Notifications (Essential)
+
+To receive notifications on your phone, you must link your native app to your Firebase Project.
+
+1. **Go to Firebase Console**: [console.firebase.google.com](https://console.firebase.google.com)
+2. **Add Native Apps**:
+   - Click **Add App** and select **Android**. Enter Package ID: `com.pks.eldercare`.
+   - Download `google-services.json` and move it into your local project folder at `android/app/google-services.json`.
+   - Click **Add App** and select **iOS**. Enter Bundle ID: `com.pks.eldercare`.
+   - Download `GoogleService-Info.plist` and move it into your local project folder at `ios/App/App/GoogleService-Info.plist`.
+3. **Sync Capacitor**:
+   ```bash
+   npx cap sync
+   ```
+
+---
+
 ## 💡 Pro Tips for a Professional Finish
 
 - **Splash Screens**: You can change the loading icon by replacing the files in `android/app/src/main/res/mipmap`.

@@ -1,14 +1,15 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useFirebase, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { getToken, onMessage } from 'firebase/messaging';
 import { doc, updateDoc } from 'firebase/firestore';
+import { Capacitor } from '@capacitor/core';
+import { PushNotifications } from '@capacitor/push-notifications';
 
 /**
  * Hook to initialize Firebase Cloud Messaging and handle token registration.
- * It respects the user's notification settings in their Firestore profile.
+ * It handles both Web and Native (Android/iOS) registration using Capacitor.
  */
 export function useFcm() {
   const { messaging } = useFirebase();
@@ -24,8 +25,8 @@ export function useFcm() {
   const { data: profile } = useDoc(userProfileRef);
 
   useEffect(() => {
-    // Only run on client and if messaging, user, and profile are available
-    if (typeof window === 'undefined' || !messaging || !user || !db || !profile) return;
+    // Only run on client and if user and profile are available
+    if (typeof window === 'undefined' || !user || !db || !profile) return;
 
     // Only proceed if notifications are explicitly enabled in the profile
     if (profile.notificationsEnabled === false) {
@@ -33,7 +34,57 @@ export function useFcm() {
       return;
     }
 
-    const requestPermission = async () => {
+    const isNative = Capacitor.isNativePlatform();
+
+    const registerNativeNotifications = async () => {
+      try {
+        let permStatus = await PushNotifications.checkPermissions();
+
+        if (permStatus.receive === 'prompt') {
+          permStatus = await PushNotifications.requestPermissions();
+        }
+
+        if (permStatus.receive !== 'granted') {
+          console.warn('Push notification permissions denied by user.');
+          return;
+        }
+
+        // Register with Apple / Google for a device token
+        await PushNotifications.register();
+
+        // Listen for the specific FCM token
+        PushNotifications.addListener('registration', async (token) => {
+          const newToken = token.value;
+          setFcmToken(newToken);
+          
+          // Only update if it's different to save writes
+          if (profile.fcmToken !== newToken) {
+            await updateDoc(doc(db, 'users', user.uid), { 
+              fcmToken: newToken,
+              notificationsEnabled: true 
+            });
+          }
+        });
+
+        PushNotifications.addListener('registrationError', (err) => {
+          console.error('FCM Registration error: ', err.error);
+        });
+
+        PushNotifications.addListener('pushNotificationReceived', (notification) => {
+          console.log('Push received in foreground: ', notification);
+        });
+
+        PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
+          console.log('Push action performed: ', notification);
+        });
+
+      } catch (err) {
+        console.warn('Native Push registration failed:', err);
+      }
+    };
+
+    const registerWebNotifications = async () => {
+      if (!messaging) return;
       try {
         const permission = await Notification.requestPermission();
         if (permission === 'granted') {
@@ -53,18 +104,30 @@ export function useFcm() {
           }
         }
       } catch (err) {
-        console.warn('FCM registration failed:', err);
+        console.warn('Web FCM registration failed:', err);
       }
     };
 
-    requestPermission();
+    if (isNative) {
+      registerNativeNotifications();
+    } else {
+      registerWebNotifications();
+    }
 
-    // Listen for foreground messages
-    const unsubscribe = onMessage(messaging, (payload) => {
-      console.log('Foreground message received: ', payload);
-    });
+    // Foreground listener for Web
+    let unsubscribeWeb: any = null;
+    if (!isNative && messaging) {
+      unsubscribeWeb = onMessage(messaging, (payload) => {
+        console.log('Foreground web message received: ', payload);
+      });
+    }
 
-    return () => unsubscribe();
+    return () => {
+      if (isNative) {
+        PushNotifications.removeAllListeners();
+      }
+      if (unsubscribeWeb) unsubscribeWeb();
+    };
   }, [messaging, user, db, profile]);
 
   return { fcmToken };
