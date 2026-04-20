@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -46,7 +46,7 @@ import {
   ChartLegendContent 
 } from '@/components/ui/chart';
 
-export default function AdminDashboard() {
+function AdminDashboardContent() {
   const db = useFirestore();
   const { user } = useUser();
   const { toast } = useToast();
@@ -54,7 +54,6 @@ export default function AdminDashboard() {
   const [isExporting, setIsExporting] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
 
-  // Deep-linking: handle tab from URL
   const [currentTab, setCurrentTab] = useState(searchParams.get('tab') || 'overview');
 
   useEffect(() => {
@@ -187,14 +186,13 @@ export default function AdminDashboard() {
       const html2canvas = (await import('html2canvas')).default;
       const jsPDF = (await import('jspdf')).jsPDF;
       
-      // Force the capture width to ensure charts don't squash on mobile
       const canvas = await html2canvas(reportRef.current, {
         scale: 2,
         useCORS: true,
         logging: false,
         backgroundColor: '#f8fafc',
-        width: 1000, // Fixed width for consistent capture layout
-        windowWidth: 1000 // Force high-res desktop-like viewport
+        width: 1000,
+        windowWidth: 1000
       });
       
       const imgData = canvas.toDataURL('image/png');
@@ -208,11 +206,9 @@ export default function AdminDashboard() {
       let heightLeft = contentHeight;
       let position = 0;
 
-      // First page
       pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, contentHeight);
       heightLeft -= pdfHeight;
 
-      // Extra pages if needed
       while (heightLeft >= 0) {
         position = heightLeft - contentHeight;
         pdf.addPage();
@@ -374,5 +370,13 @@ export default function AdminDashboard() {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+export default function AdminDashboard() {
+  return (
+    <Suspense fallback={<div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
+      <AdminDashboardContent />
+    </Suspense>
   );
 }

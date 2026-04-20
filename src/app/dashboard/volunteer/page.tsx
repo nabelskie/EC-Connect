@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
@@ -39,20 +39,14 @@ import { collection, query, where, doc, getDoc, serverTimestamp } from 'firebase
 import { setDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { cn } from '@/lib/utils';
 
-/**
- * Leveling Logic: Calculates level based on total completed tasks.
- * Growth: Level 1 (0-1 tasks), Level 2 (2 tasks), Level 3 (5 tasks), Level 4 (9 tasks)...
- * Formula: Tasks needed grows by 'increment' every level.
- */
 function getLevelInfo(tasksCount: number) {
   let level = 1;
   let tasksAtCurrentLevel = 0;
-  let tasksNeededForNextLevel = 2; // Tasks to reach level 2
+  let tasksNeededForNextLevel = 2;
 
   while (tasksCount >= tasksNeededForNextLevel && level < 100) {
     level++;
     tasksAtCurrentLevel = tasksNeededForNextLevel;
-    // Increase tasks required for next level incrementally
     const increment = Math.ceil(level / 2) + 1;
     tasksNeededForNextLevel += increment;
   }
@@ -69,7 +63,7 @@ function getLevelInfo(tasksCount: number) {
   };
 }
 
-export default function VolunteerDashboard() {
+function VolunteerDashboardContent() {
   const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -226,7 +220,7 @@ export default function VolunteerDashboard() {
     }
   };
 
-  if (!mounted || isUserLoading) return <div className="flex h-screen-dvh items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  if (!mounted || isUserLoading) return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300 gpu-accelerated">
@@ -325,7 +319,7 @@ export default function VolunteerDashboard() {
                 </p>
 
                 <div className="flex items-center justify-between pt-1">
-                  <div className="flex flex-col gap-1.5 min-w-0 flex-1">
+                  <div className="flex flex-col gap-1.5 min-0 flex-1">
                     <div className="flex items-center gap-1 text-[9px] text-muted-foreground font-bold truncate">
                       <MapPin className="h-3 w-3 shrink-0" /> {task.location}
                     </div>
@@ -421,7 +415,6 @@ export default function VolunteerDashboard() {
         <TabsContent value="achievement" className="space-y-6">
           <Card className="border-none shadow-xl rounded-[2.5rem] bg-white overflow-hidden p-8 text-center">
             <div className="relative h-48 w-48 mx-auto mb-6">
-              {/* Circular Progress SVG */}
               <svg className="h-full w-full" viewBox="0 0 100 100">
                 <circle
                   className="text-slate-100 stroke-current"
@@ -444,7 +437,6 @@ export default function VolunteerDashboard() {
                   transform="rotate(-90 50 50)"
                 />
               </svg>
-              {/* Center Info */}
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span className="text-5xl font-black text-primary leading-none">{levelInfo.level}</span>
                 <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Level</span>
@@ -519,5 +511,13 @@ export default function VolunteerDashboard() {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+export default function VolunteerDashboard() {
+  return (
+    <Suspense fallback={<div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
+      <VolunteerDashboardContent />
+    </Suspense>
   );
 }

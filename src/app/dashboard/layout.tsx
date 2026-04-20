@@ -37,8 +37,49 @@ import { collection, query, where, doc, limit, orderBy } from 'firebase/firestor
 import { cn } from '@/lib/utils';
 
 /**
- * Shared Notification Logic Hook
+ * Sub-component for Notifications to safely use useSearchParams()
  */
+function NotificationIconWithBadge() {
+  const [mounted, setMounted] = useState(false);
+  const [isNotificationsRead, setIsNotificationsRead] = useState(false);
+  const { notifications } = useNotificationData();
+
+  useEffect(() => { setMounted(true); }, []);
+
+  const showIndicatorDot = useMemo(() => {
+    if (!mounted || isNotificationsRead || notifications.length === 0) return false;
+    return notifications.some(n => n.unread);
+  }, [mounted, isNotificationsRead, notifications]);
+
+  const handleOpenNotifications = (open: boolean) => {
+    if (open) setIsNotificationsRead(true);
+  };
+
+  return (
+    <Sheet onOpenChange={handleOpenNotifications}>
+      <SheetTrigger asChild>
+        <Button variant="ghost" size="icon" className="rounded-2xl relative text-muted-foreground h-12 w-12 bg-slate-50 hover:bg-slate-100 transition-colors">
+          <Bell className="h-6 w-6" />
+          {showIndicatorDot && (
+            <span className="absolute top-2.5 right-2.5 w-3.5 h-3.5 bg-destructive rounded-full border-2 border-white shadow-sm animate-pulse" />
+          )}
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="right" className="w-[85vw] sm:w-[400px] p-0 rounded-l-[3rem] border-none shadow-2xl">
+        <SheetHeader className="p-8 border-b bg-primary text-white rounded-tl-[3rem]">
+          <SheetTitle className="text-2xl font-black flex items-center gap-3 text-white">
+            <Bell className="h-7 w-7" />
+            Notifications
+          </SheetTitle>
+        </SheetHeader>
+        <ScrollArea className="h-[calc(100vh-100px)] bg-slate-50/50">
+          <NotificationContent notifications={notifications} />
+        </ScrollArea>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 function useNotificationData() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -176,9 +217,7 @@ function DashboardNav() {
   const db = useFirestore();
   const { user } = useUser();
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  useEffect(() => { setMounted(true); }, []);
 
   const chatRoomsQuery = useMemoFirebase(() => {
     if (!user || !mounted) return null;
@@ -310,15 +349,12 @@ function NotificationContent({ notifications }: { notifications: any[] }) {
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
-  const [isNotificationsRead, setIsNotificationsRead] = useState(false);
   const db = useFirestore();
   const { user } = useUser();
   
   useFcm();
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  useEffect(() => { setMounted(true); }, []);
 
   const userRef = useMemoFirebase(() => {
     if (!user || !db) return null;
@@ -326,20 +362,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [db, user]);
 
   const { data: profile } = useDoc(userRef);
-  const { notifications } = useNotificationData();
-
-  const showIndicatorDot = useMemo(() => {
-    if (!mounted || isNotificationsRead || notifications.length === 0) return false;
-    return notifications.some(n => n.unread);
-  }, [mounted, isNotificationsRead, notifications]);
 
   const isLargeText = mounted && profile?.largeTextEnabled === true;
-
-  const handleOpenNotifications = (open: boolean) => {
-    if (open) {
-      setIsNotificationsRead(true);
-    }
-  };
 
   return (
     <div className={cn("flex flex-col h-screen-dvh bg-background overflow-hidden items-center", isLargeText && "large-font-mode")}>
@@ -353,33 +377,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
           
           <div className="flex items-center gap-4">
-            {mounted ? (
-              <Sheet onOpenChange={handleOpenNotifications}>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="rounded-2xl relative text-muted-foreground h-12 w-12 bg-slate-50 hover:bg-slate-100 transition-colors">
-                    <Bell className="h-6 w-6" />
-                    {showIndicatorDot && (
-                      <span className="absolute top-2.5 right-2.5 w-3.5 h-3.5 bg-destructive rounded-full border-2 border-white shadow-sm animate-pulse" />
-                    )}
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="right" className="w-[85vw] sm:w-[400px] p-0 rounded-l-[3rem] border-none shadow-2xl">
-                  <SheetHeader className="p-8 border-b bg-primary text-white rounded-tl-[3rem]">
-                    <SheetTitle className="text-2xl font-black flex items-center gap-3 text-white">
-                      <Bell className="h-7 w-7" />
-                      Notifications
-                    </SheetTitle>
-                  </SheetHeader>
-                  <ScrollArea className="h-[calc(100vh-100px)] bg-slate-50/50">
-                    <Suspense fallback={<div className="p-16 text-center text-base font-bold text-muted-foreground animate-pulse">Checking alerts...</div>}>
-                      <NotificationContent notifications={notifications} />
-                    </Suspense>
-                  </ScrollArea>
-                </SheetContent>
-              </Sheet>
-            ) : (
-              <div className="h-12 w-12 rounded-2xl bg-slate-100 animate-pulse" />
-            )}
+            <Suspense fallback={<div className="h-12 w-12 rounded-2xl bg-slate-50 animate-pulse" />}>
+              <NotificationIconWithBadge />
+            </Suspense>
           </div>
         </header>
 
@@ -387,11 +387,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {children}
         </main>
 
-        {mounted && (
-          <Suspense fallback={<div className="h-24 bg-white border-t" />}>
-            <DashboardNav />
-          </Suspense>
-        )}
+        <Suspense fallback={<div className="h-24 bg-white border-t" />}>
+          <DashboardNav />
+        </Suspense>
       </div>
     </div>
   );
