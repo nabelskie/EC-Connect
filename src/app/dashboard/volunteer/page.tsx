@@ -23,7 +23,9 @@ import {
   Trophy,
   MessageSquareQuote,
   Clock,
-  MessageSquare
+  MessageSquare,
+  CheckCircle2,
+  Calendar
 } from 'lucide-react';
 import { 
   DropdownMenu, 
@@ -36,7 +38,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, where, doc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, doc, getDoc, serverTimestamp, orderBy } from 'firebase/firestore';
 import { setDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { cn } from '@/lib/utils';
 
@@ -79,7 +81,10 @@ export default function VolunteerDashboard() {
 
   const completedQuery = useMemoFirebase(() => {
     if (!user) return null;
-    return query(collection(db, 'assistance_requests_completed'), where('assignedVolunteerId', '==', user.uid));
+    return query(
+      collection(db, 'assistance_requests_completed'), 
+      where('assignedVolunteerId', '==', user.uid)
+    );
   }, [db, user]);
   const { data: completedTasks, isLoading: isCompletedLoading } = useCollection(completedQuery);
 
@@ -106,6 +111,15 @@ export default function VolunteerDashboard() {
     const sum = ratingsData.reduce((acc, curr) => acc + (curr.ratingScore || 0), 0);
     return { avg: (sum / ratingsData.length).toFixed(1), count: ratingsData.length };
   }, [ratingsData]);
+
+  const sortedCompletedTasks = useMemo(() => {
+    if (!completedTasks) return [];
+    return [...completedTasks].sort((a, b) => {
+      const dateA = a.completedAt ? new Date(a.completedAt).getTime() : 0;
+      const dateB = b.completedAt ? new Date(b.completedAt).getTime() : 0;
+      return dateB - dateA;
+    });
+  }, [completedTasks]);
 
   const handleAcceptTask = async (task: any) => {
     if (!user || !profile || isAccepting) return;
@@ -272,23 +286,49 @@ export default function VolunteerDashboard() {
 
         <TabsContent value="completed" className="space-y-3">
           <h2 className="text-sm font-black text-primary uppercase">Mission History</h2>
-          {isCompletedLoading ? <div className="py-10 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" /></div> : completedTasks?.map((task) => (
-            <Card key={task.id} className="border-none shadow-sm rounded-2xl bg-slate-50/50 opacity-80">
-              <CardContent className="p-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-white text-slate-400 shadow-xs">{getTypeIcon(task.taskType)}</div>
-                  <div>
-                    <div className="font-bold text-sm text-slate-600">{task.taskType}</div>
-                    <div className="text-[9px] text-muted-foreground font-bold uppercase">Completed for {task.createdByName}</div>
+          {isCompletedLoading ? <div className="py-10 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" /></div> : sortedCompletedTasks?.map((task) => (
+            <Card key={task.id} className="border-none shadow-sm rounded-2xl bg-white active:scale-[0.98] transition-transform overflow-hidden">
+              <CardContent className="p-4 flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-xl bg-slate-50 text-slate-400">{getTypeIcon(task.taskType)}</div>
+                    <div>
+                      <div className="font-bold text-sm text-primary">{task.taskType}</div>
+                      <div className="text-[9px] text-muted-foreground font-bold uppercase">Completed for {task.createdByName}</div>
+                    </div>
                   </div>
+                  <Badge variant="outline" className="text-[8px] rounded-lg uppercase bg-emerald-50 text-emerald-600 border-emerald-100">
+                    Completed
+                  </Badge>
                 </div>
-                <div className="text-[8px] font-black uppercase text-muted-foreground/60">
-                  {task.completedAt ? new Date(task.completedAt).toLocaleDateString() : 'Finished'}
+
+                <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 italic">
+                  "{task.description}"
+                </p>
+
+                <div className="flex items-center justify-between pt-1 border-t border-slate-50 mt-1">
+                  <div className="flex flex-col gap-1 min-w-0 flex-1">
+                    <div className="flex items-center gap-1 text-[9px] text-muted-foreground font-bold truncate">
+                      <MapPin className="h-3 w-3" /> {task.location}
+                    </div>
+                    <div className="flex items-center gap-1 text-[8px] text-slate-400 font-bold uppercase tracking-tight">
+                      <Calendar className="h-3 w-3" /> Finished: {task.completedAt ? new Date(task.completedAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recently'}
+                    </div>
+                  </div>
+                  <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0 ml-4" />
                 </div>
               </CardContent>
             </Card>
           ))}
-          {!isCompletedLoading && (!completedTasks || completedTasks.length === 0) && <div className="py-20 text-center opacity-30 italic text-sm">No history yet</div>}
+          {!isCompletedLoading && sortedCompletedTasks.length === 0 && (
+            <div className="py-20 text-center bg-white rounded-3xl border-2 border-dashed border-slate-100 mx-1">
+              <div className="p-4 bg-slate-50 rounded-full w-fit mx-auto mb-4">
+                <Clock className="h-8 w-8 text-slate-200" />
+              </div>
+              <p className="text-sm font-bold text-primary">No completed missions</p>
+              <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mt-1">Finish a task to see it here</p>
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="achievement" className="space-y-4">
