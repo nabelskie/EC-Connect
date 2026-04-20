@@ -48,12 +48,13 @@ function useNotificationData() {
   const roleQuery = searchParams.get('role');
 
   const currentRole = useMemo(() => {
+    if (user?.email === 'adminkn@gmail.com') return 'admin';
     if (roleQuery) return roleQuery;
     if (pathname.includes('/admin')) return 'admin';
     if (pathname.includes('/volunteer')) return 'volunteer';
     if (pathname.includes('/elderly')) return 'elderly';
     return 'elderly';
-  }, [roleQuery, pathname]);
+  }, [roleQuery, pathname, user]);
 
   const pendingRequestsQuery = useMemoFirebase(() => 
     query(collection(db, 'assistance_requests_pending'), orderBy('createdAt', 'desc'), limit(5)), [db]);
@@ -128,7 +129,7 @@ function useNotificationData() {
           title: 'New Achievement Review',
           message: `A resident gave you a ${r.ratingScore}/10 score.`,
           time: 'Achievement',
-          unread: false,
+          unread: true,
           icon: Star,
           color: 'text-yellow-500',
           href: '/dashboard/volunteer?role=volunteer&tab=achievement'
@@ -155,7 +156,7 @@ function useNotificationData() {
           title: 'System Activity',
           message: `There are ${pendingReqs.length} pending requests awaiting help.`,
           time: 'Overview',
-          unread: false,
+          unread: true,
           icon: BarChart3,
           color: 'text-accent',
           href: '/dashboard/admin?role=admin&tab=overview'
@@ -198,12 +199,13 @@ function DashboardNav() {
   const roleQuery = searchParams.get('role');
 
   const currentRole = useMemo(() => {
+    if (user?.email === 'adminkn@gmail.com') return 'admin';
     if (roleQuery) return roleQuery;
     if (pathname.includes('/admin')) return 'admin';
     if (pathname.includes('/volunteer')) return 'volunteer';
     if (pathname.includes('/elderly')) return 'elderly';
     return 'elderly';
-  }, [roleQuery, pathname]);
+  }, [roleQuery, pathname, user]);
 
   const navItems = {
     elderly: [
@@ -331,7 +333,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // Determine if the indicator dot should be shown
   const showIndicatorDot = useMemo(() => {
     if (!mounted || isNotificationsRead || notifications.length === 0) return false;
-    // Show dot if any notification is "unread" or just if there are any current notifications
+    // Show dot if any notification is "unread"
     return notifications.some(n => n.unread);
   }, [mounted, isNotificationsRead, notifications]);
 
