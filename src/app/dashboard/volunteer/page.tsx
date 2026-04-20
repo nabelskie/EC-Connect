@@ -21,7 +21,9 @@ import {
   SearchX,
   Star,
   Trophy,
-  MessageSquareQuote
+  MessageSquareQuote,
+  Clock,
+  MessageSquare
 } from 'lucide-react';
 import { 
   DropdownMenu, 
@@ -181,12 +183,10 @@ export default function VolunteerDashboard() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="rounded-xl">
                 <DropdownMenuRadioGroup value={filter} onValueChange={setFilter}>
-                  <DropdownMenuRadioGroup value={filter} onValueChange={setFilter}>
-                    <DropdownMenuRadioItem value="All">All Categories</DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="Groceries">Groceries</DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="Transportation">Transportation</DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="Tech Support">Tech Support</DropdownMenuRadioItem>
-                  </DropdownMenuRadioGroup>
+                  <DropdownMenuRadioItem value="All">All Categories</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="Groceries">Groceries</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="Transportation">Transportation</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="Tech Support">Tech Support</DropdownMenuRadioItem>
                 </DropdownMenuRadioGroup>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -218,41 +218,77 @@ export default function VolunteerDashboard() {
         </TabsContent>
 
         <TabsContent value="active" className="space-y-3">
-          {activeTasks?.map((task) => (
-            <Card key={task.id} className="border-none shadow-sm rounded-2xl border-l-4 border-l-emerald-500">
-              <CardContent className="p-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600">{getTypeIcon(task.taskType)}</div>
-                  <div>
-                    <div className="font-bold text-sm text-primary">{task.taskType}</div>
-                    <div className="text-[9px] text-muted-foreground font-bold uppercase">{task.residentName}</div>
+          <h2 className="text-sm font-black text-primary uppercase mb-1">Ongoing Support</h2>
+          {isActiveLoading ? <div className="py-10 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" /></div> : activeTasks?.map((task) => (
+            <Card key={task.id} className="border-none shadow-sm rounded-2xl border-l-4 border-l-emerald-500 overflow-hidden active:scale-[0.98] transition-transform">
+              <CardContent className="p-4 flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600">{getTypeIcon(task.taskType)}</div>
+                    <div>
+                      <div className="font-bold text-sm text-primary">{task.taskType}</div>
+                      <div className="text-[9px] text-muted-foreground font-bold uppercase">{task.createdByName || 'Resident'}</div>
+                    </div>
                   </div>
+                  <Badge variant="outline" className="text-[8px] rounded-lg uppercase bg-emerald-50 text-emerald-700 border-emerald-100 font-black">
+                    Active
+                  </Badge>
                 </div>
-                <Button asChild size="sm" className="bg-primary rounded-xl h-8 px-3 text-[9px] font-black uppercase">
-                  <Link href={`/dashboard/chat/room?requestId=${task.chatRoomId || task.id}&role=volunteer`}>Chat</Link>
-                </Button>
+                
+                <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 italic">
+                  "{task.description}"
+                </p>
+
+                <div className="flex items-center justify-between pt-1">
+                  <div className="flex flex-col gap-1.5 min-w-0 flex-1">
+                    <div className="flex items-center gap-1 text-[9px] text-muted-foreground font-bold truncate">
+                      <MapPin className="h-3 w-3 shrink-0" /> {task.location}
+                    </div>
+                    <div className="flex items-center gap-1 text-[8px] text-emerald-600 font-black uppercase tracking-tight">
+                      <Clock className="h-3 w-3" /> Started: {task.acceptedAt ? new Date(task.acceptedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recently'}
+                    </div>
+                  </div>
+                  
+                  <Button asChild size="sm" className="h-9 px-4 bg-primary text-white font-black text-[10px] uppercase rounded-xl shadow-lg shadow-primary/10 gap-1.5 ml-4">
+                    <Link href={`/dashboard/chat/room?requestId=${task.chatRoomId || task.id}&role=volunteer`}>
+                      <MessageSquare className="h-3 w-3" />
+                      Chat
+                    </Link>
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}
-          {(!activeTasks || activeTasks.length === 0) && <div className="py-20 text-center opacity-30 italic text-sm">No ongoing tasks</div>}
+          {!isActiveLoading && (!activeTasks || activeTasks.length === 0) && (
+            <div className="py-24 text-center bg-white rounded-3xl border-2 border-dashed border-slate-100 mx-1">
+              <div className="p-4 bg-slate-50 rounded-full w-fit mx-auto mb-4">
+                <Heart className="h-8 w-8 text-slate-200" />
+              </div>
+              <p className="text-sm font-bold text-primary">No ongoing tasks</p>
+              <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mt-1">Accept a request to see it here</p>
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="completed" className="space-y-3">
-          {completedTasks?.map((task) => (
-            <Card key={task.id} className="border-none shadow-sm rounded-2xl bg-slate-50 opacity-80">
+          <h2 className="text-sm font-black text-primary uppercase">Mission History</h2>
+          {isCompletedLoading ? <div className="py-10 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" /></div> : completedTasks?.map((task) => (
+            <Card key={task.id} className="border-none shadow-sm rounded-2xl bg-slate-50/50 opacity-80">
               <CardContent className="p-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-white text-slate-400">{getTypeIcon(task.taskType)}</div>
+                  <div className="p-2 rounded-xl bg-white text-slate-400 shadow-xs">{getTypeIcon(task.taskType)}</div>
                   <div>
                     <div className="font-bold text-sm text-slate-600">{task.taskType}</div>
-                    <div className="text-[9px] text-muted-foreground font-bold uppercase">Completed</div>
+                    <div className="text-[9px] text-muted-foreground font-bold uppercase">Completed for {task.createdByName}</div>
                   </div>
                 </div>
-                <Badge variant="outline" className="text-[8px] uppercase">History</Badge>
+                <div className="text-[8px] font-black uppercase text-muted-foreground/60">
+                  {task.completedAt ? new Date(task.completedAt).toLocaleDateString() : 'Finished'}
+                </div>
               </CardContent>
             </Card>
           ))}
-          {(!completedTasks || completedTasks.length === 0) && <div className="py-20 text-center opacity-30 italic text-sm">No history yet</div>}
+          {!isCompletedLoading && (!completedTasks || completedTasks.length === 0) && <div className="py-20 text-center opacity-30 italic text-sm">No history yet</div>}
         </TabsContent>
 
         <TabsContent value="achievement" className="space-y-4">
