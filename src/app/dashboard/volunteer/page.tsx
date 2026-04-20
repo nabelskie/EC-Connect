@@ -128,6 +128,7 @@ export default function VolunteerDashboard() {
     const volunteerName = profile.name || user.displayName || 'Volunteer';
     const volunteerPhotoURL = profile.photoURL || '';
     const residentId = task.createdByUserId;
+    const residentName = task.createdByName || 'Resident';
     const chatRoomId = [residentId, volunteerId].sort().join('_');
     const participants = [residentId, volunteerId];
 
@@ -141,9 +142,16 @@ export default function VolunteerDashboard() {
     deleteDocumentNonBlocking(pendingRef);
 
     setDocumentNonBlocking(doc(db, 'chat_rooms', chatRoomId), { 
-      id: chatRoomId, requestId: task.id, participantUserIds: participants, 
-      volunteerName, volunteerPhotoURL, createdAt: new Date().toISOString(), 
-      lastMessageSnippet: `Volunteer ${volunteerName} accepted.`, lastMessageAt: serverTimestamp() 
+      id: chatRoomId, 
+      requestId: task.id, 
+      participantUserIds: participants, 
+      volunteerName, 
+      volunteerPhotoURL,
+      residentName,
+      residentPhotoURL: '', // Initial empty, but field exists
+      createdAt: new Date().toISOString(), 
+      lastMessageSnippet: `Volunteer ${volunteerName} accepted.`, 
+      lastMessageAt: serverTimestamp() 
     }, { merge: true });
 
     addDocumentNonBlocking(collection(db, 'chat_rooms', chatRoomId, 'messages'), { 

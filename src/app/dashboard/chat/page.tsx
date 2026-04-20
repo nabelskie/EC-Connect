@@ -41,12 +41,12 @@ function ChatInboxContent() {
   }, []);
 
   const chatRoomsQuery = useMemoFirebase(() => {
-    if (!user || !mounted) return null;
+    if (!user) return null;
     return query(
       collection(db, 'chat_rooms'),
       where('participantUserIds', 'array-contains', user.uid)
     );
-  }, [db, user, mounted]);
+  }, [db, user]);
 
   const { data: chatRooms, isLoading, error } = useCollection(chatRoomsQuery);
 
@@ -54,8 +54,10 @@ function ChatInboxContent() {
     if (!chatRooms) return [];
     
     const filtered = chatRooms.filter(chat => {
-      const name = role === 'volunteer' ? chat.residentName : chat.volunteerName;
-      return name?.toLowerCase().includes(searchTerm.toLowerCase());
+      const partnerName = role === 'volunteer' ? chat.residentName : chat.volunteerName;
+      // If name is missing, we still show the chat (it's better than an empty screen)
+      if (!partnerName) return true;
+      return partnerName.toLowerCase().includes(searchTerm.toLowerCase());
     });
 
     return [...filtered].sort((a, b) => {
@@ -107,61 +109,65 @@ function ChatInboxContent() {
               <Loader2 className="h-8 w-8 animate-spin" />
               <p className="text-xs font-bold uppercase tracking-widest">Loading conversations...</p>
             </div>
-          ) : sortedChatRooms.map((chat) => {
-            const isVolunteerRole = role === 'volunteer';
-            const partnerName = isVolunteerRole ? chat.residentName : chat.volunteerName;
-            const partnerPhoto = isVolunteerRole ? chat.residentPhotoURL : chat.volunteerPhotoURL;
-            const partnerRole = isVolunteerRole ? 'Elderly' : 'Volunteer';
-            const partnerId = chat.participantUserIds?.find((id: string) => id !== user?.uid) || '';
-            const isUnread = chat.lastMessageSenderId && chat.lastMessageSenderId !== user?.uid;
-            
-            return (
-              <Link key={chat.id} href={`/dashboard/chat/room?requestId=${chat.id}&role=${role}`}>
-                <Card className={`border-none shadow-sm rounded-3xl overflow-hidden active:bg-slate-50 transition-all mb-3 ${isUnread ? 'bg-accent/5 ring-1 ring-accent/10' : 'bg-white'}`}>
-                  <CardContent className="p-4 flex items-center gap-4">
-                    <ChatPartnerAvatar partnerId={partnerId} partnerName={partnerName || 'User'} photoURL={partnerPhoto} />
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-0.5">
-                        <div className="flex items-center gap-2 overflow-hidden">
-                          <span className={`truncate ${isUnread ? 'font-black text-primary' : 'font-bold text-primary/80'}`}>{partnerName || "User"}</span>
-                          <Badge variant="outline" className="text-[8px] h-4 px-1 leading-none uppercase shrink-0">
-                            {partnerRole}
-                          </Badge>
+          ) : (
+            <>
+              {sortedChatRooms.map((chat) => {
+                const isVolunteerRole = role === 'volunteer';
+                const partnerName = isVolunteerRole ? chat.residentName : chat.volunteerName;
+                const partnerPhoto = isVolunteerRole ? chat.residentPhotoURL : chat.volunteerPhotoURL;
+                const partnerRole = isVolunteerRole ? 'Elderly' : 'Volunteer';
+                const partnerId = chat.participantUserIds?.find((id: string) => id !== user?.uid) || '';
+                const isUnread = chat.lastMessageSenderId && chat.lastMessageSenderId !== user?.uid;
+                
+                return (
+                  <Link key={chat.id} href={`/dashboard/chat/room?requestId=${chat.id}&role=${role}`}>
+                    <Card className={`border-none shadow-sm rounded-3xl overflow-hidden active:bg-slate-50 transition-all mb-3 ${isUnread ? 'bg-accent/5 ring-1 ring-accent/10' : 'bg-white'}`}>
+                      <CardContent className="p-4 flex items-center gap-4">
+                        <ChatPartnerAvatar partnerId={partnerId} partnerName={partnerName || 'User'} photoURL={partnerPhoto} />
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-0.5">
+                            <div className="flex items-center gap-2 overflow-hidden">
+                              <span className={`truncate ${isUnread ? 'font-black text-primary' : 'font-bold text-primary/80'}`}>{partnerName || "User"}</span>
+                              <Badge variant="outline" className="text-[8px] h-4 px-1 leading-none uppercase shrink-0">
+                                {partnerRole}
+                              </Badge>
+                            </div>
+                            <span className={`text-[10px] font-semibold shrink-0 ${isUnread ? 'text-accent' : 'text-muted-foreground'}`}>
+                              {chat.lastMessageAt?.toDate?.() ? chat.lastMessageAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Now'}
+                            </span>
+                          </div>
+                          <p className={`text-sm truncate ${isUnread ? 'text-primary font-bold' : 'text-muted-foreground font-medium'}`}>
+                            {chat.lastMessageSnippet || "No messages yet"}
+                          </p>
                         </div>
-                        <span className={`text-[10px] font-semibold shrink-0 ${isUnread ? 'text-accent' : 'text-muted-foreground'}`}>
-                          {chat.lastMessageAt?.toDate?.() ? chat.lastMessageAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Now'}
-                        </span>
-                      </div>
-                      <p className={`text-sm truncate ${isUnread ? 'text-primary font-bold' : 'text-muted-foreground font-medium'}`}>
-                        {chat.lastMessageSnippet || "No messages yet"}
-                      </p>
-                    </div>
 
-                    <div className="flex flex-col items-end gap-2 shrink-0">
-                      <ChevronRight className={`h-5 w-5 ${isUnread ? 'text-accent' : 'text-muted-foreground/30'}`} />
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            );
-          })}
+                        <div className="flex flex-col items-end gap-2 shrink-0">
+                          <ChevronRight className={`h-5 w-5 ${isUnread ? 'text-accent' : 'text-muted-foreground/30'}`} />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                );
+              })}
 
-          {!isLoading && sortedChatRooms.length === 0 && (
-            <div className="text-center py-20 bg-white rounded-[2.5rem] border-2 border-dashed border-slate-100 flex flex-col items-center justify-center gap-4 mx-2">
-              <div className="p-4 bg-slate-50 rounded-full">
-                <MessageSquare className="h-10 w-10 text-slate-300" />
-              </div>
-              <div className="space-y-1">
-                <p className="text-lg font-bold text-primary">No Chats Available</p>
-                <p className="text-xs text-muted-foreground max-w-[220px] mx-auto leading-relaxed">
-                  {searchTerm 
-                    ? "No conversations match your search." 
-                    : (role === 'volunteer' ? "Accept a request to start a conversation." : "Wait for a volunteer to accept your request.")
-                  }
-                </p>
-              </div>
-            </div>
+              {sortedChatRooms.length === 0 && (
+                <div className="text-center py-20 bg-white rounded-[2.5rem] border-2 border-dashed border-slate-100 flex flex-col items-center justify-center gap-4 mx-2">
+                  <div className="p-4 bg-slate-50 rounded-full">
+                    <MessageSquare className="h-10 w-10 text-slate-300" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-lg font-bold text-primary">No Chats Available</p>
+                    <p className="text-xs text-muted-foreground max-w-[220px] mx-auto leading-relaxed">
+                      {searchTerm 
+                        ? "No conversations match your search." 
+                        : (role === 'volunteer' ? "Accept a request to start a conversation." : "Wait for a volunteer to accept your request.")
+                      }
+                    </p>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </ScrollArea>
