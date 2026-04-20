@@ -18,7 +18,8 @@ import {
   AlertCircle,
   UserPlus,
   BarChart3,
-  ChevronRight
+  ChevronRight,
+  Star
 } from 'lucide-react';
 import { 
   Sheet, 
@@ -32,7 +33,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Suspense, useMemo, useState, useEffect } from 'react';
 import { useFcm } from '@/firebase/messaging/use-fcm';
 import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, where, doc } from 'firebase/firestore';
+import { collection, query, where, doc, limit, orderBy } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 
 function DashboardNav() {
@@ -127,6 +128,8 @@ function DashboardNav() {
 function NotificationContent() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const db = useFirestore();
+  const { user } = useUser();
   const roleQuery = searchParams.get('role');
 
   const currentRole = useMemo(() => {
@@ -137,76 +140,123 @@ function NotificationContent() {
     return 'elderly';
   }, [roleQuery, pathname]);
 
-  const notificationsByRole = {
-    elderly: [
-      { 
-        id: 1, 
-        title: 'Request Accepted', 
-        message: 'A volunteer has accepted your assistance request. See status on home.', 
-        time: 'Just now', 
-        unread: true,
-        icon: CheckCircle2,
-        color: 'text-emerald-500',
-        href: '/dashboard/elderly?role=elderly'
-      },
-      { 
-        id: 2, 
-        title: 'New Message', 
-        message: 'You have a new message from your assigned volunteer.', 
-        time: '1 hour ago', 
-        unread: true,
-        icon: MessageCircle,
-        color: 'text-sky-500',
-        href: '/dashboard/chat?role=elderly'
-      },
-    ],
-    volunteer: [
-      { 
-        id: 1, 
-        title: 'New Request Available', 
-        message: 'A resident needs help with a task near your location.', 
-        time: '5 mins ago', 
-        unread: true,
-        icon: AlertCircle,
-        color: 'text-orange-500',
-        href: '/dashboard/volunteer?role=volunteer&tab=available'
-      },
-      { 
-        id: 2, 
-        title: 'New Achievement Review', 
-        message: 'An elderly resident has left a star rating for your last task.', 
-        time: 'Yesterday', 
-        unread: false,
-        icon: CheckCircle2,
-        color: 'text-emerald-500',
-        href: '/dashboard/volunteer?role=volunteer&tab=achievement'
-      },
-    ],
-    admin: [
-      { 
-        id: 1, 
-        title: 'New User Registration', 
-        message: 'A new volunteer has successfully registered and is pending review.', 
-        time: '10 mins ago', 
-        unread: true,
-        icon: UserPlus,
-        color: 'text-primary',
-        href: '/dashboard/admin/users?role=admin'
-      },
-      { 
-        id: 2, 
-        title: 'System Performance Ready', 
-        message: 'The operational analytics report for the current week is now ready.', 
-        time: 'Yesterday', 
-        unread: false,
-        icon: BarChart3,
-        color: 'text-accent',
-        href: '/dashboard/admin?role=admin&tab=analytics'
-      },
-    ]
-  };
+  // Queries for real-time notifications based on role
+  const pendingRequestsQuery = useMemoFirebase(() => 
+    query(collection(db, 'assistance_requests_pending'), orderBy('createdAt', 'desc'), limit(5)), [db]);
+  
+  const activeRequestsQuery = useMemoFirebase(() => 
+    user ? query(collection(db, 'assistance_requests_active'), where('createdByUserId', '==', user.uid), limit(5)) : null, [db, user]);
+  
+  const chatRoomsQuery = useMemoFirebase(() => 
+    user ? query(collection(db, 'chat_rooms'), where('participantUserIds', 'array-contains', user.uid)) : null, [db, user]);
 
-  const notifications = notificationsByRole[currentRole as keyof typeof notificationsByRole] || notificationsByRole.elderly;
+  const recentRatingsQuery = useMemoFirebase(() => 
+    user ? query(collection(db, 'ratings'), where('volunteerUserId', '==', user.uid), limit(5)) : null, [db, user]);
+
+  const recentUsersQuery = useMemoFirebase(() => 
+    query(collection(db, 'users'), orderBy('createdAt', 'desc'), limit(5)), [db]);
+
+  const { data: pendingReqs } = useCollection(pendingRequestsQuery);
+  const { data: activeReqs } = useCollection(activeRequestsQuery);
+  const { data: chatRooms } = useCollection(chatRoomsQuery);
+  const { data: ratings } = useCollection(recentRatingsQuery);
+  const { data: recentUsers } = useCollection(recentUsersQuery);
+
+  const notifications = useMemo(() => {
+    if (!user) return [];
+    const items: any[] = [];
+
+    if (currentRole === 'elderly') {
+      // 1. Accepted Requests
+      activeReqs?.forEach(req => {
+        items.push({
+          id: `acc-${req.id}`,
+          title: 'Request Accepted',
+          message: `${req.volunteerName || 'A volunteer'} has accepted your ${req.taskType} request.`,
+          time: 'Active Now',
+          unread: true,
+          icon: CheckCircle2,
+          color: 'text-emerald-500',
+          href: '/dashboard/elderly?role=elderly'
+        });
+      });
+      // 2. Unread Messages
+      chatRooms?.forEach(room => {
+        if (room.lastMessageSenderId && room.lastMessageSenderId !== user.uid) {
+          items.push({
+            id: `msg-${room.id}`,
+            title: 'New Message',
+            message: `New message from ${room.volunteerName || 'Volunteer'}.`,
+            time: 'Recent',
+            unread: true,
+            icon: MessageCircle,
+            color: 'text-sky-500',
+            href: `/dashboard/chat/room?requestId=${room.id}&role=elderly`
+          });
+        }
+      });
+    }
+
+    if (currentRole === 'volunteer') {
+      // 1. New Pending Requests
+      pendingReqs?.forEach(req => {
+        items.push({
+          id: `pend-${req.id}`,
+          title: 'New Request Available',
+          message: `${req.createdByName} needs help with ${req.taskType}.`,
+          time: 'Available',
+          unread: true,
+          icon: AlertCircle,
+          color: 'text-orange-500',
+          href: '/dashboard/volunteer?role=volunteer&tab=available'
+        });
+      });
+      // 2. New Ratings
+      ratings?.forEach(r => {
+        items.push({
+          id: `rate-${r.id}`,
+          title: 'New Achievement Review',
+          message: `A resident gave you a ${r.ratingScore}/10 score.`,
+          time: 'Achievement',
+          unread: false,
+          icon: Star,
+          color: 'text-yellow-500',
+          href: '/dashboard/volunteer?role=volunteer&tab=achievement'
+        });
+      });
+    }
+
+    if (currentRole === 'admin') {
+      // 1. New Registered Users
+      recentUsers?.filter(u => u.id !== user.uid).forEach(u => {
+        items.push({
+          id: `user-${u.id}`,
+          title: 'New User Registered',
+          message: `${u.name} joined as a ${u.role}.`,
+          time: 'Directory',
+          unread: true,
+          icon: UserPlus,
+          color: 'text-primary',
+          href: '/dashboard/admin/users?role=admin'
+        });
+      });
+      // 2. System Alerts
+      if (pendingReqs && pendingReqs.length > 0) {
+        items.push({
+          id: 'sys-load',
+          title: 'System Activity',
+          message: `There are ${pendingReqs.length} pending requests awaiting help.`,
+          time: 'Overview',
+          unread: false,
+          icon: BarChart3,
+          color: 'text-accent',
+          href: '/dashboard/admin?role=admin&tab=overview'
+        });
+      }
+    }
+
+    return items;
+  }, [currentRole, activeReqs, chatRooms, pendingReqs, ratings, recentUsers, user]);
 
   return (
     <div className="divide-y divide-slate-100">
@@ -250,6 +300,7 @@ function NotificationContent() {
         <div className="flex flex-col items-center justify-center py-24 px-6 text-center opacity-30">
           <Bell className="h-16 w-16 mb-6" />
           <p className="text-xl font-black text-primary">No notifications yet</p>
+          <p className="text-xs font-bold uppercase mt-2 tracking-widest">Everything is up to date</p>
         </div>
       )}
     </div>
@@ -258,7 +309,7 @@ function NotificationContent() {
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
-  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(true);
+  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
   const db = useFirestore();
   const { user } = useUser();
   
