@@ -286,40 +286,56 @@ export default function VolunteerDashboard() {
 
         <TabsContent value="completed" className="space-y-3">
           <h2 className="text-sm font-black text-primary uppercase">Mission History</h2>
-          {isCompletedLoading ? <div className="py-10 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" /></div> : sortedCompletedTasks?.map((task) => (
-            <Card key={task.id} className="border-none shadow-sm rounded-2xl bg-white active:scale-[0.98] transition-transform overflow-hidden">
-              <CardContent className="p-4 flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-xl bg-slate-50 text-slate-400">{getTypeIcon(task.taskType)}</div>
-                    <div>
-                      <div className="font-bold text-sm text-primary">{task.taskType}</div>
-                      <div className="text-[9px] text-muted-foreground font-bold uppercase">Completed for {task.createdByName}</div>
+          {isCompletedLoading ? <div className="py-10 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" /></div> : sortedCompletedTasks?.map((task) => {
+            const rating = ratingsData?.find(r => r.requestId === task.id);
+            return (
+              <Card key={task.id} className="border-none shadow-sm rounded-2xl bg-white active:scale-[0.98] transition-transform overflow-hidden">
+                <CardContent className="p-4 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-xl bg-slate-50 text-slate-400">{getTypeIcon(task.taskType)}</div>
+                      <div>
+                        <div className="font-bold text-sm text-primary">{task.taskType}</div>
+                        <div className="text-[9px] text-muted-foreground font-bold uppercase">Completed for {task.createdByName}</div>
+                      </div>
                     </div>
+                    <Badge variant="outline" className="text-[8px] rounded-lg uppercase bg-emerald-50 text-emerald-600 border-emerald-100">
+                      Completed
+                    </Badge>
                   </div>
-                  <Badge variant="outline" className="text-[8px] rounded-lg uppercase bg-emerald-50 text-emerald-600 border-emerald-100">
-                    Completed
-                  </Badge>
-                </div>
 
-                <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 italic">
-                  "{task.description}"
-                </p>
+                  <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 italic">
+                    "{task.description}"
+                  </p>
 
-                <div className="flex items-center justify-between pt-1 border-t border-slate-50 mt-1">
-                  <div className="flex flex-col gap-1 min-w-0 flex-1">
-                    <div className="flex items-center gap-1 text-[9px] text-muted-foreground font-bold truncate">
-                      <MapPin className="h-3 w-3" /> {task.location}
+                  <div className="flex items-center justify-between pt-1 border-t border-slate-50 mt-1">
+                    <div className="flex flex-col gap-1 min-w-0 flex-1">
+                      <div className="flex items-center gap-1 text-[9px] text-muted-foreground font-bold truncate">
+                        <MapPin className="h-3 w-3" /> {task.location}
+                      </div>
+                      <div className="flex items-center gap-1 text-[8px] text-slate-400 font-bold uppercase tracking-tight">
+                        <Calendar className="h-3 w-3" /> Finished: {task.completedAt ? new Date(task.completedAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recently'}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1 text-[8px] text-slate-400 font-bold uppercase tracking-tight">
-                      <Calendar className="h-3 w-3" /> Finished: {task.completedAt ? new Date(task.completedAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recently'}
-                    </div>
+                    <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0 ml-4" />
                   </div>
-                  <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0 ml-4" />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+
+                  {rating && (
+                    <div className="mt-1 pt-2 border-t border-slate-50 bg-accent/5 -mx-4 -mb-4 px-4 pb-4">
+                      <div className="flex items-center gap-1.5 text-accent font-black text-[10px] uppercase">
+                        <Star className="h-3.5 w-3.5 fill-accent" /> Achievement: {rating.ratingScore}/10
+                      </div>
+                      {rating.feedback && (
+                        <p className="text-[10px] text-muted-foreground italic mt-1 leading-relaxed">
+                          "{rating.feedback}"
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
           {!isCompletedLoading && sortedCompletedTasks.length === 0 && (
             <div className="py-20 text-center bg-white rounded-3xl border-2 border-dashed border-slate-100 mx-1">
               <div className="p-4 bg-slate-50 rounded-full w-fit mx-auto mb-4">
