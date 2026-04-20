@@ -1,3 +1,4 @@
+
 import type {Metadata, Viewport} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
@@ -8,7 +9,7 @@ export const metadata: Metadata = {
   description: 'Connecting elderly residents with student volunteers at Politeknik Kuching Sarawak.',
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'default',
+    statusBarStyle: 'black-translucent',
     title: 'ElderCare',
   },
   formatDetection: {
@@ -21,7 +22,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: '#3c415c', // Matches --primary
+  viewportFit: 'cover',
+  themeColor: '#3c415c',
 };
 
 export default function RootLayout({
@@ -39,7 +41,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body 
-        className="font-body antialiased bg-background text-foreground selection:bg-accent/30 overflow-x-hidden min-h-[100dvh]"
+        className="font-body antialiased bg-background text-foreground selection:bg-accent/30 overflow-hidden min-h-[100dvh]"
         suppressHydrationWarning
       >
         <FirebaseClientProvider>

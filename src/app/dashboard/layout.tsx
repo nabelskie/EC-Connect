@@ -38,7 +38,6 @@ import { cn } from '@/lib/utils';
 
 /**
  * Shared Notification Logic Hook
- * Centralizes the calculation for both the dot and the list
  */
 function useNotificationData() {
   const pathname = usePathname();
@@ -229,7 +228,7 @@ function DashboardNav() {
   const roleNavItems = navItems[currentRole as keyof typeof navItems] || navItems.elderly;
 
   return (
-    <nav className="h-24 bg-white border-t flex items-center justify-around px-2 fixed bottom-0 left-0 right-0 z-50 safe-area-bottom shadow-[0_-8px_30px_rgba(0,0,0,0.08)]">
+    <nav className="h-24 bg-white border-t flex items-center justify-around px-2 fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-50 safe-area-bottom shadow-[0_-8px_30px_rgba(0,0,0,0.08)]">
       {roleNavItems.map((item) => {
         const Icon = item.icon;
         const itemPath = item.href.split('?')[0];
@@ -315,7 +314,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const db = useFirestore();
   const { user } = useUser();
   
-  // Initialize Cloud Messaging
   useFcm();
 
   useEffect(() => {
@@ -330,10 +328,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { data: profile } = useDoc(userRef);
   const { notifications } = useNotificationData();
 
-  // Determine if the indicator dot should be shown
   const showIndicatorDot = useMemo(() => {
     if (!mounted || isNotificationsRead || notifications.length === 0) return false;
-    // Show dot if any notification is "unread"
     return notifications.some(n => n.unread);
   }, [mounted, isNotificationsRead, notifications]);
 
@@ -341,61 +337,62 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const handleOpenNotifications = (open: boolean) => {
     if (open) {
-      // Mark as read locally for this session
       setIsNotificationsRead(true);
     }
   };
 
   return (
-    <div className={cn("flex flex-col h-screen-dvh bg-background overflow-hidden", isLargeText && "large-font-mode")}>
-      <header className="h-20 bg-white border-b flex items-center justify-between px-6 sticky top-0 z-30 shadow-md shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-accent/10">
-            <Heart className="h-7 w-7 text-accent fill-accent" />
+    <div className={cn("flex flex-col h-screen-dvh bg-background overflow-hidden items-center", isLargeText && "large-font-mode")}>
+      <div className="w-full max-w-md h-full flex flex-col bg-white shadow-2xl relative">
+        <header className="h-20 bg-white border-b flex items-center justify-between px-6 sticky top-0 z-30 shadow-sm shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-accent/10">
+              <Heart className="h-7 w-7 text-accent fill-accent" />
+            </div>
+            <span className="font-headline font-black text-2xl text-primary tracking-tight">ElderCare</span>
           </div>
-          <span className="font-headline font-black text-2xl text-primary tracking-tight">ElderCare</span>
-        </div>
-        
-        <div className="flex items-center gap-4">
-          {mounted ? (
-            <Sheet onOpenChange={handleOpenNotifications}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-2xl relative text-muted-foreground h-12 w-12 bg-slate-50 hover:bg-slate-100 transition-colors">
-                  <Bell className="h-6 w-6" />
-                  {showIndicatorDot && (
-                    <span className="absolute top-2.5 right-2.5 w-3.5 h-3.5 bg-destructive rounded-full border-2 border-white shadow-sm animate-pulse" />
-                  )}
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-[85vw] sm:w-[450px] p-0 rounded-l-[3rem] border-none shadow-2xl">
-                <SheetHeader className="p-8 border-b bg-primary text-white rounded-tl-[3rem]">
-                  <SheetTitle className="text-2xl font-black flex items-center gap-3 text-white">
-                    <Bell className="h-7 w-7" />
-                    Notifications
-                  </SheetTitle>
-                </SheetHeader>
-                <ScrollArea className="h-[calc(100vh-100px)] bg-slate-50/50">
-                  <Suspense fallback={<div className="p-16 text-center text-base font-bold text-muted-foreground animate-pulse">Checking alerts...</div>}>
-                    <NotificationContent notifications={notifications} />
-                  </Suspense>
-                </ScrollArea>
-              </SheetContent>
-            </Sheet>
-          ) : (
-            <div className="h-12 w-12 rounded-2xl bg-slate-100 animate-pulse" />
-          )}
-        </div>
-      </header>
+          
+          <div className="flex items-center gap-4">
+            {mounted ? (
+              <Sheet onOpenChange={handleOpenNotifications}>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon" className="rounded-2xl relative text-muted-foreground h-12 w-12 bg-slate-50 hover:bg-slate-100 transition-colors">
+                    <Bell className="h-6 w-6" />
+                    {showIndicatorDot && (
+                      <span className="absolute top-2.5 right-2.5 w-3.5 h-3.5 bg-destructive rounded-full border-2 border-white shadow-sm animate-pulse" />
+                    )}
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-[85vw] sm:w-[400px] p-0 rounded-l-[3rem] border-none shadow-2xl">
+                  <SheetHeader className="p-8 border-b bg-primary text-white rounded-tl-[3rem]">
+                    <SheetTitle className="text-2xl font-black flex items-center gap-3 text-white">
+                      <Bell className="h-7 w-7" />
+                      Notifications
+                    </SheetTitle>
+                  </SheetHeader>
+                  <ScrollArea className="h-[calc(100vh-100px)] bg-slate-50/50">
+                    <Suspense fallback={<div className="p-16 text-center text-base font-bold text-muted-foreground animate-pulse">Checking alerts...</div>}>
+                      <NotificationContent notifications={notifications} />
+                    </Suspense>
+                  </ScrollArea>
+                </SheetContent>
+              </Sheet>
+            ) : (
+              <div className="h-12 w-12 rounded-2xl bg-slate-100 animate-pulse" />
+            )}
+          </div>
+        </header>
 
-      <main className="flex-1 overflow-y-auto pb-28 px-4 pt-8 max-w-md mx-auto w-full transition-all duration-200">
-        {children}
-      </main>
+        <main className="flex-1 overflow-y-auto pb-28 px-4 pt-8 w-full transition-all duration-200">
+          {children}
+        </main>
 
-      {mounted && (
-        <Suspense fallback={<div className="h-24 bg-white border-t" />}>
-          <DashboardNav />
-        </Suspense>
-      )}
+        {mounted && (
+          <Suspense fallback={<div className="h-24 bg-white border-t" />}>
+            <DashboardNav />
+          </Suspense>
+        )}
+      </div>
     </div>
   );
 }
