@@ -22,7 +22,9 @@ import {
   Clock,
   MessageSquare,
   CheckCircle2,
-  Calendar
+  Calendar,
+  Medal,
+  Award
 } from 'lucide-react';
 import { 
   DropdownMenu, 
@@ -36,6 +38,36 @@ import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@
 import { collection, query, where, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { setDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { cn } from '@/lib/utils';
+
+/**
+ * Leveling Logic: Calculates level based on total completed tasks.
+ * Growth: Level 1 (0-1 tasks), Level 2 (2 tasks), Level 3 (5 tasks), Level 4 (9 tasks)...
+ * Formula: Tasks needed grows by 'increment' every level.
+ */
+function getLevelInfo(tasksCount: number) {
+  let level = 1;
+  let tasksAtCurrentLevel = 0;
+  let tasksNeededForNextLevel = 2; // Tasks to reach level 2
+
+  while (tasksCount >= tasksNeededForNextLevel && level < 100) {
+    level++;
+    tasksAtCurrentLevel = tasksNeededForNextLevel;
+    // Increase tasks required for next level incrementally
+    const increment = Math.ceil(level / 2) + 1;
+    tasksNeededForNextLevel += increment;
+  }
+
+  const progress = tasksCount - tasksAtCurrentLevel;
+  const range = tasksNeededForNextLevel - tasksAtCurrentLevel;
+  const percentage = Math.min(100, (progress / range) * 100);
+
+  return {
+    level,
+    percentage,
+    tasksToNext: tasksNeededForNextLevel - tasksCount,
+    isMax: level >= 100
+  };
+}
 
 export default function VolunteerDashboard() {
   const { toast } = useToast();
@@ -89,6 +121,10 @@ export default function VolunteerDashboard() {
   }, [db, user]);
   const { data: ratingsData, isLoading: isRatingsLoading } = useCollection(ratingsQuery);
 
+  const levelInfo = useMemo(() => {
+    return getLevelInfo(completedTasks?.length || 0);
+  }, [completedTasks]);
+
   const availableTasks = useMemo(() => {
     if (!pendingTasks) return [];
     let filtered = filter === 'All' ? [...pendingTasks] : pendingTasks.filter(t => t.taskType === filter);
@@ -125,7 +161,6 @@ export default function VolunteerDashboard() {
     const volunteerPhotoURL = profile.photoURL || '';
     const residentId = task.createdByUserId;
 
-    // Fetch resident's latest profile to ensure we have their correct photo
     let residentName = task.createdByName || 'Resident';
     let residentPhotoURL = '';
     try {
@@ -196,9 +231,19 @@ export default function VolunteerDashboard() {
   return (
     <div className="space-y-6 animate-in fade-in duration-300 gpu-accelerated">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-headline font-black text-primary">Volunteer</h1>
-          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Politeknik Kuching Sarawak</p>
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <div className="h-12 w-12 rounded-full border-2 border-primary bg-primary/5 flex items-center justify-center font-black text-primary">
+              {levelInfo.level}
+            </div>
+            <div className="absolute -bottom-1 -right-1 h-5 w-5 bg-accent rounded-full border-2 border-white flex items-center justify-center">
+              <Star className="h-3 w-3 text-white fill-white" />
+            </div>
+          </div>
+          <div>
+            <h1 className="text-xl font-headline font-black text-primary leading-tight">Volunteer Lvl {levelInfo.level}</h1>
+            <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">Politeknik Kuching Sarawak</p>
+          </div>
         </div>
         <div className="bg-primary/5 px-3 py-1.5 rounded-full border border-primary/10 flex items-center gap-2">
           <Heart className="h-4 w-4 text-accent fill-accent" />
@@ -373,31 +418,104 @@ export default function VolunteerDashboard() {
           )}
         </TabsContent>
 
-        <TabsContent value="achievement" className="space-y-4">
-          <Card className="border-none shadow-lg rounded-[2rem] bg-primary text-white text-center p-6">
-            <Trophy className="h-8 w-8 text-yellow-400 mx-auto mb-3" />
-            <h3 className="text-xl font-black">Success Rate</h3>
-            <div className="grid grid-cols-2 gap-3 mt-4">
-              <div className="bg-white/10 rounded-2xl p-3">
-                <div className="text-2xl font-black flex items-center justify-center gap-1">{achievementStats.avg} <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" /></div>
-                <div className="text-[8px] font-bold uppercase opacity-60">Avg Score</div>
+        <TabsContent value="achievement" className="space-y-6">
+          <Card className="border-none shadow-xl rounded-[2.5rem] bg-white overflow-hidden p-8 text-center">
+            <div className="relative h-48 w-48 mx-auto mb-6">
+              {/* Circular Progress SVG */}
+              <svg className="h-full w-full" viewBox="0 0 100 100">
+                <circle
+                  className="text-slate-100 stroke-current"
+                  strokeWidth="8"
+                  fill="transparent"
+                  r="40"
+                  cx="50"
+                  cy="50"
+                />
+                <circle
+                  className="text-accent stroke-current transition-all duration-1000 ease-out"
+                  strokeWidth="8"
+                  strokeDasharray="251.2"
+                  strokeDashoffset={251.2 - (251.2 * levelInfo.percentage) / 100}
+                  strokeLinecap="round"
+                  fill="transparent"
+                  r="40"
+                  cx="50"
+                  cy="50"
+                  transform="rotate(-90 50 50)"
+                />
+              </svg>
+              {/* Center Info */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-5xl font-black text-primary leading-none">{levelInfo.level}</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Level</span>
               </div>
-              <div className="bg-white/10 rounded-2xl p-3">
-                <div className="text-2xl font-black">{achievementStats.count}</div>
-                <div className="text-[8px] font-bold uppercase opacity-60">Reviews</div>
+            </div>
+
+            <div className="space-y-2 mb-8">
+              <h3 className="text-xl font-black text-primary">Community Contributor</h3>
+              <p className="text-xs text-muted-foreground font-medium">
+                {levelInfo.isMax 
+                  ? "Maximum Level Reached! You are a legend." 
+                  : `${levelInfo.tasksToNext} more task${levelInfo.tasksToNext === 1 ? '' : 's'} to reach Level ${levelInfo.level + 1}`}
+              </p>
+              <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden mt-4">
+                <div 
+                  className="h-full bg-accent transition-all duration-1000" 
+                  style={{ width: `${levelInfo.percentage}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                <div className="text-2xl font-black flex items-center justify-center gap-1 text-primary">
+                  {achievementStats.avg} <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                </div>
+                <div className="text-[9px] font-bold uppercase opacity-60">Success Rate</div>
+              </div>
+              <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                <div className="text-2xl font-black text-primary">{completedTasks?.length || 0}</div>
+                <div className="text-[9px] font-bold uppercase opacity-60">Missions</div>
               </div>
             </div>
           </Card>
-          {ratingsData?.map((rating) => (
-            <Card key={rating.id} className="border-none shadow-sm rounded-2xl bg-white p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-black text-primary text-xs">{rating.ratingScore}/10 Stars</span>
-                <span className="text-[8px] text-muted-foreground font-bold">{new Date(rating.createdAt).toLocaleDateString()}</span>
-              </div>
-              {rating.feedback && <p className="text-xs text-slate-600 italic leading-relaxed">"{rating.feedback}"</p>}
-            </Card>
-          ))}
-          {(!ratingsData || ratingsData.length === 0) && <div className="py-10 text-center opacity-30 italic text-sm">No reviews yet</div>}
+
+          <div className="space-y-4">
+            <h3 className="text-sm font-black text-primary uppercase tracking-widest flex items-center gap-2">
+              <Trophy className="h-4 w-4 text-yellow-500" /> Milestone Rewards
+            </h3>
+            <div className="grid grid-cols-1 gap-3 pb-8">
+              {[
+                { lvl: 10, name: "Bronze Spirit", color: "bg-amber-600", desc: "Unlock Bronze Profile Border" },
+                { lvl: 20, name: "Silver Guardian", color: "bg-slate-400", desc: "Unlock Silver Profile Border" },
+                { lvl: 50, name: "Golden Hero", color: "bg-yellow-500", desc: "Unlock Golden Profile Border" },
+                { lvl: 100, name: "Community Legend", color: "bg-purple-600", desc: "Unlock Platinum Glow & Banner" }
+              ].map((m) => (
+                <Card key={m.lvl} className={cn(
+                  "border-none shadow-sm rounded-2xl p-4 flex items-center justify-between",
+                  levelInfo.level >= m.lvl ? "bg-white" : "bg-slate-100 opacity-60"
+                )}>
+                  <div className="flex items-center gap-4">
+                    <div className={cn("p-3 rounded-xl text-white shadow-lg", m.color)}>
+                      {levelInfo.level >= m.lvl ? <Medal className="h-5 w-5" /> : <Award className="h-5 w-5" />}
+                    </div>
+                    <div>
+                      <div className="font-bold text-sm text-primary">{m.name}</div>
+                      <div className="text-[10px] text-muted-foreground">{m.desc}</div>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <div className="text-[10px] font-black text-primary uppercase">Lvl {m.lvl}</div>
+                    {levelInfo.level >= m.lvl ? (
+                      <Badge className="bg-emerald-500 text-[8px] h-4 uppercase">Unlocked</Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-[8px] h-4 uppercase">Locked</Badge>
+                    )}
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

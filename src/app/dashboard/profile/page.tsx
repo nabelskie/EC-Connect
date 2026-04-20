@@ -40,13 +40,28 @@ import {
   Image as ImageIcon,
   Upload,
   Type,
-  Hash
+  Hash,
+  Star,
+  Trophy
 } from 'lucide-react';
 import { Suspense, useMemo, useState, useEffect, useRef } from 'react';
-import { useAuth, useUser, useDoc, useMemoFirebase, useFirestore, updateDocumentNonBlocking } from '@/firebase';
+import { useAuth, useUser, useDoc, useMemoFirebase, useFirestore, useCollection, updateDocumentNonBlocking } from '@/firebase';
 import { signOut, updatePassword, updateProfile } from 'firebase/auth';
-import { doc } from 'firebase/firestore';
+import { collection, doc, query, where } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
+
+/** Achievement helper same as dashboard */
+function getLevel(tasksCount: number) {
+  let level = 1;
+  let tasksNeededForNextLevel = 2;
+  while (tasksCount >= tasksNeededForNextLevel && level < 100) {
+    level++;
+    const increment = Math.ceil(level / 2) + 1;
+    tasksNeededForNextLevel += increment;
+  }
+  return level;
+}
 
 function ProfileContent() {
   const router = useRouter();
@@ -90,6 +105,27 @@ function ProfileContent() {
   }, [db, authUser]);
 
   const { data: profileData, isLoading: isProfileLoading } = useDoc(userRef);
+
+  // Completed missions for level calculation
+  const completedQuery = useMemoFirebase(() => {
+    if (!authUser || !profileData || profileData.role !== 'volunteer') return null;
+    return query(collection(db, 'assistance_requests_completed'), where('assignedVolunteerId', '==', authUser.uid));
+  }, [db, authUser, profileData]);
+  const { data: completedTasks } = useCollection(completedQuery);
+
+  const volunteerLevel = useMemo(() => {
+    return getLevel(completedTasks?.length || 0);
+  }, [completedTasks]);
+
+  // Achievement styles
+  const achievementClasses = useMemo(() => {
+    if (profileData?.role !== 'volunteer') return "";
+    if (volunteerLevel >= 100) return "ring-4 ring-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.6)] animate-pulse";
+    if (volunteerLevel >= 50) return "ring-4 ring-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.4)]";
+    if (volunteerLevel >= 20) return "ring-4 ring-slate-400";
+    if (volunteerLevel >= 10) return "ring-4 ring-amber-600";
+    return "";
+  }, [volunteerLevel, profileData?.role]);
 
   // Initialize form when profile data loads
   useEffect(() => {
@@ -180,8 +216,6 @@ function ProfileContent() {
         photoURL: editPhotoURL
       };
 
-      // Matrix Number is NOT updated here because it is read-only for volunteers
-
       updateDocumentNonBlocking(userRef, updates);
 
       toast({
@@ -198,43 +232,6 @@ function ProfileContent() {
       });
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  const handleChangePassword = async () => {
-    if (!authUser) return;
-    if (newPassword !== confirmPassword) {
-      toast({
-        variant: "destructive",
-        title: "Password Mismatch",
-        description: "New passwords do not match.",
-      });
-      return;
-    }
-
-    setIsChangingPassword(true);
-    try {
-      await updatePassword(authUser, newPassword);
-      toast({
-        title: "Password Changed",
-        description: "Your account security has been updated.",
-      });
-      setNewPassword('');
-      setConfirmPassword('');
-      setShowNewPassword(false);
-      setShowConfirmPassword(false);
-    } catch (error: any) {
-      let msg = "Failed to update password. You may need to re-login first.";
-      if (error.code === 'auth/requires-recent-login') {
-        msg = "For security reasons, please log out and log back in before changing your password.";
-      }
-      toast({
-        variant: "destructive",
-        title: "Change Failed",
-        description: msg,
-      });
-    } finally {
-      setIsChangingPassword(false);
     }
   };
 
@@ -274,10 +271,22 @@ function ProfileContent() {
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">
       <div className="flex flex-col items-center gap-4 py-6">
         <div className="relative">
-          <Avatar className="h-24 w-24 border-4 border-white shadow-xl">
+          {/* Achievement Banner for Level 100 */}
+          {profileData.role === 'volunteer' && volunteerLevel >= 100 && (
+            <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-purple-600 text-white text-[8px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-xl whitespace-nowrap z-20 ring-2 ring-white">
+              <Trophy className="h-2 w-2 inline mr-1" /> Community Hero
+            </div>
+          )}
+          <Avatar className={cn("h-28 w-28 border-4 border-white shadow-2xl transition-all duration-500", achievementClasses)}>
             <AvatarImage src={avatarSrc} className="object-cover" />
             <AvatarFallback>{profileData.name?.[0] || 'U'}</AvatarFallback>
           </Avatar>
+          {profileData.role === 'volunteer' && (
+            <div className="absolute -bottom-2 -right-2 bg-primary text-white h-10 w-10 rounded-full border-4 border-white flex flex-col items-center justify-center shadow-lg z-10">
+              <span className="text-[10px] font-black leading-none">{volunteerLevel}</span>
+              <span className="text-[6px] font-bold uppercase tracking-tighter">Level</span>
+            </div>
+          )}
         </div>
         <div className="text-center">
           <h1 className="text-2xl font-headline font-bold text-primary">{profileData.name}</h1>
@@ -289,6 +298,27 @@ function ProfileContent() {
       </div>
 
       <div className="space-y-4">
+        {profileData.role === 'volunteer' && (
+          <Card className="border-none shadow-sm rounded-[2rem] bg-accent/5 border border-accent/10">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-accent/10 text-accent">
+                  <Star className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest leading-none mb-1">Impact Level</p>
+                  <p className="text-lg font-black text-primary leading-none">Lvl {volunteerLevel}</p>
+                </div>
+              </div>
+              <Link href="/dashboard/volunteer?role=volunteer&tab=achievement">
+                <Button variant="ghost" size="sm" className="text-accent font-black text-[10px] uppercase">
+                  View Awards
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        )}
+
         <Card className="border-none shadow-sm rounded-[2rem] overflow-hidden">
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
