@@ -8,12 +8,13 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Send, ArrowLeft, Loader2, Mic, Square, Volume2, Play, Trash2, Star } from 'lucide-react';
+import { Send, ArrowLeft, Loader2, Mic, Square, Volume2, Play, Trash2, Star, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useFirestore, useUser, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, serverTimestamp, orderBy, where } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 /** Achievement helper */
 function getLevel(tasksCount: number) {
@@ -42,6 +43,7 @@ function ChatContent() {
   const role = searchParams.get('role') || 'elderly';
   const db = useFirestore();
   const { user } = useUser();
+  const { toast } = useToast();
   const [mounted, setMounted] = useState(false);
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -133,24 +135,56 @@ function ChatContent() {
 
   const startRecording = async () => {
     try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        toast({
+          variant: "destructive",
+          title: "Not Supported",
+          description: "Your device does not support voice recording in this browser."
+        });
+        return;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mimeType = MediaRecorder.isTypeSupported('audio/mp4') 
-        ? 'audio/mp4' : (MediaRecorder.isTypeSupported('audio/mpeg') ? 'audio/mpeg' : 'audio/webm');
+      
+      // Determine supported mime type for mobile WebViews
+      let mimeType = 'audio/webm';
+      if (MediaRecorder.isTypeSupported('audio/mp4')) {
+        mimeType = 'audio/mp4';
+      } else if (MediaRecorder.isTypeSupported('audio/mpeg')) {
+        mimeType = 'audio/mpeg';
+      } else if (MediaRecorder.isTypeSupported('audio/aac')) {
+        mimeType = 'audio/aac';
+      }
         
       const mediaRecorder = new MediaRecorder(stream, { mimeType });
       mediaRecorderRef.current = mediaRecorder;
       const chunks: BlobPart[] = [];
-      mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+      
+      mediaRecorder.ondataavailable = (e) => { 
+        if (e.data.size > 0) chunks.push(e.data); 
+      };
+      
       mediaRecorder.onstop = () => {
         const blob = new Blob(chunks, { type: mimeType });
         setAudioBlob(blob);
         stream.getTracks().forEach(track => track.stop());
       };
+
       mediaRecorder.start();
       setIsRecording(true);
       setRecordingTime(0);
       timerRef.current = setInterval(() => setRecordingTime(prev => prev + 1), 1000);
-    } catch (err) { console.error("Recording error:", err); }
+    } catch (err: any) { 
+      console.error("Recording error:", err);
+      let message = "Could not access microphone. Please check app permissions.";
+      if (err.name === 'NotAllowedError') message = "Microphone access was denied. Please enable it in your phone settings.";
+      
+      toast({
+        variant: "destructive",
+        title: "Microphone Error",
+        description: message
+      });
+    }
   };
 
   const stopRecording = () => {
@@ -260,7 +294,7 @@ function ChatContent() {
                         {msg.audioUrl ? (
                           <div className="flex items-center gap-2 min-w-[200px]">
                             <Mic className={cn("h-4 w-4 shrink-0", isMe ? "text-white/70" : "text-primary/50")} />
-                            <audio controls className="h-8 w-full" src={msg.audioUrl} preload="metadata" />
+                            <audio controls className="h-10 w-full" src={msg.audioUrl} preload="metadata" />
                           </div>
                         ) : (
                           <div className="flex items-start gap-2">
@@ -294,7 +328,7 @@ function ChatContent() {
                 <div className="flex items-center gap-2 text-accent font-black uppercase text-[10px]"><Play className="h-4 w-4" /> Ready</div>
                 <div className="flex gap-2">
                   <Button variant="ghost" size="sm" onClick={() => setAudioBlob(null)} className="h-8 px-2"><Trash2 className="h-4 w-4" /></Button>
-                  <Button size="sm" onClick={handleSendVoiceNote} className="bg-accent h-8 px-4 rounded-lg text-[10px] font-bold">Send</Button>
+                  <Button size="sm" onClick={handleSendVoiceNote} className="bg-accent h-8 px-4 rounded-lg text-[10px] font-bold text-white">Send</Button>
                 </div>
               </div>
             )}

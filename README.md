@@ -33,7 +33,27 @@ You need the following installed on your physical computer:
 
 ---
 
-## 🤖 Step 3: Generate Android APK
+## 🎙️ Step 3: Enabling Voice Chat (Permissions)
+
+For the **Voice Message** feature to work, you MUST manually add microphone permissions to your native projects.
+
+### For Android:
+1. Open `android/app/src/main/AndroidManifest.xml`.
+2. Add these lines inside the `<manifest>` tag but outside `<application>`:
+   ```xml
+   <uses-permission android:name="android.permission.RECORD_AUDIO" />
+   <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+   ```
+
+### For iOS:
+1. Open your project in Xcode.
+2. Go to the **Info** tab of your App Target.
+3. Add a new key: `Privacy - Microphone Usage Description`.
+4. Set the value to: `This app needs access to your microphone to record and send voice messages to community members.`
+
+---
+
+## 🤖 Step 4: Generate Android APK
 
 1.  **Open in Android Studio**:
     ```bash
@@ -47,7 +67,7 @@ You need the following installed on your physical computer:
 
 ---
 
-## 🍎 Step 4: Generate iOS App (Mac Only)
+## 🍎 Step 5: Generate iOS App (Mac Only)
 
 1.  **Open in Xcode**:
     ```bash
