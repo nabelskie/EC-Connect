@@ -8,12 +8,33 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/componen
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, ArrowLeft, Loader2, Mic, Square, Volume2, Play, Trash2 } from 'lucide-react';
+import { Send, ArrowLeft, Loader2, Mic, Square, Volume2, Play, Trash2, Star } from 'lucide-react';
 import Link from 'next/link';
 import { useFirestore, useUser, useDoc, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, collection, query, serverTimestamp, orderBy } from 'firebase/firestore';
+import { doc, collection, query, serverTimestamp, orderBy, where } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { cn } from '@/lib/utils';
+
+/** Achievement helper */
+function getLevel(tasksCount: number) {
+  let level = 1;
+  let tasksNeededForNextLevel = 2;
+  while (tasksCount >= tasksNeededForNextLevel && level < 100) {
+    level++;
+    const increment = Math.ceil(level / 2) + 1;
+    tasksNeededForNextLevel += increment;
+  }
+  return level;
+}
+
+function getAchievementClasses(level: number, role?: string) {
+  if (role !== 'volunteer') return "";
+  if (level >= 100) return "ring-2 ring-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.4)]";
+  if (level >= 50) return "ring-2 ring-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.3)]";
+  if (level >= 20) return "ring-2 ring-slate-400 shadow-[0_0_5px_rgba(148,163,184,0.2)]";
+  if (level >= 10) return "ring-2 ring-amber-600 shadow-[0_0_5px_rgba(217,119,6,0.1)]";
+  return "ring-2 ring-slate-100";
+}
 
 function ChatContent() {
   const searchParams = useSearchParams();
@@ -63,8 +84,16 @@ function ChatContent() {
 
   const { data: partnerProfile } = useDoc(partnerUserRef);
 
-  // Optimized query: Fetch all messages for this room without restrictive participant filters
-  // which can fail if fields are missing or indexes aren't yet populated.
+  // Achievement check for partner (especially if they are a volunteer)
+  const completedQuery = useMemoFirebase(() => {
+    if (!partnerId || partnerProfile?.role !== 'volunteer') return null;
+    return query(collection(db, 'assistance_requests_completed'), where('assignedVolunteerId', '==', partnerId));
+  }, [db, partnerId, partnerProfile?.role]);
+  const { data: partnerCompletedTasks } = useCollection(completedQuery);
+
+  const partnerLevel = useMemo(() => getLevel(partnerCompletedTasks?.length || 0), [partnerCompletedTasks]);
+  const partnerBorder = useMemo(() => getAchievementClasses(partnerLevel, partnerProfile?.role), [partnerLevel, partnerProfile?.role]);
+
   const messagesQuery = useMemoFirebase(() => {
     if (!requestId || !db) return null;
     return collection(db, 'chat_rooms', requestId, 'messages');
@@ -81,7 +110,6 @@ function ChatContent() {
     });
   }, [messages]);
 
-  // Faster, GPU-friendly scroll to bottom
   useEffect(() => {
     if (sortedMessages.length > 0) {
       const frame = requestAnimationFrame(() => {
@@ -199,13 +227,18 @@ function ChatContent() {
             <Link href={`/dashboard/chat?role=${role}`} className="p-2 -ml-2 hover:bg-white/10 rounded-full active:scale-90 transition-transform">
               <ArrowLeft className="h-8 w-8" />
             </Link>
-            <Avatar className="h-10 w-10 border border-white/20">
+            <Avatar className={cn("h-10 w-10 transition-shadow", partnerBorder)}>
               <AvatarImage src={chatPartner.image} className="object-cover" />
               <AvatarFallback>{chatPartner.name?.[0] || 'U'}</AvatarFallback>
             </Avatar>
             <div>
-              <CardTitle className="text-lg font-headline font-black leading-none mb-1">{chatPartner.name}</CardTitle>
-              <div className="text-[10px] text-white/70 flex items-center gap-1.5 font-bold uppercase tracking-wider">
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-lg font-headline font-black leading-none">{chatPartner.name}</CardTitle>
+                {partnerProfile?.role === 'volunteer' && partnerLevel > 1 && (
+                  <Badge className="h-4 px-1 text-[8px] bg-white text-primary font-black">Lvl {partnerLevel}</Badge>
+                )}
+              </div>
+              <div className="text-[10px] text-white/70 flex items-center gap-1.5 font-bold uppercase tracking-wider mt-1">
                 <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></div> {chatPartner.roleName}
               </div>
             </div>

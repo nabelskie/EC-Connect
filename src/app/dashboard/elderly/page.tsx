@@ -40,9 +40,76 @@ import {
   Star
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { cn } from '@/lib/utils';
+
+/** Achievement helper */
+function getLevel(tasksCount: number) {
+  let level = 1;
+  let tasksNeededForNextLevel = 2;
+  while (tasksCount >= tasksNeededForNextLevel && level < 100) {
+    level++;
+    const increment = Math.ceil(level / 2) + 1;
+    tasksNeededForNextLevel += increment;
+  }
+  return level;
+}
+
+function getAchievementClasses(level: number, role?: string) {
+  if (role !== 'volunteer') return "";
+  if (level >= 100) return "ring-4 ring-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.4)]";
+  if (level >= 50) return "ring-4 ring-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.3)]";
+  if (level >= 20) return "ring-4 ring-slate-400 shadow-[0_0_8px_rgba(148,163,184,0.2)]";
+  if (level >= 10) return "ring-4 ring-amber-600 shadow-[0_0_5px_rgba(217,119,6,0.1)]";
+  return "ring-2 ring-slate-100";
+}
+
+/** Volunteer Profile Mini-Card for the detail sheet */
+function AssignedVolunteerInfo({ volunteerId, volunteerName }: { volunteerId: string; volunteerName: string }) {
+  const db = useFirestore();
+  const vRef = useMemoFirebase(() => volunteerId ? doc(db, 'users', volunteerId) : null, [db, volunteerId]);
+  const { data: vProfile } = useDoc(vRef);
+  
+  const completedQuery = useMemoFirebase(() => {
+    if (!volunteerId) return null;
+    return query(collection(db, 'assistance_requests_completed'), where('assignedVolunteerId', '==', volunteerId));
+  }, [db, volunteerId]);
+  
+  const { data: completedTasks } = useCollection(completedQuery);
+  
+  const level = useMemo(() => getLevel(completedTasks?.length || 0), [completedTasks]);
+  const borderClass = useMemo(() => getAchievementClasses(level, 'volunteer'), [level]);
+
+  return (
+    <div className="flex items-start gap-5">
+      <div className="relative">
+        <Avatar className={cn("h-12 w-12 border-2 border-white shadow-md", borderClass)}>
+          <AvatarImage src={vProfile?.photoURL || `https://picsum.photos/seed/${volunteerId}/100/100`} />
+          <AvatarFallback>{volunteerName[0]}</AvatarFallback>
+        </Avatar>
+        {level > 1 && (
+          <div className="absolute -bottom-1 -right-1 h-5 w-5 bg-primary text-white text-[8px] font-black rounded-full border-2 border-white flex items-center justify-center shadow-sm">
+            {level}
+          </div>
+        )}
+      </div>
+      <div>
+        <Label className="text-xs text-muted-foreground uppercase font-black tracking-widest">Volunteer Assigned</Label>
+        <div className="flex items-center gap-2 mt-1">
+          <p className="text-xl text-emerald-600 font-black">{volunteerName}</p>
+          {level >= 10 && (
+            <Badge className="bg-amber-600 text-[8px] font-bold h-4 px-1">
+              {level >= 100 ? 'Legend' : level >= 50 ? 'Hero' : level >= 20 ? 'Guardian' : 'Spirit'}
+            </Badge>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function ElderlyDashboard() {
   const { toast } = useToast();
@@ -192,7 +259,6 @@ export default function ElderlyDashboard() {
     setDocumentNonBlocking(completedRef, completedData, { merge: true });
     deleteDocumentNonBlocking(activeRef);
     
-    // Prepare for rating
     setRatingRequest(request);
     setSelectedRequest(null);
     toast({ title: "Task Completed", description: "Please take a moment to rate the volunteer." });
@@ -493,14 +559,11 @@ export default function ElderlyDashboard() {
                     <p className={`text-xl font-black mt-1 ${selectedRequest.urgencyLevel === 'High' ? 'text-destructive' : 'text-primary'}`}>{selectedRequest.urgencyLevel}</p>
                   </div>
                 </div>
-                {selectedRequest.volunteerName && (
-                  <div className="flex items-start gap-5">
-                    <div className="p-3 rounded-xl bg-emerald-50 text-emerald-500"><User className="h-6 w-6" /></div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground uppercase font-black tracking-widest">Volunteer Assigned</Label>
-                      <p className="text-xl text-emerald-600 font-black mt-1">{selectedRequest.volunteerName}</p>
-                    </div>
-                  </div>
+                {selectedRequest.assignedVolunteerId && (
+                  <AssignedVolunteerInfo 
+                    volunteerId={selectedRequest.assignedVolunteerId} 
+                    volunteerName={selectedRequest.volunteerName} 
+                  />
                 )}
               </div>
               <div className="flex flex-col gap-4 mt-10">

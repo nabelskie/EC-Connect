@@ -4,7 +4,7 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, ChevronRight, ArrowLeft, MessageSquare, Loader2 } from 'lucide-react';
+import { Search, ChevronRight, ArrowLeft, MessageSquare, Loader2, Star } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
@@ -12,25 +12,62 @@ import { useSearchParams } from 'next/navigation';
 import { Suspense, useMemo, useState, useEffect } from 'react';
 import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, doc } from 'firebase/firestore';
+import { cn } from '@/lib/utils';
+
+/** Achievement helper for shared display */
+function getLevel(tasksCount: number) {
+  let level = 1;
+  let tasksNeededForNextLevel = 2;
+  while (tasksCount >= tasksNeededForNextLevel && level < 100) {
+    level++;
+    const increment = Math.ceil(level / 2) + 1;
+    tasksNeededForNextLevel += increment;
+  }
+  return level;
+}
+
+function getAchievementClasses(level: number, role?: string) {
+  if (role !== 'volunteer') return "ring-2 ring-slate-100";
+  if (level >= 100) return "ring-2 ring-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.4)]";
+  if (level >= 50) return "ring-2 ring-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.3)]";
+  if (level >= 20) return "ring-2 ring-slate-400 shadow-[0_0_5px_rgba(148,163,184,0.2)]";
+  if (level >= 10) return "ring-2 ring-amber-600 shadow-[0_0_5px_rgba(217,119,6,0.1)]";
+  return "ring-2 ring-slate-100";
+}
 
 /**
  * Optimized Avatar component that fetches the LATEST profile information.
- * This ensures updates to profile pictures are reflected in the chat list.
+ * This ensures updates to profile pictures and achievement levels are reflected.
  */
 function ChatPartnerAvatar({ partnerId, partnerName, photoURL }: { partnerId: string; partnerName: string; photoURL?: string }) {
   const db = useFirestore();
   const partnerRef = useMemoFirebase(() => partnerId ? doc(db, 'users', partnerId) : null, [db, partnerId]);
   const { data: partnerProfile } = useDoc(partnerRef);
   
-  // Use the live profile photo if available, fallback to the snapshot photoURL, then a placeholder.
+  // Fetch completed tasks to show achievement border even for non-volunteer viewers
+  const completedQuery = useMemoFirebase(() => {
+    if (!partnerId || partnerProfile?.role !== 'volunteer') return null;
+    return query(collection(db, 'assistance_requests_completed'), where('assignedVolunteerId', '==', partnerId));
+  }, [db, partnerId, partnerProfile?.role]);
+  
+  const { data: completedTasks } = useCollection(completedQuery);
+  
+  const partnerLevel = useMemo(() => getLevel(completedTasks?.length || 0), [completedTasks]);
+  const borderClass = useMemo(() => getAchievementClasses(partnerLevel, partnerProfile?.role), [partnerLevel, partnerProfile?.role]);
+
   const finalPhoto = partnerProfile?.photoURL || photoURL || `https://picsum.photos/seed/${partnerId}/100/100`;
 
   return (
     <div className="relative">
-      <Avatar className="h-14 w-14 border-2 border-slate-100 transition-transform active:scale-95">
+      <Avatar className={cn("h-14 w-14 transition-transform active:scale-95", borderClass)}>
         <AvatarImage src={finalPhoto} className="object-cover" />
         <AvatarFallback>{partnerName?.[0] || 'U'}</AvatarFallback>
       </Avatar>
+      {partnerProfile?.role === 'volunteer' && partnerLevel > 1 && (
+        <div className="absolute -bottom-1 -right-1 h-5 w-5 bg-primary text-white text-[8px] font-black rounded-full border-2 border-white flex items-center justify-center shadow-sm">
+          {partnerLevel}
+        </div>
+      )}
     </div>
   );
 }

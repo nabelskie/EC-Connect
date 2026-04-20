@@ -29,13 +29,140 @@ import {
   MapPin,
   UserCircle,
   Hash,
-  Calendar
+  Calendar,
+  Star
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, doc, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
+
+/** Achievement helper */
+function getLevel(tasksCount: number) {
+  let level = 1;
+  let tasksNeededForNextLevel = 2;
+  while (tasksCount >= tasksNeededForNextLevel && level < 100) {
+    level++;
+    const increment = Math.ceil(level / 2) + 1;
+    tasksNeededForNextLevel += increment;
+  }
+  return level;
+}
+
+function getAchievementClasses(level: number, role?: string) {
+  if (role !== 'volunteer') return "";
+  if (level >= 100) return "ring-4 ring-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.4)]";
+  if (level >= 50) return "ring-4 ring-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.3)]";
+  if (level >= 20) return "ring-4 ring-slate-400 shadow-[0_0_8px_rgba(148,163,184,0.2)]";
+  if (level >= 10) return "ring-4 ring-amber-600 shadow-[0_0_5px_rgba(217,119,6,0.1)]";
+  return "ring-2 ring-slate-100";
+}
+
+/** Specific User Card to handle individual achievement border calculation */
+function UserListItem({ user, currentUser, onDelete }: { user: any; currentUser: any; onDelete: (u: any) => void }) {
+  const db = useFirestore();
+  
+  const completedQuery = useMemoFirebase(() => {
+    if (user.role !== 'volunteer') return null;
+    return query(collection(db, 'assistance_requests_completed'), where('assignedVolunteerId', '==', user.id));
+  }, [db, user.id, user.role]);
+  
+  const { data: completedTasks } = useCollection(completedQuery);
+  
+  const level = useMemo(() => getLevel(completedTasks?.length || 0), [completedTasks]);
+  const borderClass = useMemo(() => getAchievementClasses(level, user.role), [level, user.role]);
+
+  const getDisplayRole = (role: string) => {
+    if (!role) return 'User';
+    const r = role.toLowerCase();
+    if (r === 'elderly') return 'Elderly';
+    if (r === 'volunteer') return 'Volunteer';
+    if (r === 'admin') return 'Admin';
+    return role.charAt(0).toUpperCase() + role.slice(1);
+  };
+
+  return (
+    <Card className="border-none shadow-sm rounded-2xl p-4 flex items-start justify-between gap-4 active:bg-slate-50 transition-colors">
+      <div className="flex items-start gap-4 flex-1 min-w-0">
+        <div className="relative">
+          <Avatar className={cn("h-12 w-12 border-2 border-white shadow-sm shrink-0", borderClass)}>
+            <AvatarImage src={user.photoURL || `https://picsum.photos/seed/${user.id}/100/100`} className="object-cover" />
+            <AvatarFallback>{user.name?.[0] || 'U'}</AvatarFallback>
+          </Avatar>
+          {user.role === 'volunteer' && level > 1 && (
+            <div className="absolute -bottom-1 -right-1 bg-primary text-white text-[8px] font-black h-5 w-5 rounded-full border-2 border-white flex items-center justify-center">
+              {level}
+            </div>
+          )}
+        </div>
+        
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-bold text-primary break-words whitespace-normal leading-tight flex-1 min-w-[120px]">{user.name}</span>
+            <Badge variant="outline" className={cn("text-[8px] h-4 px-1 leading-none uppercase shrink-0", 
+              user.role === 'admin' ? 'border-primary text-primary' : 
+              user.role === 'volunteer' ? 'border-accent text-accent' : 'border-slate-400 text-slate-500'
+            )}>
+              {getDisplayRole(user.role)}
+            </Badge>
+          </div>
+          <div className="flex flex-col gap-1 mt-2">
+            {user.age && user.age !== "N/A" && (
+              <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-bold">
+                <Calendar className="h-3 w-3 shrink-0" />
+                <span>Age: {user.age}</span>
+              </div>
+            )}
+            {user.matrixNumber && user.matrixNumber !== "N/A" && (
+              <div className="flex items-center gap-2 text-[10px] text-accent font-black">
+                <Hash className="h-3 w-3 shrink-0" />
+                <span>Matrix: {user.matrixNumber}</span>
+              </div>
+            )}
+            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+              <Mail className="h-3 w-3 shrink-0" />
+              <span className="break-all whitespace-normal">{user.email}</span>
+            </div>
+            {user.gender && (
+              <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                <UserCircle className="h-3 w-3 shrink-0" /> 
+                <span>{user.gender}</span>
+              </div>
+            )}
+            {user.phone && user.phone !== "N/A" && (
+              <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                <Phone className="h-3 w-3 shrink-0" /> 
+                <span className="break-words">{user.phone}</span>
+              </div>
+            )}
+            {user.address && user.address !== "System Console" && (
+              <div className="flex items-start gap-2 text-[10px] text-muted-foreground">
+                <MapPin className="h-3 w-3 shrink-0 mt-0.5" /> 
+                <span className="break-words whitespace-normal">{user.address}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="shrink-0">
+        {user.id !== currentUser?.uid && (
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="text-destructive hover:bg-destructive/10 rounded-xl h-9 px-2 flex items-center gap-1 transition-colors"
+            onClick={() => onDelete(user)}
+          >
+            <Trash2 className="h-4 w-4" />
+            <span className="text-[10px] font-bold uppercase hidden sm:inline">Delete</span>
+          </Button>
+        )}
+      </div>
+    </Card>
+  );
+}
 
 function AdminUsersContent() {
   const [mounted, setMounted] = useState(false);
@@ -87,10 +214,6 @@ function AdminUsersContent() {
     });
   }, [usersData, searchTerm, roleFilter]);
 
-  /**
-   * Cascading Delete Handler
-   * Deletes the user profile and all requests created by this user.
-   */
   const confirmDeleteUser = async () => {
     if (!userToDelete || isDeleting) return;
     
@@ -109,10 +232,7 @@ function AdminUsersContent() {
     const batch = writeBatch(db);
 
     try {
-      // 1. Queue user profile deletion
       batch.delete(doc(db, 'users', userId));
-
-      // 2. Find and queue deletion for all requests created by this user across all status collections
       const collectionsToClean = [
         'assistance_requests_pending',
         'assistance_requests_active',
@@ -127,7 +247,6 @@ function AdminUsersContent() {
         });
       }
 
-      // 3. Execute all deletions atomically
       await batch.commit();
       
       toast({
@@ -145,15 +264,6 @@ function AdminUsersContent() {
       setIsDeleting(false);
       setUserToDelete(null);
     }
-  };
-
-  const getDisplayRole = (role: string) => {
-    if (!role) return 'User';
-    const r = role.toLowerCase();
-    if (r === 'elderly') return 'Elderly';
-    if (r === 'volunteer') return 'Volunteer';
-    if (r === 'admin') return 'Admin';
-    return role.charAt(0).toUpperCase() + role.slice(1);
   };
 
   if (!mounted || isProfileLoading) {
@@ -207,11 +317,11 @@ function AdminUsersContent() {
               variant={roleFilter.toLowerCase() === r.toLowerCase() ? "default" : "outline"}
               size="sm"
               onClick={() => setRoleFilter(r)}
-              className={`rounded-full px-4 h-8 text-[10px] font-bold uppercase shrink-0 transition-all ${
+              className={cn("rounded-full px-4 h-8 text-[10px] font-bold uppercase shrink-0 transition-all", 
                 roleFilter.toLowerCase() === r.toLowerCase() ? 'bg-primary text-white border-primary shadow-md' : 'bg-white text-muted-foreground border-slate-200'
-              }`}
+              )}
             >
-              {getDisplayRole(r)}
+              {r === 'All' ? 'All' : r === 'elderly' ? 'Elderly' : r === 'volunteer' ? 'Volunteer' : 'Admin'}
             </Button>
           ))}
         </div>
@@ -224,76 +334,7 @@ function AdminUsersContent() {
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : filteredUsers.map((u) => (
-            <Card key={u.id} className="border-none shadow-sm rounded-2xl p-4 flex items-start justify-between gap-4 active:bg-slate-50 transition-colors">
-              <div className="flex items-start gap-4 flex-1 min-w-0">
-                <Avatar className="h-12 w-12 border-2 border-slate-50 shrink-0">
-                  <AvatarImage src={u.photoURL || `https://picsum.photos/seed/${u.id}/100/100`} className="object-cover" />
-                  <AvatarFallback>{u.name?.[0] || 'U'}</AvatarFallback>
-                </Avatar>
-                
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-bold text-primary break-words whitespace-normal leading-tight flex-1 min-w-[120px]">{u.name}</span>
-                    <Badge variant="outline" className={`text-[8px] h-4 px-1 leading-none uppercase shrink-0 ${
-                      u.role === 'admin' ? 'border-primary text-primary' : 
-                      u.role === 'volunteer' ? 'border-accent text-accent' : 'border-slate-400 text-slate-500'
-                    }`}>
-                      {getDisplayRole(u.role)}
-                    </Badge>
-                  </div>
-                  <div className="flex flex-col gap-1 mt-2">
-                    {u.age && u.age !== "N/A" && (
-                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-bold">
-                        <Calendar className="h-3 w-3 shrink-0" />
-                        <span>Age: {u.age}</span>
-                      </div>
-                    )}
-                    {u.matrixNumber && u.matrixNumber !== "N/A" && (
-                      <div className="flex items-center gap-2 text-[10px] text-accent font-black">
-                        <Hash className="h-3 w-3 shrink-0" />
-                        <span>Matrix: {u.matrixNumber}</span>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                      <Mail className="h-3 w-3 shrink-0" />
-                      <span className="break-all whitespace-normal">{u.email}</span>
-                    </div>
-                    {u.gender && (
-                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                        <UserCircle className="h-3 w-3 shrink-0" /> 
-                        <span>{u.gender}</span>
-                      </div>
-                    )}
-                    {u.phone && u.phone !== "N/A" && (
-                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                        <Phone className="h-3 w-3 shrink-0" /> 
-                        <span className="break-words">{u.phone}</span>
-                      </div>
-                    )}
-                    {u.address && u.address !== "System Console" && (
-                      <div className="flex items-start gap-2 text-[10px] text-muted-foreground">
-                        <MapPin className="h-3 w-3 shrink-0 mt-0.5" /> 
-                        <span className="break-words whitespace-normal">{u.address}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="shrink-0">
-                {u.id !== currentUser?.uid && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="text-destructive hover:bg-destructive/10 rounded-xl h-9 px-2 flex items-center gap-1 transition-colors"
-                    onClick={() => setUserToDelete(u)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    <span className="text-[10px] font-bold uppercase hidden sm:inline">Delete</span>
-                  </Button>
-                )}
-              </div>
-            </Card>
+            <UserListItem key={u.id} user={u} currentUser={currentUser} onDelete={setUserToDelete} />
           ))}
           
           {filteredUsers.length === 0 && !isUsersLoading && (
