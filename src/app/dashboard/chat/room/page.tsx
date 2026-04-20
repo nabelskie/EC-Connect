@@ -11,7 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send, ArrowLeft, Loader2, Mic, Square, Volume2, Play, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useFirestore, useUser, useDoc, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, collection, query, serverTimestamp, where } from 'firebase/firestore';
+import { doc, collection, query, serverTimestamp, orderBy } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { cn } from '@/lib/utils';
 
@@ -63,13 +63,12 @@ function ChatContent() {
 
   const { data: partnerProfile } = useDoc(partnerUserRef);
 
+  // Optimized query: Fetch all messages for this room without restrictive participant filters
+  // which can fail if fields are missing or indexes aren't yet populated.
   const messagesQuery = useMemoFirebase(() => {
-    if (!requestId || !db || !user) return null;
-    return query(
-      collection(db, 'chat_rooms', requestId, 'messages'),
-      where('participantUserIds', 'array-contains', user.uid)
-    );
-  }, [db, requestId, user]);
+    if (!requestId || !db) return null;
+    return collection(db, 'chat_rooms', requestId, 'messages');
+  }, [db, requestId]);
 
   const { data: messages, isLoading: isMessagesLoading } = useCollection(messagesQuery);
 
