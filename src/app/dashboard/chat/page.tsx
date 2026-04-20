@@ -10,18 +10,25 @@ import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useMemo, useState, useEffect } from 'react';
-import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, query, where, doc } from 'firebase/firestore';
 
 /**
- * Optimized Avatar component that uses pre-fetched URLs from the chat record.
- * This removes the "N+1" listener performance bottleneck.
+ * Optimized Avatar component that fetches the LATEST profile information.
+ * This ensures updates to profile pictures are reflected in the chat list.
  */
 function ChatPartnerAvatar({ partnerId, partnerName, photoURL }: { partnerId: string; partnerName: string; photoURL?: string }) {
+  const db = useFirestore();
+  const partnerRef = useMemoFirebase(() => partnerId ? doc(db, 'users', partnerId) : null, [db, partnerId]);
+  const { data: partnerProfile } = useDoc(partnerRef);
+  
+  // Use the live profile photo if available, fallback to the snapshot photoURL, then a placeholder.
+  const finalPhoto = partnerProfile?.photoURL || photoURL || `https://picsum.photos/seed/${partnerId}/100/100`;
+
   return (
     <div className="relative">
       <Avatar className="h-14 w-14 border-2 border-slate-100 transition-transform active:scale-95">
-        <AvatarImage src={photoURL || `https://picsum.photos/seed/${partnerId}/100/100`} className="object-cover" />
+        <AvatarImage src={finalPhoto} className="object-cover" />
         <AvatarFallback>{partnerName?.[0] || 'U'}</AvatarFallback>
       </Avatar>
     </div>
@@ -55,7 +62,6 @@ function ChatInboxContent() {
     
     const filtered = chatRooms.filter(chat => {
       const partnerName = role === 'volunteer' ? chat.residentName : chat.volunteerName;
-      // If name is missing, we still show the chat (it's better than an empty screen)
       if (!partnerName) return true;
       return partnerName.toLowerCase().includes(searchTerm.toLowerCase());
     });

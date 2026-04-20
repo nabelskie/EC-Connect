@@ -10,7 +10,6 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   MapPin, 
-  ArrowRight, 
   ShoppingCart, 
   Truck, 
   Wrench, 
@@ -18,10 +17,8 @@ import {
   Heart,
   Filter,
   Loader2,
-  SearchX,
   Star,
   Trophy,
-  MessageSquareQuote,
   Clock,
   MessageSquare,
   CheckCircle2,
@@ -30,15 +27,13 @@ import {
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
-  DropdownMenuLabel, 
   DropdownMenuRadioGroup, 
   DropdownMenuRadioItem, 
-  DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, where, doc, getDoc, serverTimestamp, orderBy } from 'firebase/firestore';
+import { collection, query, where, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { setDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { cn } from '@/lib/utils';
 
@@ -124,11 +119,26 @@ export default function VolunteerDashboard() {
   const handleAcceptTask = async (task: any) => {
     if (!user || !profile || isAccepting) return;
     setIsAccepting(task.id);
+    
     const volunteerId = user.uid;
     const volunteerName = profile.name || user.displayName || 'Volunteer';
     const volunteerPhotoURL = profile.photoURL || '';
     const residentId = task.createdByUserId;
-    const residentName = task.createdByName || 'Resident';
+
+    // Fetch resident's latest profile to ensure we have their correct photo
+    let residentName = task.createdByName || 'Resident';
+    let residentPhotoURL = '';
+    try {
+      const resDoc = await getDoc(doc(db, 'users', residentId));
+      if (resDoc.exists()) {
+        const resData = resDoc.data();
+        residentName = resData.name || residentName;
+        residentPhotoURL = resData.photoURL || '';
+      }
+    } catch (err) {
+      console.warn("Could not fetch resident profile for chat setup:", err);
+    }
+
     const chatRoomId = [residentId, volunteerId].sort().join('_');
     const participants = [residentId, volunteerId];
 
@@ -136,9 +146,14 @@ export default function VolunteerDashboard() {
     const pendingRef = doc(db, 'assistance_requests_pending', task.id);
     
     setDocumentNonBlocking(activeRef, { 
-      ...task, status: 'Accepted', assignedVolunteerId: volunteerId, 
-      volunteerName, chatRoomId, acceptedAt: new Date().toISOString()
+      ...task, 
+      status: 'Accepted', 
+      assignedVolunteerId: volunteerId, 
+      volunteerName, 
+      chatRoomId, 
+      acceptedAt: new Date().toISOString()
     }, { merge: true });
+    
     deleteDocumentNonBlocking(pendingRef);
 
     setDocumentNonBlocking(doc(db, 'chat_rooms', chatRoomId), { 
@@ -148,16 +163,19 @@ export default function VolunteerDashboard() {
       volunteerName, 
       volunteerPhotoURL,
       residentName,
-      residentPhotoURL: '', // Initial empty, but field exists
+      residentPhotoURL,
       createdAt: new Date().toISOString(), 
       lastMessageSnippet: `Volunteer ${volunteerName} accepted.`, 
-      lastMessageAt: serverTimestamp() 
+      lastMessageAt: serverTimestamp(),
+      lastMessageSenderId: volunteerId
     }, { merge: true });
 
     addDocumentNonBlocking(collection(db, 'chat_rooms', chatRoomId, 'messages'), { 
-      chatRoomId, senderUserId: volunteerId, 
+      chatRoomId, 
+      senderUserId: volunteerId, 
       messageText: `I've accepted your request for ${task.taskType}. How can I help?`, 
-      timestamp: serverTimestamp(), participantUserIds: participants 
+      timestamp: serverTimestamp(), 
+      participantUserIds: participants 
     });
 
     toast({ title: "Task Accepted" });
