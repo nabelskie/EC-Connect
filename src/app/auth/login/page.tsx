@@ -33,8 +33,6 @@ export default function LoginPage() {
 
   /**
    * Manual Login Handler
-   * This function now handles both authentication AND the role-based redirection logic.
-   * Auto-login (session detection redirect) has been removed to ensure manual entry.
    */
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,85 +126,87 @@ export default function LoginPage() {
   const isAdminEmail = email.toLowerCase().trim() === ADMIN_EMAIL;
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
-      <Link href="/" className="flex items-center gap-2 mb-8 group">
-        <Heart className="h-8 w-8 text-accent fill-accent transition-transform group-hover:scale-110" />
-        <span className="text-2xl font-headline font-bold text-primary">ElderCare Connect</span>
-      </Link>
-      
-      <Card className="w-full max-w-md border-none shadow-xl">
-        <CardHeader className="space-y-1 pb-6 text-center">
-          <CardTitle className="text-2xl font-headline font-bold text-primary">Welcome Back</CardTitle>
-          <CardDescription className="text-muted-foreground">
-            Enter your credentials manually to log in
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <form onSubmit={handleLogin} className="space-y-4" autoComplete="off">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
-              <Input 
-                id="email" 
-                type="email" 
-                placeholder="name@example.com" 
-                required 
-                className="h-12 text-lg"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoComplete="off"
-                suppressHydrationWarning
-              />
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
-              </div>
-              <div className="relative">
+    <div className="h-screen-dvh w-full overflow-y-auto bg-background">
+      <div className="min-h-full flex flex-col items-center justify-center p-4 py-12">
+        <Link href="/" className="flex items-center gap-2 mb-8 group">
+          <Heart className="h-8 w-8 text-accent fill-accent transition-transform group-hover:scale-110" />
+          <span className="text-2xl font-headline font-bold text-primary">ElderCare Connect</span>
+        </Link>
+        
+        <Card className="w-full max-w-md border-none shadow-xl">
+          <CardHeader className="space-y-1 pb-6 text-center">
+            <CardTitle className="text-2xl font-headline font-bold text-primary">Welcome Back</CardTitle>
+            <CardDescription className="text-muted-foreground">
+              Enter your credentials manually to log in
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <form onSubmit={handleLogin} className="space-y-4" autoComplete="off">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email Address</Label>
                 <Input 
-                  id="password" 
-                  type={showPassword ? "text" : "password"} 
+                  id="email" 
+                  type="email" 
+                  placeholder="name@example.com" 
                   required 
-                  className="h-12 text-lg pr-12"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  className="h-12 text-lg"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   autoComplete="off"
                   suppressHydrationWarning
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors p-2"
-                >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </button>
               </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Password</Label>
+                </div>
+                <div className="relative">
+                  <Input 
+                    id="password" 
+                    type={showPassword ? "text" : "password"} 
+                    required 
+                    className="h-12 text-lg pr-12"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="off"
+                    suppressHydrationWarning
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors p-2"
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
+              </div>
+              <Button 
+                type="submit" 
+                className="w-full h-12 text-lg bg-primary hover:bg-primary/90 mt-2 shadow-lg" 
+                disabled={isSubmitting}
+                suppressHydrationWarning
+              >
+                {isSubmitting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : 'Sign In'}
+              </Button>
+            </form>
+          </CardContent>
+          <CardFooter className="flex flex-col space-y-4 pt-0">
+            <div className="text-center text-sm text-muted-foreground">
+              Don't have an account?{' '}
+              <Link href="/auth/register" className="font-semibold text-accent hover:underline">
+                Register here
+              </Link>
             </div>
-            <Button 
-              type="submit" 
-              className="w-full h-12 text-lg bg-primary hover:bg-primary/90 mt-2 shadow-lg" 
-              disabled={isSubmitting}
-              suppressHydrationWarning
-            >
-              {isSubmitting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : 'Sign In'}
-            </Button>
-          </form>
-        </CardContent>
-        <CardFooter className="flex flex-col space-y-4 pt-0">
-          <div className="text-center text-sm text-muted-foreground">
-            Don't have an account?{' '}
-            <Link href="/auth/register" className="font-semibold text-accent hover:underline">
-              Register here
-            </Link>
-          </div>
-          
-          {isAdminEmail && (
-            <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100 text-[10px] text-muted-foreground italic">
-              <AlertCircle className="h-3 w-3 text-accent shrink-0" />
-              Administrator detected. Note: Initial password is "knadmin123".
-            </div>
-          )}
-        </CardFooter>
-      </Card>
+            
+            {isAdminEmail && (
+              <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100 text-[10px] text-muted-foreground italic">
+                <AlertCircle className="h-3 w-3 text-accent shrink-0" />
+                Administrator detected. Note: Initial password is "knadmin123".
+              </div>
+            )}
+          </CardFooter>
+        </Card>
+      </div>
     </div>
   );
 }
