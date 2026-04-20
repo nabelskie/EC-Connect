@@ -1,6 +1,7 @@
 
 "use client";
 
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -51,7 +52,7 @@ import { collection, doc, query, where } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
-/** Achievement helper same as dashboard */
+/** Achievement helper same as dashboard leveling system */
 function getLevel(tasksCount: number) {
   let level = 1;
   let tasksNeededForNextLevel = 2;
@@ -86,13 +87,6 @@ function ProfileContent() {
   const [editMatrixNumber, setEditMatrixNumber] = useState('');
   const [tempPhotoPreview, setTempPhotoPreview] = useState<string | null>(null);
   
-  // Password state
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
-
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -117,14 +111,14 @@ function ProfileContent() {
     return getLevel(completedTasks?.length || 0);
   }, [completedTasks]);
 
-  // Achievement styles
+  // Achievement styles for profile border
   const achievementClasses = useMemo(() => {
     if (profileData?.role !== 'volunteer') return "";
     if (volunteerLevel >= 100) return "ring-4 ring-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.6)] animate-pulse";
     if (volunteerLevel >= 50) return "ring-4 ring-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.4)]";
-    if (volunteerLevel >= 20) return "ring-4 ring-slate-400";
-    if (volunteerLevel >= 10) return "ring-4 ring-amber-600";
-    return "";
+    if (volunteerLevel >= 20) return "ring-4 ring-slate-400 shadow-[0_0_10px_rgba(148,163,184,0.3)]";
+    if (volunteerLevel >= 10) return "ring-4 ring-amber-600 shadow-[0_0_8px_rgba(217,119,6,0.2)]";
+    return "ring-2 ring-slate-100";
   }, [volunteerLevel, profileData?.role]);
 
   // Initialize form when profile data loads
